@@ -1,0 +1,144 @@
+$primary-color: #6c5ce7;
+$secondary-color: #ff8c42;
+$gray-light: #f5f6fa;
+$gray-text: #8b92a9;
+$white: #ffffff;
+$border-light: #e8eaf6;
+
+$tablet: 1024px;
+$mobile: 768px;
+
+.roles-dashboard {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e8f0fe 0%, #f3e5f5 100%);
+
+  .main-content {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+
+    .header {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 2rem;
+    }
+
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+
+      .kpi-card {
+        background: $white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        text-align: center;
+        transition: all 0.3s ease;
+
+        &:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        h4 {
+          font-size: 14px;
+          color: $gray-text;
+          margin-bottom: 0.5rem;
+        }
+
+        .kpi-value {
+          font-size: 26px;
+          font-weight: 700;
+          color: $primary-color;
+        }
+
+        .kpi-trend {
+          font-size: 13px;
+          margin-top: 0.25rem;
+
+          &.up {
+            color: #22c55e;
+          }
+
+          &.down {
+            color: #ef4444;
+          }
+        }
+      }
+    }
+
+    /* Table Section */
+    .table-section {
+      background: $white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+
+      .table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+
+        h3 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #2d3436;
+        }
+
+        .btn-add {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: $primary-color;
+          color: $white;
+          border: none;
+          padding: 8px 14px;
+          border-radius: 8px;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.3s;
+
+          &:hover {
+            background: #5b4db5;
+            transform: translateY(-2px);
+          }
+        }
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+
+        th,
+        td {
+          text-align: left;
+          padding: 10px 12px;
+          font-size: 13px;
+          border-bottom: 1px solid $border-light;
+        }
+
+        th {
+          background: $gray-light;
+          color: $gray-text;
+        }
+
+        .role-cell {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+
+          .role-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+          }
+        }
+      }
+    }
+  }
+}

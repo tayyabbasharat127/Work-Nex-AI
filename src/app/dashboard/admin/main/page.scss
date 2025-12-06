@@ -1,0 +1,514 @@
+$primary-color: #6c5ce7;
+$secondary-color: #ff8c42;
+$light-purple: #e8eaff;
+$light-orange: #ffe4d1;
+$gray-light: #f5f6fa;
+$gray-text: #8b92a9;
+$white: #ffffff;
+$sidebar-bg: #5b4db5;
+$border-light: #e8eaf6;
+
+// Breakpoints
+$mobile: 768px;
+$tablet: 1024px;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, sans-serif;
+  background: linear-gradient(135deg, #e8f0fe 0%, #f3e5f5 100%);
+  min-height: 100vh;
+}
+
+.dashboard {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e8f0fe 0%, #f3e5f5 100%);
+}
+
+// Main Content
+.main-content {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+
+  .header {
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+.page-heading {
+  margin-bottom: 24px;
+  text-align: left;
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #2d3436;
+    margin-bottom: 6px;
+  }
+
+  .subheading {
+    font-size: 14px;
+    color: $gray-text;
+  }
+
+  @media (max-width: $mobile) {
+    h1 {
+      font-size: 22px;
+    }
+  }
+}
+
+// Grid Layout
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px;
+
+  @media (max-width: $tablet) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  @media (max-width: $mobile) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+// Charts
+.chart-card {
+  h3 {
+    font-size: 16px;
+    color: #2d3436;
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+
+  .chart-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+
+    .control-label {
+      font-size: 12px;
+      padding: 6px 12px;
+      background: $gray-light;
+      border-radius: 16px;
+      color: $gray-text;
+    }
+  }
+
+  .line-chart {
+    width: 100%;
+    height: 200px;
+    margin-bottom: 16px;
+  }
+
+  .chart-legend {
+    display: flex;
+    gap: 24px;
+    font-size: 12px;
+    color: $gray-text;
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+    }
+  }
+}
+
+// Bar Chart
+.bar-chart-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .bar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .bar-label {
+      width: 40px;
+      font-size: 11px;
+      font-weight: 600;
+      color: $gray-text;
+    }
+
+    .bar-group {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      .bar {
+        height: 8px;
+        border-radius: 4px;
+        transition: all 0.3s;
+
+        &:hover {
+          opacity: 0.8;
+        }
+      }
+    }
+  }
+}
+
+// Calendar
+.calendar-card {
+  .calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #2d3436;
+    }
+
+    svg {
+      cursor: pointer;
+      color: $gray-text;
+      transition: color 0.2s;
+
+      &:hover {
+        color: $primary-color;
+      }
+    }
+  }
+
+  .calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+    text-align: center;
+
+    span {
+      font-size: 12px;
+      font-weight: 600;
+      color: $gray-text;
+      padding: 4px;
+    }
+  }
+
+  .calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+
+    .calendar-day {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-size: 12px;
+      color: $gray-text;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: $gray-light;
+
+      &.today {
+        background: $primary-color;
+        color: $white;
+        font-weight: 600;
+      }
+
+      &.selected {
+        border: 2px solid $primary-color;
+        color: $primary-color;
+        font-weight: 600;
+      }
+
+      &:hover:not(.today):not(.selected) {
+        background: #f0f1f6;
+      }
+    }
+  }
+}
+
+// Progress
+.progress-card {
+  text-align: center;
+
+  .progress-label {
+    font-size: 12px;
+    color: $gray-text;
+    margin-bottom: 4px;
+  }
+
+  .progress-sublabel {
+    font-size: 14px;
+    color: $gray-text;
+    margin-bottom: 24px;
+    font-weight: 500;
+  }
+
+  .circular-progress {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 24px;
+
+    .progress-circle {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+
+      .progress-bg {
+        fill: none;
+        stroke: $gray-light;
+        stroke-width: 4;
+      }
+
+      .progress-fill {
+        fill: none;
+        stroke: $primary-color;
+        stroke-width: 4;
+        stroke-linecap: round;
+        transition: stroke-dasharray 0.6s;
+      }
+    }
+
+    .progress-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      font-weight: 700;
+      color: $primary-color;
+    }
+  }
+
+  .progress-desc {
+    font-size: 12px;
+    color: $gray-text;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 12px 24px;
+    background: $primary-color;
+    color: $white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+
+    &:hover {
+      background: #5b4db5;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba($primary-color, 0.3);
+    }
+  }
+}
+
+// Horizontal Chart
+.horiz-chart {
+  h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2d3436;
+    margin-bottom: 16px;
+  }
+
+  .bars {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .day-label {
+        width: 40px;
+        font-size: 11px;
+        font-weight: 600;
+        color: $gray-text;
+      }
+
+      .bar-container {
+        flex: 1;
+        height: 6px;
+        background: $gray-light;
+        border-radius: 3px;
+        overflow: hidden;
+
+        .bar-fill {
+          height: 100%;
+          border-radius: 3px;
+          transition: all 0.3s;
+        }
+      }
+    }
+  }
+}
+
+// Info Cards
+.info-card {
+  h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2d3436;
+    margin-bottom: 8px;
+  }
+
+  .info-desc {
+    font-size: 12px;
+    color: $gray-text;
+    margin-bottom: 16px;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+
+    h4 {
+      margin: 0;
+    }
+
+    .period-select {
+      font-size: 12px;
+      padding: 4px 12px;
+      background: $gray-light;
+      border-radius: 16px;
+      color: $gray-text;
+    }
+  }
+
+  .sparklines {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+
+    .sparkline {
+      width: 100%;
+      height: 50px;
+    }
+  }
+
+  .stacked-bars {
+    margin-bottom: 12px;
+
+    .stacked-bar {
+      display: flex;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      gap: 2px;
+
+      .segment {
+        transition: all 0.3s;
+
+        &:hover {
+          opacity: 0.8;
+        }
+      }
+    }
+  }
+
+  .legend-small {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: $gray-text;
+
+    span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+      }
+    }
+  }
+
+  .pie-chart {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 12px;
+
+    .pie {
+      width: 100%;
+      height: 100%;
+    }
+
+    .pie-labels {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+
+      span {
+        display: block;
+        color: #2d3436;
+
+        small {
+          display: block;
+          font-size: 10px;
+          color: $gray-text;
+          font-weight: 400;
+          margin-top: 2px;
+        }
+      }
+    }
+  }
+}
+
+// Scrollbar
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $primary-color;
+  border-radius: 4px;
+
+  &:hover {
+    background: $sidebar-bg;
+  }
+}

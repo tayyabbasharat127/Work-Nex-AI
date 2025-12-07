@@ -10,6 +10,7 @@ import EmployeeAnalyticsPage from "./dashboard/employee/analytics/page";
 import EmployeeAttendancePage from "./dashboard/employee/attendance/page";
 import EmployeeLeavesPage from "./dashboard/employee/leaves/page";
 import HomePage from "./homepage/page";
+import ManagerDashboardPage from "./dashboard/manager/main/page";
 
 export const metadata = {
   title: "WorkNext AI - The Future is here!",
@@ -19,7 +20,7 @@ export const metadata = {
 export default function Home() {
   return (
     <>
-      <EmployeeDashboard />
+      <ManagerDashboardPage />
     </>
   );
 }

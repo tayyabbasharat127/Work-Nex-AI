@@ -19,61 +19,58 @@ import {
   ListOrdered,
   Users,
   Bot,
-  TrendingUp
+  TrendingUp,
+  LayoutDashboard,
 } from "lucide-react";
 import "./sidebar.scss";
 
-const SidebarEmployee: React.FC = () => {
+const SidebarManager: React.FC = () => {
   return (
     <aside className="sidebar">
       {/* Logo Section */}
       <div className="sidebar-logo">
         <User size={24} />
-        <span className="logo-text">Employee</span>
+        <span className="logo-text">Manager</span>
       </div>
 
       {/* Navigation */}
       <nav className="sidebar-nav">
         {/* Dashboard */}
-        <a href="/dashboard/employee/main" className="nav-item active">
-          <Home size={20} />
-          <span>Dashboard</span>
+        {/* Overview */}
+        <a href="/dashboard/manager/main" className="nav-item">
+          <LayoutDashboard size={20} />
+          <span>Overview</span>
+        </a>
+
+        {/* Team */}
+        <a href="/dashboard/manager/team" className="nav-item">
+          <Users size={20} />
+          <span>Team</span>
         </a>
 
         {/* Attendance */}
-        <a href="/dashboard/employee/attendance" className="nav-item">
+        <a href="/dashboard/manager/attendance" className="nav-item">
           <CalendarClock size={20} />
           <span>Attendance</span>
         </a>
 
         {/* Leaves */}
-        <a href="/dashboard/employee/leaves" className="nav-item">
+        <a href="/dashboard/manager/leaves" className="nav-item">
           <FileCheck2 size={20} />
           <span>Leaves</span>
         </a>
 
         {/* Performance */}
-        <a href="/dashboard/employee/performance" className="nav-item">
+        <a href="/dashboard/manager/performance" className="nav-item">
           <LineChart size={20} />
           <span>Performance</span>
         </a>
 
-        {/* Analytics */}
-        <a href="/dashboard/employee/analytics" className="nav-item">
-          <BarChart2 size={20} />
-          <span>Analytics</span>
-        </a>
-        {/* Assistant */}
-        <a href="/dashboard/employee/assistant" className="nav-item">
+        {/* AI Assistant */}
+        <a href="/dashboard/manager/assistant" className="nav-item">
           <Bot size={20} />
           <span>Assistant</span>
         </a>
-        {/* Forecast */}
-        <a href="/dashboard/employee/forecast" className="nav-item">
-  <TrendingUp size={20} />
-  <span>Forecast</span>
-</a>
-
       </nav>
 
       {/* Footer */}
@@ -85,4 +82,4 @@ const SidebarEmployee: React.FC = () => {
   );
 };
 
-export default SidebarEmployee;
+export default SidebarManager;

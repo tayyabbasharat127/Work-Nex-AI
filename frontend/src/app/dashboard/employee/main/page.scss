@@ -1,0 +1,198 @@
+$primary-color: #6c5ce7;
+$secondary-color: #ff8c42;
+$gray-light: #f5f6fa;
+$gray-text: #8b92a9;
+$white: #ffffff;
+
+.employee-dashboard {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e8f0fe 0%, #f3e5f5 100%);
+
+  .main-content {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+
+    .header {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 1.5rem;
+    }
+
+    .page-title {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 2rem;
+      color: #2d3436;
+    }
+
+    /* KPI GRID */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+
+      .kpi-card {
+        background: $white;
+        padding: 1rem;
+        border-radius: 14px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+
+        h4 {
+          font-size: 13px;
+          color: $gray-text;
+          margin-bottom: 6px;
+        }
+
+        .kpi-value {
+          font-size: 20px;
+          font-weight: 700;
+          color: $primary-color;
+        }
+      }
+    }
+
+    /* GRID LAYOUT */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr;
+      gap: 24px;
+
+      @media (max-width: 1024px) {
+        grid-template-columns: 1fr;
+      }
+
+      .column {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+    }
+
+    /* CARD BOX */
+    .card-box {
+      background: $white;
+      padding: 1.5rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+
+      h3 {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 1rem;
+      }
+    }
+
+    /* LINE CHART */
+    .line-chart {
+      width: 100%;
+      height: 220px;
+    }
+
+    .sparkline {
+      width: 100%;
+      height: 60px;
+    }
+
+    /* LEAVE HISTORY */
+    .bars {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      .bar-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        span {
+          width: 40px;
+          font-size: 13px;
+          color: $gray-text;
+        }
+
+        .bar-track {
+          flex: 1;
+          height: 6px;
+          background: $gray-light;
+          border-radius: 4px;
+
+          .bar-fill {
+            height: 100%;
+            background: $primary-color;
+            border-radius: 4px;
+          }
+        }
+      }
+    }
+
+    /* SUMMARY */
+    .summary-card {
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+
+        p {
+          font-size: 18px;
+          font-weight: 700;
+        }
+
+        h4 {
+          font-size: 13px;
+          color: $gray-text;
+        }
+      }
+    }
+
+    /* ACTION BUTTONS */
+    .actions-card {
+      .action-btn {
+        background: $gray-light;
+        padding: 12px;
+        border-radius: 10px;
+        width: 100%;
+        border: none;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        transition: 0.3s;
+
+        &:hover {
+          background: $primary-color;
+          color: $white;
+        }
+      }
+    }
+
+    /* NOTIFICATIONS */
+    .notif-card {
+      .notif-item {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+
+        .notif-icon {
+          color: $primary-color;
+          margin-top: 3px;
+        }
+
+        .notif-text {
+          font-size: 14px;
+          margin: 0;
+          font-weight: 500;
+        }
+
+        .notif-time {
+          font-size: 12px;
+          color: $gray-text;
+        }
+      }
+    }
+  }
+}

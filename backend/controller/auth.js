@@ -1,358 +1,168 @@
-const { Organization } = require("../models");
-const {TempOtp} = require("../models");
-const { User } = require('../models');
+
 const bcrypt = require('bcrypt');
 const transporter = require("../config/nodemailer");
 const FREE_EMAIL_DOMAINS = [ "yahoo.com", "hotmail.com", "outlook.com"];
+const pool = require("../config/db");
+const sendEmail = require("../utils/sendEmail");
+const jwt = require("jsonwebtoken");
+
 exports.signup = async (req, res) => {
+  const {
+    organization_name,
+    organization_email,
+    admin_name,
+    admin_email,
+    password,
+    subscription_plan
+  } = req.body;
+
   try {
-    const {
-      organization_name,
-      Industry,
-      address,
-      city,
-      country,
-      package,
-      status,
-      admin_email,
-      admin_name
-    } = req.body;
+    // 1. Check org exists
+    const orgCheck = await pool.query(
+      `SELECT * FROM organization WHERE organization_email=$1`,
+      [organization_email]
+    );
+    if (orgCheck.rows.length)
+      return res.status(400).json({ message: "Organization already exists" });
 
-    if (!organization_name || !admin_email) {
-      return res.status(400).json({
-        success: false,
-        message: "organization_name & admin_email are required"
-      });
-    }
-
-    const domain = admin_email.split("@")[1]?.toLowerCase();
-
-    if (FREE_EMAIL_DOMAINS.includes(domain)) {
-      return res.status(400).json({
-        success: false,
-        message: "Please use a corporate email address"
-      });
-    }
-
-    const existingOrg = await Organization.findOne({
-      where: { company_domain: domain }
-    });
-
-    if (existingOrg) {
-      return res.status(400).json({
-        success: false,
-        message: "Organization already exists"
-      });
-    }
-
-    const org = await Organization.create({
-      organization_name,
-      Industry,
-      company_domain: domain,
-      package,
-      address,
-      city,
-      country,
-      status: status || "pending",
-      admin_email,
-      is_verified: false
-    });
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiry = new Date(Date.now() + 10 * 60 * 1000);
-  await TempOtp.create({
-      email: admin_email,
-      otp: otp,
-      expires_at: expiry,
-    });
-
-    
-
-    await transporter.sendMail({
-      to: admin_email,
-      subject: "WorkNex AI - OTP Verification",
-      html: `
-        <h3>Hello ${admin_name || "Admin"},</h3>
-        <p>Your OTP is:</p>
-        <h1>${otp}</h1>
-        <p>This OTP will expire in 10 minutes.</p>
-      `
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "OTP sent. Please verify.",
-      organization_id: org.id,
-      admin_email
-    });
-
-  } catch (error) {
-    console.error("Signup error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message
-    });
-  }
-};
-exports.verifyOTP = async (req, res) => {
-  try {
-    const { admin_email, otp } = req.body;  // Destructure correctly
-
-    if (!admin_email || !otp) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and OTP are required",
-      });
-    }
-
-    // Check if the organization exists with the given admin email
-    const org = await Organization.findOne({ where: { admin_email } });
-
-    if (!org) {
-      return res.status(404).json({
-        success: false,
-        message: "Organization not found",
-      });
-    }
-
-    // Fetch OTP record from TempOtp table
-    const otpRecord = await TempOtp.findOne({
-      where: { email: admin_email, otp: otp },
-    });
-
-    if (!otpRecord) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid OTP",
-      });
-    }
-
-    // Check if the OTP has expired
-    if (new Date() > otpRecord.expires_at) {
-      return res.status(400).json({
-        success: false,
-        message: "OTP expired",
-      });
-    }
-
-    // OTP is valid, mark organization as verified and clear OTP
-    await org.update({
-      is_verified: true,
-      otp_code: null,
-      otp_expiry: null,
-    });
-
-    // Generate a temporary password for admin and create admin user
-    const tempPassword = Math.random().toString(36).slice(-8);
-    const adminUser = await User.create({
-      name: org.admin_name,
-      email: org.admin_email,
-      role: "admin",
-    organization_id: org.id,
-      password: tempPassword, // Auto-hashed by Sequelize hook
-      must_change_password: true,
-    });
-
-    // Send the credentials email to the admin
-    await transporter.sendMail({
-      to: org.admin_email,
-      subject: "Your WorkNex AI Admin Credentials",
-      html: `
-        <h2>Welcome to WorkNex AI</h2>
-        <p>Your organization has been successfully verified.</p>
-        <p><b>Admin Login Credentials:</b></p>
-        <p>Email: ${org.admin_email}</p>
-        <p>Password: ${tempPassword}</p>
-        <br/>
-        <p>Please login and change your password immediately.</p>
-      `,
-    });
-
-    // Success response
-    return res.status(200).json({
-      success: true,
-      message: "OTP verified. Admin credentials have been emailed.",
-    });
-  } catch (error) {
-    console.error("OTP Verify Error:", error);
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-
-exports.login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Validate fields
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email & password are required"
-      });
-    }
-
-    // Find user
-    const user = await User.findOne({ where: { email } });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "Invalid email or password"
-      });
-    }
-
-    // Ensure the user is associated with an organization
-   
-
-    // Find organization based on organization_id
-    const org = await Organization.findOne({ where: { id: user.organization_id } });
-
-   
-
-    // Check organization verification status
-   
-
-    // Compare password
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-
-    if (!isMatch) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid email or password"
-      });
-    }
-
-    // Generate JWT Token
-    const token = jwt.sign(
-      {
-        id: user.id,
-        role: user.role,
-        organization_id: user.organization_id
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+    // 2. Create organization
+    const org = await pool.query(
+      `INSERT INTO organization
+      (organization_name, organization_email, admin_email, subscription_plan, is_verified)
+      VALUES ($1,$2,$3,$4,false)
+      RETURNING organization_id`,
+      [organization_name, organization_email, admin_email, subscription_plan]
     );
 
-    // Dashboard redirection logic
-    let dashboard = "";
-    if (user.role === "admin") dashboard = "/admin/dashboard";
-    if (user.role === "manager") dashboard = "/manager/dashboard";
-    if (user.role === "employee") dashboard = "/employee/dashboard";
+    // 3. Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
 
-    // First login, force password change
-    if (user.must_change_password) {
-      return res.status(200).json({
-        success: true,
-        must_change_password: true,
-        message: "Password change required",
-        token,
-        dashboard
-      });
-    }
+    // 4. Create admin user
+    await pool.query(
+      `INSERT INTO users
+      (name, email, password_hash, role_id, organization_id, status)
+      VALUES ($1,$2,$3,1,$4,'inactive')`,
+      [admin_name, admin_email, passwordHash, org.rows[0].organization_id]
+    );
 
-    // Normal login response
-    return res.status(200).json({
-      success: true,
-      message: "Login successful",
-      token,
-      role: user.role,
-      dashboard
-    });
+    // 5. Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    await pool.query(
+      `INSERT INTO otps (email, otp, expires_at)
+       VALUES ($1,$2,NOW() + interval '10 minutes')`,
+      [admin_email, otp]
+    );
 
-  } catch (error) {
-    console.error("Login Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-      error: error.message
-    });
+    // 6. Send email
+    await sendEmail(admin_email, "Verify OTP", `Your OTP is ${otp}`);
+
+    res.json({ success: true, message: "OTP sent to email" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Signup failed" });
+  }
+};
+
+
+exports.verifyOTP = async (req, res) => {
+  const { email, otp } = req.body;
+
+  const record = await pool.query(
+    `SELECT * FROM otps
+     WHERE email=$1 AND otp=$2 AND expires_at > NOW()`,
+    [email, otp]
+  );
+
+  if (!record.rows.length)
+    return res.status(400).json({ message: "Invalid or expired OTP" });
+
+  // Activate org & admin
+  await pool.query(
+    `UPDATE organization SET is_verified=true WHERE admin_email=$1`,
+    [email]
+  );
+
+  await pool.query(
+    `UPDATE users SET status='active' WHERE email=$1`,
+    [email]
+  );
+
+  await pool.query(`DELETE FROM otps WHERE email=$1`, [email]);
+
+  res.json({ success: true, message: "Email verified successfully" });
+};
+
+exports.login = async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await pool.query(
+    `SELECT * FROM users WHERE email=$1 AND status='active'`,
+    [email]
+  );
+
+  if (!user.rows.length)
+    return res.status(401).json({ message: "Invalid credentials" });
+
+  const match = await bcrypt.compare(password, user.rows[0].password_hash);
+  if (!match)
+    return res.status(401).json({ message: "Invalid credentials" });
+
+  const token = jwt.sign(
+    {
+      user_id: user.rows[0].user_id,
+      role_id: user.rows[0].role_id,
+      organization_id: user.rows[0].organization_id
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "15m" }
+  );
+
+  res.json({ token });
+};
+exports.refreshToken = async (req, res) => {
+  const { refreshToken } = req.body;
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    const newToken = jwt.sign(
+      decoded,
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
+    );
+    res.json({ token: newToken });
+  } catch {
+    res.status(403).json({ message: "Invalid refresh token" });
   }
 };
 exports.forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
+  const { email } = req.body;
 
-    if (!email)
-      return res.status(400).json({ success: false, message: "Email is required." });
+  const user = await pool.query(`SELECT * FROM users WHERE email=$1`, [email]);
+  if (!user.rows.length) return res.json({ message: "If exists, email sent" });
 
-    // Check if user exists
-    const user = await User.findOne({ where: { email } });
+  const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: "10m" });
 
-    if (!user)
-      return res.status(404).json({ success: false, message: "User not found." });
+  await sendEmail(email, "Reset Password", `Token: ${token}`);
 
-    // Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires_at = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-
-    // Delete old OTPs
-    await TempOtp.destroy({ where: { email } });
-
-    // Save new OTP
-    await TempOtp.create({ email, otp, expires_at });
-
-    // Send email
-    await transporter.sendMail({
-      to: email,
-      subject: "WorkNex AI - Password Reset OTP",
-      html: `
-        <h2>Your OTP Code</h2>
-        <h1>${otp}</h1>
-        <p>This OTP will expire in 10 minutes.</p>
-      `
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "OTP sent to your email."
-    });
-
-  } catch (error) {
-    console.error("Forgot Password Error:", error);
-    return res.status(500).json({ success: false, message: error.message });
-  }
+  res.json({ success: true });
 };
+
 exports.resetPassword = async (req, res) => {
+  const { token, new_password } = req.body;
+
   try {
-    const { email, otp, newPassword } = req.body;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const hash = await bcrypt.hash(new_password, 10);
 
-    if (!email || !otp || !newPassword)
-      return res.status(400).json({ success: false, message: "Email, OTP & new password are required." });
+    await pool.query(
+      `UPDATE users SET password_hash=$1 WHERE email=$2`,
+      [hash, decoded.email]
+    );
 
-    // Find OTP record
-    const otpRecord = await TempOtp.findOne({ where: { email, otp } });
-
-    if (!otpRecord)
-      return res.status(400).json({ success: false, message: "Invalid OTP." });
-
-    if (new Date() > otpRecord.expires_at)
-      return res.status(400).json({ success: false, message: "OTP has expired." });
-
-    // Find user
-    const user = await User.findOne({ where: { email } });
-
-    if (!user)
-      return res.status(404).json({ success: false, message: "User not found." });
-
-    // Update password (Sequelize will auto-hash)
-    await user.update({
-      password_hash: newPassword,
-      must_change_password: false
-    });
-
-    // Clear OTP from DB
-    await TempOtp.destroy({ where: { email } });
-
-    return res.status(200).json({
-      success: true,
-      message: "Password reset successful."
-    });
-
-  } catch (error) {
-    console.error("Reset Password Error:", error);
-    return res.status(500).json({ success: false, message: error.message });
+    res.json({ success: true, message: "Password updated" });
+  } catch {
+    res.status(400).json({ message: "Invalid or expired token" });
   }
 };
 exports.changePassword = async (req, res) => {

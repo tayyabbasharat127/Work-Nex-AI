@@ -1,4 +1,4 @@
-const {attendance} = require('../models');
+
 exports.createleave =async(req,res)=>{
       try {
             const leave = await Leave.create(req.body);

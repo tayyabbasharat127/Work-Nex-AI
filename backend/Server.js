@@ -5,7 +5,7 @@ dotenv.config();
 const pool = require('./config/db');
 const authroutes = require('./routes/authroutes');
 const attendanceroutes = require('./routes/attendanceroute');
-
+const leaveroutes = require('./routes/leaveroutes');
 const app = express();
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
@@ -19,6 +19,8 @@ app.get('/', (req, res) => {
 // Use auth routes
 app.use("/api/auth", authroutes);
 app.use("/api/attendance", attendanceroutes);
+app.use("/api/leaves", leaveroutes);
+
 
 // Test Sequelize DB connection
 /*

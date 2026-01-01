@@ -89,6 +89,7 @@ export default function Login() {
         err?.message ||
         "Login failed";
       setError(msg);
+      console.log("Error", err);
     } finally {
       setIsLoading(false);
     }

@@ -20,8 +20,10 @@ api.interceptors.request.use((config) => {
 const API_PREFIX = "/api";
 
 // Authentication
-export const signupApi = (payload) => api.post(`${API_PREFIX}/auth/signup`, payload);
-export const loginApi = (payload) => api.post(`${API_PREFIX}/auth/login`, payload);
+export const signupApi = (payload) =>
+  api.post(`${API_PREFIX}/auth/signup`, payload);
+export const loginApi = (payload) =>
+  api.post(`${API_PREFIX}/auth/login`, payload);
 export const forgotPasswordApi = (payload) =>
   api.post(`${API_PREFIX}/auth/forgot-password`, payload);
 export const verifyOtpApi = (payload) =>
@@ -33,29 +35,48 @@ export const resetPasswordApi = (payload) =>
 // Create user API Admin
 export const createUserApi = (payload) => api.post("/api/createuser", payload);
 export const getUserApi = (payload) => api.post("/api/getuser", payload);
-export const updateUserApi = (id, payload) => api.put(`/api/users/${id}`, payload);
+export const updateUserApi = (id, payload) =>
+  api.put(`/api/users/${id}`, payload);
 export const deleteUserApi = (id) => api.delete(`/api/users/${id}`);
 
-
-export const createLeaveApi = (payload) =>
-  api.post("/api/leaves", payload);
+export const createLeaveApi = (payload) => api.post("/api/leaves", payload);
 
 // Get my leaves (Employee)
-export const getMyLeavesApi = () =>
-  api.get("/api/leaves/my");
+export const getMyLeavesApi = () => api.get("/api/leaves/my");
 
 // Delete my leave (Employee)
-export const deleteLeaveApi = (leave_id) =>
-  api.delete(`/api/leaves/${leave_id}`);
-
-// Admin: Get all leaves
-export const getAllLeavesApi = () =>
-  api.get("/api/leaves");
-
-// Admin: Update leave status (Approved/Rejected/Pending etc.)
-export const updateLeaveStatusApi = (leave_id, payload) =>
-  api.put(`/api/leaves/${leave_id}/status`, payload);
 
 
+// POST /api/attendance/check-in
+export const checkInApi = (payload = {}) =>
+  http.post("/api/attendance/check-in", payload);
+
+// POST /api/attendance/check-out
+export const checkOutApi = (payload = {}) =>
+  http.post("/api/attendance/check-out", payload);
+
+// POST /api/attendance/ping
+export const pingApi = (payload = {}) =>
+  http.post("/api/attendance/ping", payload);
+
+// GET /api/attendance/today-status
+export const todayStatusApi = () =>
+  http.get("/api/attendance/today-status");
+
+// GET /api/attendance/history?from=2026-01-01&to=2026-01-31&page=1&limit=10
+export const historyApi = (params = {}) =>
+  http.get("/api/attendance/history", { params });
+
+export const getAllLeavesApi = () => api.get("/api/leaves"); 
+// OR if your backend route is different, match it exactly (examples below)
+
+// 2) PATCH / PUT update leave status
+export const updateLeaveStatusApi = (leaveId, payload) =>
+  api.patch(`/api/leaves/${leaveId}/status`, payload);
+// If your backend expects PUT, use api.put(...)
+
+// 3) DELETE leave
+export const deleteLeaveApi = (leaveId) =>
+  api.delete(`/api/leaves/${leaveId}`);
 
 export default api;

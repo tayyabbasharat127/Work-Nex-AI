@@ -81,7 +81,7 @@ export default function Login() {
       // Optional: store user payload if backend returns it
       if (res.data?.user) localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      router.push("/dashboard");
+      router.push("/dashboard/admin/main");
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||

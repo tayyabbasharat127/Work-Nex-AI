@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import "./page.scss";
+import { forgotPasswordApi } from "@/src/api/api";
 
 // Simple Mail Icon
 const EmailIcon = () => (
@@ -19,20 +20,39 @@ const EmailIcon = () => (
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
+
   const router = useRouter();
 
-  const handleSubmit = () => {
-    if (!email) return alert("Please enter your email address.");
+  const handleSubmit = async () => {
+    if (!email) {
+      setError("Please enter your email address.");
+      return;
+    }
+
     setLoading(true);
+    setError("");
+    setMessage("");
 
-    // simulate sending email, then redirect to OTP
-    setTimeout(() => {
-      console.log("Password reset link (OTP) sent to:", email);
+    try {
+      const res = await forgotPasswordApi({ email });
+
+      // backend might return message like "OTP sent"
+      setMessage(res.data?.message || "If the email exists, an OTP has been sent.");
+
+      // ✅ Redirect to OTP page (include email so OTP page can use it)
+      router.push(`/auth/verify-otp?email=${encodeURIComponent(email)}`);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Failed to send reset OTP";
+      setError(msg);
+    } finally {
       setLoading(false);
-
-      // ✅ Redirect to OTP page
-      router.push("/auth/verify-otp");
-    }, 1500);
+    }
   };
 
   return (
@@ -41,7 +61,7 @@ export default function ForgotPassword() {
         <div className="forgot-header">
           <h1 className="title">Forgot Password</h1>
           <p className="subtitle">
-            Enter your email and we’ll send you a password reset link.
+            Enter your email and we’ll send you a password reset OTP.
           </p>
         </div>
 
@@ -77,10 +97,14 @@ export default function ForgotPassword() {
                 <span className="spinner"></span> Sending OTP...
               </>
             ) : (
-              "Send Reset Link"
+              "Send OTP"
             )}
             <span className="button-glow"></span>
           </button>
+
+          {/* Messages */}
+          {error && <p className="error-text">{error}</p>}
+          {message && <p className="success-text">{message}</p>}
 
           <a href="/auth/login" className="back-link">
             ← Back to Login

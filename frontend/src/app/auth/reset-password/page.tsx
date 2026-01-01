@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import "./page.scss";
+import { resetPasswordApi } from "@/src/api/api";
 
 // Eye icon toggle
 const EyeIcon = ({ open }: { open: boolean }) => (
@@ -30,24 +32,63 @@ const EyeIcon = ({ open }: { open: boolean }) => (
 );
 
 export default function ResetPassword() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // If you redirected like: /auth/reset-password?email=...
+  const emailFromQuery = searchParams.get("email") || "";
+
+  const [email, setEmail] = useState(emailFromQuery);
+  const [otp, setOtp] = useState("");
+
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const handleSubmit = () => {
-    if (!password || !confirm) return alert("Please fill both fields.");
-    if (password !== confirm) return alert("Passwords do not match!");
-    if (password.length < 8)
-      return alert("Password must be at least 8 characters.");
+  const [error, setError] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
+
+  const handleSubmit = async () => {
+    setError("");
+    setMessage("");
+
+    if (!email) return setError("Email is required.");
+    if (!otp) return setError("OTP is required.");
+    if (!password || !confirm) return setError("Please fill both password fields.");
+    if (password !== confirm) return setError("Passwords do not match!");
+    if (password.length < 8) return setError("Password must be at least 8 characters.");
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+
+    try {
+      // Backend endpoint: POST /api/auth/reset-password
+      // Typical payload: { email, otp, newPassword }
+      const res = await resetPasswordApi({
+        email,
+        otp,
+        newPassword: password,
+      });
+
+      setMessage(res.data?.message || "Password updated successfully.");
       setSuccess(true);
-    }, 2000);
+
+      // Optional: auto-redirect after success
+      // setTimeout(() => router.push("/auth/login"), 1200);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Reset password failed";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -60,12 +101,46 @@ export default function ResetPassword() {
           <p className="subtitle">
             {success
               ? "Your password has been successfully updated."
-              : "Enter your new password below."}
+              : "Enter the OTP and your new password below."}
           </p>
         </div>
 
         {!success ? (
           <div className="reset-form">
+            {/* Email (optional editable) */}
+            <div className="input-group">
+              <label htmlFor="email" className="input-label">
+                Email
+              </label>
+              <div className="input-wrapper">
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="input-field"
+                />
+              </div>
+            </div>
+
+            {/* OTP */}
+            <div className="input-group">
+              <label htmlFor="otp" className="input-label">
+                OTP
+              </label>
+              <div className="input-wrapper">
+                <input
+                  id="otp"
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  placeholder="Enter OTP"
+                  className="input-field"
+                />
+              </div>
+            </div>
+
             {/* New Password */}
             <div className="input-group">
               <label htmlFor="password" className="input-label">
@@ -130,6 +205,10 @@ export default function ResetPassword() {
               )}
               <span className="button-glow"></span>
             </button>
+
+            {/* Messages */}
+            {error && <p className="error-text">{error}</p>}
+            {message && !error && <p className="success-text">{message}</p>}
 
             <a href="/auth/login" className="back-link">
               ← Back to Login

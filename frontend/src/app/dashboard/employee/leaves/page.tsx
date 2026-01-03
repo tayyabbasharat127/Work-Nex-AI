@@ -15,8 +15,8 @@ import {
 type LeaveRow = {
   id: string;
   type: string;
-  startDate: string; // ISO
-  endDate: string;   // ISO
+  startDate: string;
+  endDate: string;
   status: "Approved" | "Rejected" | "Pending" | string;
   comments?: string;
   reason?: string;
@@ -39,10 +39,10 @@ const EMPTY_FORM: ApplyFormState = {
 
 export default function EmployeeLeavesPage() {
   const [activeTab, setActiveTab] = useState<"apply" | "history">("apply");
-
   const [leaves, setLeaves] = useState<LeaveRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Load my leaves
   const loadMyLeaves = async () => {
@@ -51,13 +51,16 @@ export default function EmployeeLeavesPage() {
       setError(null);
 
       const res = await getMyLeavesApi();
+      console.log("Leaves API response:", res.data);
 
-      // support response shapes:
-      // 1) { leaves: [...] }
-      // 2) [...]
-      const rawList = Array.isArray(res.data) ? res.data : res.data?.leaves || [];
+      // Support various response shapes
+      const rawList = Array.isArray(res.data) 
+        ? res.data 
+        : res.data?.leaves || res.data?.data || [];
+      
       setLeaves(normalizeLeaves(rawList));
     } catch (e: any) {
+      console.error("Error loading leaves:", e);
       setError(e?.response?.data?.message || e?.message || "Failed to load your leaves.");
     } finally {
       setLoading(false);
@@ -66,19 +69,24 @@ export default function EmployeeLeavesPage() {
 
   useEffect(() => {
     loadMyLeaves();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // KPI from real data (balance fields are not in your backend routes, so keep those as placeholders unless you add balances API)
+  // Clear success message after 5 seconds
+  useEffect(() => {
+    if (successMsg) {
+      const timer = setTimeout(() => setSuccessMsg(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMsg]);
+
+  // KPI calculations
   const kpi = useMemo(() => {
     const total = leaves.length;
-
     const approved = leaves.filter((l) => l.status.toLowerCase() === "approved").length;
+    const rejected = leaves.filter((l) => l.status.toLowerCase() === "rejected").length;
     const pending = leaves.filter((l) => l.status.toLowerCase() === "pending").length;
-
     const approvedPct = total > 0 ? Math.round((approved / total) * 100) : 0;
 
-    // Total leaves this year
     const thisYear = new Date().getFullYear();
     const totalThisYear = leaves.filter((l) => {
       const d = new Date(l.startDate);
@@ -103,6 +111,75 @@ export default function EmployeeLeavesPage() {
     });
   }, [leaves]);
 
+  const handleCreateLeave = async (payload: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+      setSuccessMsg(null);
+
+      console.log("Submitting leave request:", payload);
+      const res = await createLeaveApi(payload);
+      console.log("Create leave response:", res.data);
+
+      const created = res.data?.leave || res.data?.data || res.data;
+
+      // Add to state optimistically
+      if (created) {
+        const normalized = normalizeLeaves([created]);
+        if (normalized.length > 0) {
+          setLeaves((prev) => [normalized[0], ...prev]);
+        }
+      }
+
+      // Switch to history tab and refresh
+      setActiveTab("history");
+      setSuccessMsg("Leave request submitted successfully!");
+      
+      // Refresh data from server
+      await loadMyLeaves();
+    } catch (e: any) {
+      console.error("Error creating leave:", e);
+      setError(
+        e?.response?.data?.message || 
+        e?.response?.data?.error ||
+        e?.message || 
+        "Failed to submit leave request."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelLeave = async (leaveId: string) => {
+    const ok = window.confirm("Are you sure you want to cancel this leave request?");
+    if (!ok) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      setSuccessMsg(null);
+
+      console.log("Canceling leave:", leaveId);
+      await deleteLeaveApi(leaveId);
+      
+      setLeaves((prev) => prev.filter((l) => l.id !== leaveId));
+      setSuccessMsg("Leave request cancelled successfully!");
+      
+      // Refresh to ensure sync with server
+      await loadMyLeaves();
+    } catch (e: any) {
+      console.error("Error canceling leave:", e);
+      setError(
+        e?.response?.data?.message || 
+        e?.response?.data?.error ||
+        e?.message || 
+        "Failed to cancel leave."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="employee-leaves">
       <SidebarEmployee />
@@ -117,7 +194,20 @@ export default function EmployeeLeavesPage() {
           <p>Apply for leave and track your requests.</p>
         </div>
 
-        {error && <div className="banner banner-error">{error}</div>}
+        {error && (
+          <div className="banner banner-error">
+            {error}
+            <button onClick={() => setError(null)} style={{ marginLeft: 10 }}>×</button>
+          </div>
+        )}
+        
+        {successMsg && (
+          <div className="banner banner-success">
+            {successMsg}
+            <button onClick={() => setSuccessMsg(null)} style={{ marginLeft: 10 }}>×</button>
+          </div>
+        )}
+        
         {loading && <div className="banner banner-loading">Working...</div>}
 
         <div className="kpi-grid">
@@ -149,56 +239,17 @@ export default function EmployeeLeavesPage() {
             disabled={loading}
             style={{ marginLeft: "auto" }}
           >
-            Refresh
+            {loading ? "Loading..." : "Refresh"}
           </button>
         </div>
 
         {activeTab === "apply" ? (
-          <ApplyLeaveForm
-            loading={loading}
-            onCreate={async (payload) => {
-              try {
-                setLoading(true);
-                setError(null);
-
-                const res = await createLeaveApi(payload);
-                const created = res.data?.leave || res.data;
-
-                // Insert optimistically then refresh for truth
-                setLeaves((prev) => [normalizeLeaves([created])[0], ...prev].filter(Boolean) as LeaveRow[]);
-                setActiveTab("history");
-                await loadMyLeaves();
-              } catch (e: any) {
-                setError(
-                  e?.response?.data?.message || e?.message || "Failed to submit leave request."
-                );
-              } finally {
-                setLoading(false);
-              }
-            }}
-          />
+          <ApplyLeaveForm loading={loading} onCreate={handleCreateLeave} />
         ) : (
           <LeaveHistory
             loading={loading}
             history={history}
-            onCancel={async (leaveId) => {
-              const ok = window.confirm("Cancel this leave request?");
-              if (!ok) return;
-
-              try {
-                setLoading(true);
-                setError(null);
-
-                await deleteLeaveApi(leaveId);
-                setLeaves((prev) => prev.filter((l) => l.id !== leaveId));
-              } catch (e: any) {
-                setError(
-                  e?.response?.data?.message || e?.message || "Failed to cancel leave."
-                );
-              } finally {
-                setLoading(false);
-              }
-            }}
+            onCancel={handleCancelLeave}
           />
         )}
       </main>
@@ -210,32 +261,47 @@ export default function EmployeeLeavesPage() {
 // Helpers
 // -----------------------------
 function normalizeLeaves(list: any[]): LeaveRow[] {
-  return (list || [])
+  if (!Array.isArray(list)) {
+    console.warn("normalizeLeaves received non-array:", list);
+    return [];
+  }
+
+  return list
     .map((l: any) => {
       const id = l.leave_id || l.id || l._id;
-      if (!id) return null;
+      if (!id) {
+        console.warn("Leave item missing ID:", l);
+        return null;
+      }
 
       const start = l.start_date || l.from || l.startDate;
       const end = l.end_date || l.to || l.endDate;
+      
+      const type = l.type || l.leave_type || "Casual";
 
       return {
         id: String(id),
-        type: l.type || l.leave_type || "—",
+        type: type,
         startDate: start,
         endDate: end,
         status: l.status || "Pending",
         comments: l.comments || l.admin_comment || "",
         reason: l.reason || "",
-        createdAt: l.createdAt,
+        createdAt: l.createdAt || l.created_at,
       } as LeaveRow;
     })
     .filter(Boolean) as LeaveRow[];
 }
 
 function formatShort(iso: string) {
+  if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString("en-US", { 
+    month: "short", 
+    day: "numeric", 
+    year: "numeric" 
+  });
 }
 
 // ---------------- APPLY LEAVE COMPONENT ----------------
@@ -248,28 +314,48 @@ function ApplyLeaveForm({
 }) {
   const [form, setForm] = useState<ApplyFormState>(EMPTY_FORM);
   const [fileName, setFileName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // basic validation
-    if (!form.startDate) return alert("Start date is required.");
-    if (!form.endDate) return alert("End date is required.");
-    if (new Date(form.endDate) < new Date(form.startDate))
-      return alert("End date cannot be before start date.");
-    if (!form.reason.trim()) return alert("Reason is required.");
+    // Validation
+    if (!form.startDate) {
+      alert("Start date is required.");
+      return;
+    }
+    if (!form.endDate) {
+      alert("End date is required.");
+      return;
+    }
+    if (new Date(form.endDate) < new Date(form.startDate)) {
+      alert("End date cannot be before start date.");
+      return;
+    }
+    if (!form.reason.trim()) {
+      alert("Reason is required.");
+      return;
+    }
 
-    // Backend currently shows JSON routes (no file upload). So we submit JSON only.
-    await onCreate({
-      type: form.type,
-      start_date: form.startDate,
-      end_date: form.endDate,
-      reason: form.reason,
-      // file: not supported unless you add multer in backend
-    });
+    try {
+      setSubmitting(true);
+      
+      // Submit to backend
+      await onCreate({
+        leave_type: form.type,
+        start_date: form.startDate,
+        end_date: form.endDate,
+        reason: form.reason.trim(),
+      });
 
-    setForm(EMPTY_FORM);
-    setFileName("");
+      // Reset form on success
+      setForm(EMPTY_FORM);
+      setFileName("");
+    } catch (err) {
+      console.error("Submit error:", err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -282,7 +368,7 @@ function ApplyLeaveForm({
           <select
             value={form.type}
             onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}
-            disabled={loading}
+            disabled={loading || submitting}
           >
             <option value="Casual">Casual Leave</option>
             <option value="Sick">Sick Leave</option>
@@ -297,7 +383,8 @@ function ApplyLeaveForm({
               type="date"
               value={form.startDate}
               onChange={(e) => setForm((p) => ({ ...p, startDate: e.target.value }))}
-              disabled={loading}
+              disabled={loading || submitting}
+              required
             />
           </div>
 
@@ -307,7 +394,8 @@ function ApplyLeaveForm({
               type="date"
               value={form.endDate}
               onChange={(e) => setForm((p) => ({ ...p, endDate: e.target.value }))}
-              disabled={loading}
+              disabled={loading || submitting}
+              required
             />
           </div>
         </div>
@@ -318,30 +406,34 @@ function ApplyLeaveForm({
             placeholder="Explain your leave reason..."
             value={form.reason}
             onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
-            disabled={loading}
+            disabled={loading || submitting}
+            required
+            rows={4}
           />
         </div>
 
         <div className="form-group">
           <label>Attach File (optional)</label>
-
           <div className="file-upload">
             <Upload size={18} />
             <span>{fileName || "Upload document"}</span>
             <input
               type="file"
               onChange={(e) => setFileName(e.target.files?.[0]?.name || "")}
-              disabled={loading}
+              disabled={loading || submitting}
             />
           </div>
-
           <small className="hint">
-            File upload will work only if backend supports multipart upload (multer).
+            File upload requires backend multipart support (multer).
           </small>
         </div>
 
-        <button type="submit" className="submit-btn" disabled={loading}>
-          {loading ? "Submitting..." : "Submit Leave Request"}
+        <button 
+          type="submit" 
+          className="submit-btn" 
+          disabled={loading || submitting}
+        >
+          {submitting ? "Submitting..." : "Submit Leave Request"}
         </button>
       </form>
     </div>
@@ -362,60 +454,80 @@ function LeaveHistory({
     <div className="leave-history card-box">
       <div className="history-header">
         <h3>Leave History</h3>
+        <p style={{ fontSize: 14, opacity: 0.7, marginTop: 5 }}>
+          {history.length} total request{history.length !== 1 ? "s" : ""}
+        </p>
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Type</th>
-            <th>From</th>
-            <th>To</th>
-            <th>Status</th>
-            <th>Comments</th>
-            <th style={{ width: 140 }}>Action</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {!loading && history.length === 0 ? (
+      <div style={{ overflowX: "auto" }}>
+        <table>
+          <thead>
             <tr>
-              <td colSpan={6} style={{ padding: 20, textAlign: "center" }}>
-                No leave requests found.
-              </td>
+              <th>Type</th>
+              <th>From</th>
+              <th>To</th>
+              <th>Status</th>
+              <th>Reason</th>
+              <th>Comments</th>
+              <th style={{ width: 140 }}>Action</th>
             </tr>
-          ) : (
-            history.map((h) => {
-              const status = h.status.toLowerCase();
-              const canCancel = status === "pending";
+          </thead>
 
-              return (
-                <tr key={h.id}>
-                  <td>{h.type}</td>
-                  <td>{formatShort(h.startDate)}</td>
-                  <td>{formatShort(h.endDate)}</td>
-                  <td>
-                    <span className={`status ${status}`}>{h.status}</span>
-                  </td>
-                  <td>{h.comments || "—"}</td>
-                  <td>
-                    {canCancel ? (
-                      <button
-                        className="btn-cancel"
-                        onClick={() => onCancel(h.id)}
-                        disabled={loading}
-                      >
-                        Cancel
-                      </button>
-                    ) : (
-                      <span style={{ opacity: 0.7 }}>—</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-      </table>
+          <tbody>
+            {!loading && history.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{ padding: 40, textAlign: "center" }}>
+                  <p style={{ opacity: 0.6 }}>No leave requests found.</p>
+                  <small>Click "Apply Leave" to create your first request.</small>
+                </td>
+              </tr>
+            ) : (
+              history.map((h) => {
+                const status = h.status.toLowerCase();
+                const canCancel = status === "pending";
+
+                return (
+                  <tr key={h.id}>
+                    <td>{h.type}</td>
+                    <td>{formatShort(h.startDate)}</td>
+                    <td>{formatShort(h.endDate)}</td>
+                    <td>
+                      <span className={`status ${status}`}>
+                        {h.status}
+                      </span>
+                    </td>
+                    <td style={{ maxWidth: 200 }}>
+                      {h.reason ? (
+                        <span title={h.reason}>
+                          {h.reason.length > 50 
+                            ? h.reason.substring(0, 50) + "..." 
+                            : h.reason}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td>{h.comments || "—"}</td>
+                    <td>
+                      {canCancel ? (
+                        <button
+                          className="btn-cancel"
+                          onClick={() => onCancel(h.id)}
+                          disabled={loading}
+                        >
+                          Cancel
+                        </button>
+                      ) : (
+                        <span style={{ opacity: 0.5 }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

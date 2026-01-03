@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import "./page.scss";
-import { resetPasswordApi } from "@/src/api/api";
+import { changePasswordApi } from "@/src/api/api";
 
 // Eye icon toggle
 const EyeIcon = ({ open }: { open: boolean }) => (
@@ -33,18 +33,13 @@ const EyeIcon = ({ open }: { open: boolean }) => (
 
 export default function ResetPassword() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
-  // If you redirected like: /auth/reset-password?email=...
-  const emailFromQuery = searchParams.get("email") || "";
-
-  const [email, setEmail] = useState(emailFromQuery);
-  const [otp, setOtp] = useState("");
-
-  const [password, setPassword] = useState("");
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
 
-  const [showPass, setShowPass] = useState(false);
+  const [showOldPass, setShowOldPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -57,27 +52,24 @@ export default function ResetPassword() {
     setError("");
     setMessage("");
 
-    if (!email) return setError("Email is required.");
-    if (!otp) return setError("OTP is required.");
-    if (!password || !confirm) return setError("Please fill both password fields.");
-    if (password !== confirm) return setError("Passwords do not match!");
-    if (password.length < 8) return setError("Password must be at least 8 characters.");
+    if (!oldPassword || !newPassword || !confirm)
+      return setError("Please fill all password fields.");
+
+    if (newPassword !== confirm) return setError("Passwords do not match!");
+    if (newPassword.length < 8) return setError("Password must be at least 8 characters.");
 
     setLoading(true);
 
     try {
-      // Backend endpoint: POST /api/auth/reset-password
-      // Typical payload: { email, otp, newPassword }
-      const res = await resetPasswordApi({
-        email,
-        otp,
-        newPassword: password,
+      const res = await changePasswordApi({
+        oldPassword,
+        newPassword,
       });
 
       setMessage(res.data?.message || "Password updated successfully.");
       setSuccess(true);
 
-      // Optional: auto-redirect after success
+      // Optional auto-redirect after success
       // setTimeout(() => router.push("/auth/login"), 1200);
     } catch (err: any) {
       const msg =
@@ -101,66 +93,56 @@ export default function ResetPassword() {
           <p className="subtitle">
             {success
               ? "Your password has been successfully updated."
-              : "Enter the OTP and your new password below."}
+              : "Enter your current and new password below."}
           </p>
         </div>
 
         {!success ? (
           <div className="reset-form">
-            {/* Email (optional editable) */}
+            {/* Old Password */}
             <div className="input-group">
-              <label htmlFor="email" className="input-label">
-                Email
+              <label htmlFor="oldPassword" className="input-label">
+                Current Password
               </label>
               <div className="input-wrapper">
                 <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  id="oldPassword"
+                  type={showOldPass ? "text" : "password"}
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  placeholder="Enter current password"
                   className="input-field"
                 />
-              </div>
-            </div>
-
-            {/* OTP */}
-            <div className="input-group">
-              <label htmlFor="otp" className="input-label">
-                OTP
-              </label>
-              <div className="input-wrapper">
-                <input
-                  id="otp"
-                  type="text"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  placeholder="Enter OTP"
-                  className="input-field"
-                />
+                <button
+                  type="button"
+                  className="toggle-password"
+                  onClick={() => setShowOldPass(!showOldPass)}
+                >
+                  <EyeIcon open={showOldPass} />
+                </button>
               </div>
             </div>
 
             {/* New Password */}
             <div className="input-group">
-              <label htmlFor="password" className="input-label">
+              <label htmlFor="newPassword" className="input-label">
                 New Password
               </label>
               <div className="input-wrapper">
                 <input
-                  id="password"
-                  type={showPass ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  id="newPassword"
+                  type={showNewPass ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Enter new password"
                   className="input-field"
                 />
                 <button
                   type="button"
                   className="toggle-password"
-                  onClick={() => setShowPass(!showPass)}
+                  onClick={() => setShowNewPass(!showNewPass)}
                 >
-                  <EyeIcon open={showPass} />
+                  <EyeIcon open={showNewPass} />
                 </button>
               </div>
             </div>
@@ -176,7 +158,7 @@ export default function ResetPassword() {
                   type={showConfirm ? "text" : "password"}
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
-                  placeholder="Confirm your password"
+                  placeholder="Confirm your new password"
                   className="input-field"
                 />
                 <button

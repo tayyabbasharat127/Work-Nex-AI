@@ -110,8 +110,8 @@ exports.login = async (req, res) => {
 
   const token = jwt.sign(
     {
-      user_id: user.rows[0].user_id,
-      role_id: user.rows[0].role_id,
+      userId: user.rows[0].user_id,
+      role: user.rows[0].role_id,
       organization_id: user.rows[0].organization_id
     },
     process.env.JWT_SECRET,
@@ -151,6 +151,10 @@ exports.forgotPassword = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   const { token, new_password } = req.body;
 
+  if (!token || !new_password) {
+    return res.status(400).json({ message: "Token and new password required" });
+  }
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const hash = await bcrypt.hash(new_password, 10);
@@ -160,41 +164,51 @@ exports.resetPassword = async (req, res) => {
       [hash, decoded.email]
     );
 
-    res.json({ success: true, message: "Password updated" });
-  } catch {
-    res.status(400).json({ message: "Invalid or expired token" });
+    res.json({ success: true, message: "Password updated successfully" });
+
+  } catch (err) {
+    return res.status(400).json({ message: "Invalid or expired token" });
   }
 };
 exports.changePassword = async (req, res) => {
   try {
-    const userId = req.user.id;  // from JWT middleware
+    // Assuming you have a middleware that sets req.user with the decoded JWT
+   // const userEmail = req.user?.email;
+    if (!userEmail) return res.status(401).json({ success: false, message: "Unauthorized" });
+
     const { oldPassword, newPassword } = req.body;
 
-    if (!oldPassword || !newPassword)
+    if (!oldPassword || !newPassword) {
       return res.status(400).json({ success: false, message: "Old & new password required." });
+    }
 
-    const user = await User.findByPk(userId);
-    if (!user)
+    // Fetch user from DB
+    const userResult = await pool.query(`SELECT * FROM users WHERE email=$1`, [userEmail]);
+    if (!userResult.rows.length) {
       return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    const user = userResult.rows[0];
 
     // Compare old password
     const isMatch = await bcrypt.compare(oldPassword, user.password_hash);
-    if (!isMatch)
+    if (!isMatch) {
       return res.status(400).json({ success: false, message: "Old password is incorrect." });
+    }
 
-    // Update password (auto-hashed)
-    await user.update({
-      password_hash: newPassword,
-      must_change_password: false
-    });
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    return res.status(200).json({
-      success: true,
-      message: "Password updated successfully."
-    });
+    // Update password
+    await pool.query(
+      `UPDATE users SET password_hash=$1, must_change_password=false WHERE email=$2`,
+      [hashedPassword, userEmail]
+    );
+
+    res.status(200).json({ success: true, message: "Password updated successfully." });
 
   } catch (error) {
     console.error("Change Password Error:", error);
-    return res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -7,8 +7,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   if (token) {
     config.headers = config.headers || {};
@@ -30,6 +29,8 @@ export const verifyOtpApi = (payload) =>
   api.post(`${API_PREFIX}/auth/verify-otp`, payload);
 export const resetPasswordApi = (payload) =>
   api.post(`${API_PREFIX}/auth/reset-password`, payload);
+export const changePasswordApi = (payload) =>
+  api.post(`${API_PREFIX}/auth/changePassword`, payload);
 
 // Admin Users CRUD
 // Create user API Admin
@@ -48,24 +49,25 @@ export const getMyLeavesApi = () => api.get("/api/leaves/my");
 
 
 // POST /api/attendance/check-in
-export const checkInApi = (payload = {}) =>
-  http.post("/api/attendance/check-in", payload);
+export const checkInApi = (payload = {}) => {
+  console.log("check in clicked", payload);
+  return api.post("/api/attendance/check-in", payload);
+};
 
 // POST /api/attendance/check-out
 export const checkOutApi = (payload = {}) =>
-  http.post("/api/attendance/check-out", payload);
+  api.post("/api/attendance/check-out", payload);
 
 // POST /api/attendance/ping
 export const pingApi = (payload = {}) =>
-  http.post("/api/attendance/ping", payload);
-
+  api.post("/api/attendance/ping", payload);
 // GET /api/attendance/today-status
 export const todayStatusApi = () =>
-  http.get("/api/attendance/today-status");
+  api.get("/api/attendance/today-status");
 
 // GET /api/attendance/history?from=2026-01-01&to=2026-01-31&page=1&limit=10
 export const historyApi = (params = {}) =>
-  http.get("/api/attendance/history", { params });
+  api.get("/api/attendance/history", { params });
 
 export const getAllLeavesApi = () => api.get("/api/leaves"); 
 // OR if your backend route is different, match it exactly (examples below)

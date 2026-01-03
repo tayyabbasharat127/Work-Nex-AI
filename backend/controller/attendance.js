@@ -13,7 +13,7 @@ const getClientIP = (req) => {
 
 exports.checkIn = async (req, res) => {
   try {
-    const userId = req.user.user_id; // from JWT
+    const userId = req.user.userId; // from JWT
     const clientIP = getClientIP(req);
 console.log('Client IP:', clientIP);
     // OPTIONAL: office Wi-Fi validation (example subnet)
@@ -69,7 +69,7 @@ console.log('Client IP:', clientIP);
 
 exports.checkOut = async (req, res) => {
   try {
-    const userId = req.user.user_id;
+    const userId = req.user.userId;
 
     // Find today's active attendance
     const result = await pool.query(
@@ -118,7 +118,7 @@ exports.checkOut = async (req, res) => {
 };
 exports.ping = async (req, res) => {
   try {
-    const userId = req.user.user_id;
+    const userId = req.user.userId;
     const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
     // Must be office Wi-Fi
@@ -160,7 +160,7 @@ exports.ping = async (req, res) => {
 };
 exports.todayStatus = async (req, res) => {
   try {
-    const userId = req.user.user_id;
+    const userId = req.user.userId;
 
     const result = await pool.query(
       `SELECT check_in, check_out, status, source
@@ -187,7 +187,7 @@ exports.todayStatus = async (req, res) => {
 
 exports.history = async (req, res) => {
   try {
-    const userId = req.user.user_id;
+    const userId = req.user.userId;
 
     const result = await pool.query(
       `SELECT check_in, check_out, status, source

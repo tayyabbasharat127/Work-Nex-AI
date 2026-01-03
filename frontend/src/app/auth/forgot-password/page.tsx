@@ -42,7 +42,7 @@ export default function ForgotPassword() {
       setMessage(res.data?.message || "If the email exists, an OTP has been sent.");
 
       // ✅ Redirect to OTP page (include email so OTP page can use it)
-      router.push(`/auth/verify-otp?email=${encodeURIComponent(email)}`);
+      router.push(`/auth/reset-password?email=${encodeURIComponent(email)}`);
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||

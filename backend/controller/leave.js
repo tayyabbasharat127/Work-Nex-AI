@@ -5,13 +5,13 @@ const pool = require('../config/db');
  */
 exports.createLeave = async (req, res) => {
   try {
-    const userId = req.user.user_id;
+    const userId = req.user.userId;
     const { leave_type, start_date, end_date, reason } = req.body;
 
     const result = await pool.query(
       `INSERT INTO leaves
-       (user_id, leave_type, start_date, end_date, reason)
-       VALUES ($1, $2, $3, $4, $5)
+       (user_id, leave_type, start_date, end_date, reason, status)
+       VALUES ($1, $2, $3, $4, $5, 'Pending')
        RETURNING *`,
       [userId, leave_type, start_date, end_date, reason]
     );
@@ -32,7 +32,7 @@ exports.createLeave = async (req, res) => {
  */
 exports.getMyLeaves = async (req, res) => {
   try {
-    const userId = req.user.user_id;
+    const userId = req.user.userId;
 
     const result = await pool.query(
       `SELECT *
@@ -81,14 +81,15 @@ exports.getAllLeaves = async (req, res) => {
  */
 exports.updateLeaveStatus = async (req, res) => {
   try {
-    const adminId = req.user.user_id;
+    const adminId = req.user.userId;
     const { leave_id } = req.params;
     const { status } = req.body; // approved | rejected
 
     const result = await pool.query(
       `UPDATE leaves
        SET status = $1,
-           approved_by = $2
+           approved_by = $2,
+           approved_at = NOW()
        WHERE leave_id = $3
        RETURNING *`,
       [status, adminId, leave_id]
@@ -114,14 +115,14 @@ exports.updateLeaveStatus = async (req, res) => {
  */
 exports.deleteLeave = async (req, res) => {
   try {
-    const userId = req.user.user_id;
+    const userId = req.user.userId;
     const { leave_id } = req.params;
 
     const result = await pool.query(
       `DELETE FROM leaves
        WHERE leave_id = $1
        AND user_id = $2
-       AND status = 'pending'
+       AND status = 'Pending'
        RETURNING *`,
       [leave_id, userId]
     );

@@ -75,13 +75,14 @@ export default function Login() {
       const res = await loginApi({ email, password });
 
       // If backend returns tokens:
+      if (res.data?.token) localStorage.setItem("token", res.data.token);
       if (res.data?.accessToken) localStorage.setItem("accessToken", res.data.accessToken);
       if (res.data?.refreshToken) localStorage.setItem("refreshToken", res.data.refreshToken);
 
       // Optional: store user payload if backend returns it
       if (res.data?.user) localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      router.push("/dashboard/admin/main");
+      router.push("/dashboard/employee/main");
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||

@@ -16,6 +16,31 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Log detailed error information
+    console.log('=== API Error Details ===');
+    console.log('Error:', error.message);
+    console.log('Code:', error.code);
+    console.log('Status:', error.response?.status);
+    console.log('Network Error:', error.code === 'NETWORK_ERROR' || error.code === 'ECONNREFUSED');
+    
+    // Check for network errors (WiFi disconnect)
+    if (error.code === 'NETWORK_ERROR' || 
+        error.code === 'ECONNREFUSED' ||
+        error.message?.includes('Network Error') ||
+        !window.navigator.onLine) {
+      console.log('📶 Network disconnected detected in API interceptor');
+      
+      // Trigger custom event for network disconnect
+      window.dispatchEvent(new CustomEvent('network-disconnect'));
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 const API_PREFIX = "/api";
 
 // Authentication
@@ -59,8 +84,18 @@ export const checkOutApi = (payload = {}) =>
   api.post("/api/attendance/check-out", payload);
 
 // POST /api/attendance/ping
-export const pingApi = (payload = {}) =>
-  api.post("/api/attendance/ping", payload);
+export const getDeviceId = () => {
+  let id = localStorage.getItem("device_id");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("device_id", id);
+  }
+  return id;
+};
+export const pingApi = () =>
+  api.post("/api/attendance/ping", {
+    deviceId: getDeviceId()
+  });
 // GET /api/attendance/today-status
 export const todayStatusApi = () =>
   api.get("/api/attendance/today-status");

@@ -4,7 +4,7 @@
 import React, { useState } from "react";
 import "./page.scss";
 import { useRouter } from "next/navigation";
-import { loginApi } from "@/src/api/api";
+import { loginApi,getDeviceId } from "@/src/api/api";
 
 // Material UI Icons (SVG)
 const EmailIcon = () => (
@@ -72,7 +72,7 @@ export default function Login() {
     setError("");
 
     try {
-      const res = await loginApi({ email, password });
+      const res = await loginApi({ email, password, deviceId: getDeviceId() });
 
       // If backend returns tokens:
       if (res.data?.token) localStorage.setItem("token", res.data.token);

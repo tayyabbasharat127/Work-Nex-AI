@@ -1,5 +1,5 @@
 import React from "react";
-import "./statsCard.scss";
+import "./statsCard.css";
 
 interface Stat {
   value?: number | string;

@@ -1,0 +1,206 @@
+/* Attendance Dashboard.css - Converted from SCSS */
+
+.attendance-dashboard {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e8f0fe 0%, #f3e5f5 100%);
+}
+
+/* Main Content */
+.attendance-dashboard .main-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.attendance-dashboard .main-content .header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 2rem;
+}
+
+/* Summary Stats */
+.attendance-dashboard .main-content .stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.attendance-dashboard .main-content .stats-row .stat-card {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.attendance-dashboard .main-content .stats-row .stat-card h4 {
+  font-size: 14px;
+  color: #8b92a9;
+  margin-bottom: 0.5rem;
+}
+
+.attendance-dashboard .main-content .stats-row .stat-card .stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: #6c5ce7;
+}
+
+.attendance-dashboard .main-content .stats-row .stat-card .stat-trend {
+  font-size: 13px;
+  margin-top: 0.25rem;
+}
+
+.attendance-dashboard .main-content .stats-row .stat-card .stat-trend.up {
+  color: #22c55e;
+}
+
+.attendance-dashboard .main-content .stats-row .stat-card .stat-trend.down {
+  color: #ef4444;
+}
+
+/* Layout Grid */
+.attendance-dashboard .main-content .attendance-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 1024px) {
+  .attendance-dashboard .main-content .attendance-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Calendar Section */
+.attendance-dashboard .main-content .attendance-grid .calendar-section {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.attendance-dashboard .main-content .attendance-grid .calendar-section .calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.attendance-dashboard .main-content .attendance-grid .calendar-section .calendar-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3436;
+}
+
+.attendance-dashboard .main-content .attendance-grid .calendar-section .calendar-header button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #8b92a9;
+  transition: color 0.2s;
+}
+
+.attendance-dashboard .main-content .attendance-grid .calendar-section .calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.attendance-dashboard .main-content .attendance-grid .calendar-section .calendar-weekdays span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b92a9;
+}
+
+.attendance-dashboard .main-content .attendance-grid .calendar-section .calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.attendance-dashboard .main-content .attendance-grid .calendar-section .calendar-days .calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #f5f6fa;
+  color: #8b92a9;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.attendance-dashboard .main-content .attendance-grid .calendar-section .calendar-days .calendar-day.present {
+  background: #22c55e;
+  color: #ffffff;
+}
+
+.attendance-dashboard .main-content .attendance-grid .calendar-section .calendar-days .calendar-day.absent {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.attendance-dashboard .main-content .attendance-grid .calendar-section .calendar-days .calendar-day.late {
+  background: #ff8c42;
+  color: #ffffff;
+}
+
+.attendance-dashboard .main-content .attendance-grid .calendar-section .calendar-days .calendar-day:hover {
+  opacity: 0.85;
+}
+
+/* Table Section */
+.attendance-dashboard .main-content .attendance-grid .table-section {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.attendance-dashboard .main-content .attendance-grid .table-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3436;
+  margin-bottom: 1rem;
+}
+
+.attendance-dashboard .main-content .attendance-grid .table-section table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.attendance-dashboard .main-content .attendance-grid .table-section table th,
+.attendance-dashboard .main-content .attendance-grid .table-section table td {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid #e8eaf6;
+}
+
+.attendance-dashboard .main-content .attendance-grid .table-section table th {
+  background: #f5f6fa;
+  color: #8b92a9;
+}
+
+.attendance-dashboard .main-content .attendance-grid .table-section table td.present {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.attendance-dashboard .main-content .attendance-grid .table-section table td.absent {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.attendance-dashboard .main-content .attendance-grid .table-section table td.late {
+  color: #ff8c42;
+  font-weight: 600;
+}
+

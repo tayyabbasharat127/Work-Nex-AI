@@ -1,5 +1,5 @@
 import React from "react";
-import "./searchBox.scss";
+import "./searchBox.css";
 import { Search } from "lucide-react";
 
 export const SearchBox: React.FC = () => {

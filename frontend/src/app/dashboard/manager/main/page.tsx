@@ -12,7 +12,7 @@ import {
   XCircle,
   ClipboardList,
 } from "lucide-react";
-import "./page.scss";
+import "./page.css";
 
 const ManagerDashboardPage: React.FC = () => {
   const kpis = [

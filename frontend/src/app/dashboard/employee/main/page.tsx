@@ -13,7 +13,7 @@ import {
   Activity,
 } from "lucide-react";
 
-import "./page.scss";
+import "./page.css";
 import SidebarEmployee from "@/src/app/components/sideBar/employee/sidebar";
 
 export default function EmployeeDashboard() {

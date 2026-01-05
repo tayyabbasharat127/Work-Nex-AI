@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import SidebarEmployee from "@/src/app/components/sideBar/employee/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import { Send, Bot, User } from "lucide-react";
-import "./page.scss";
+import "./page.css";
 
 
 type ChatRole = "user" | "assistant";

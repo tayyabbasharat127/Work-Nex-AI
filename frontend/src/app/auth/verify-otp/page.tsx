@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import "./page.scss";
+import "./page.css";
 import { verifyOtpApi, forgotPasswordApi } from "@/src/api/api";
 
 export default function VerifyOTP() {

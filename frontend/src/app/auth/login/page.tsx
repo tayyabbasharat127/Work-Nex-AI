@@ -2,7 +2,7 @@
 
 // src/app/auth/Login.tsx
 import React, { useState } from "react";
-import "./page.scss";
+import "./page.css";
 import { useRouter } from "next/navigation";
 import { loginApi,getDeviceId } from "@/src/api/api";
 

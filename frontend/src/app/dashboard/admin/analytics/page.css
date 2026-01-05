@@ -1,0 +1,156 @@
+/* Analytics Dashboard.css - Converted from SCSS */
+
+.analytics-dashboard {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e8f0fe 0%, #f3e5f5 100%);
+}
+
+/* Main Content */
+.analytics-dashboard .main-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.analytics-dashboard .main-content .header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 2rem;
+}
+
+/* KPI Grid */
+.analytics-dashboard .main-content .kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.analytics-dashboard .main-content .kpi-grid .kpi-card {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.analytics-dashboard .main-content .kpi-grid .kpi-card h4 {
+  font-size: 14px;
+  color: #8b92a9;
+  margin-bottom: 0.5rem;
+}
+
+.analytics-dashboard .main-content .kpi-grid .kpi-card .kpi-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: #6c5ce7;
+}
+
+.analytics-dashboard .main-content .kpi-grid .kpi-card .kpi-trend {
+  font-size: 13px;
+  margin-top: 0.25rem;
+}
+
+.analytics-dashboard .main-content .kpi-grid .kpi-card .kpi-trend.up {
+  color: #22c55e;
+}
+
+.analytics-dashboard .main-content .kpi-grid .kpi-card .kpi-trend.down {
+  color: #ef4444;
+}
+
+/* Charts Row */
+.analytics-dashboard .main-content .charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 1024px) {
+  .analytics-dashboard .main-content .charts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.analytics-dashboard .main-content .charts-row .chart-card {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.analytics-dashboard .main-content .charts-row .chart-card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3436;
+  margin-bottom: 1rem;
+}
+
+.analytics-dashboard .main-content .charts-row .chart-card .line-chart {
+  width: 100%;
+  height: 200px;
+  margin-bottom: 1rem;
+}
+
+.analytics-dashboard .main-content .charts-row .chart-card .chart-legend {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 12px;
+  color: #8b92a9;
+}
+
+.analytics-dashboard .main-content .charts-row .chart-card .chart-legend .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.analytics-dashboard .main-content .charts-row .chart-card .chart-legend .legend-item .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.analytics-dashboard .main-content .charts-row .chart-card .chart-legend .legend-item .dot.purple {
+  background: #6c5ce7;
+}
+
+.analytics-dashboard .main-content .charts-row .chart-card .chart-legend .legend-item .dot.orange {
+  background: #ff8c42;
+}
+
+.analytics-dashboard .main-content .charts-row .chart-card.bar-chart .bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.analytics-dashboard .main-content .charts-row .chart-card.bar-chart .bars .bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.analytics-dashboard .main-content .charts-row .chart-card.bar-chart .bars .bar-row .bar-label {
+  width: 40px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b92a9;
+}
+
+.analytics-dashboard .main-content .charts-row .chart-card.bar-chart .bars .bar-row .bar-container {
+  flex: 1;
+  height: 8px;
+  background: #f5f6fa;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.analytics-dashboard .main-content .charts-row .chart-card.bar-chart .bars .bar-row .bar-container .bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+

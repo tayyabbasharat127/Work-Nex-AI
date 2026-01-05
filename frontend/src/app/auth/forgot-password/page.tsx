@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import "./page.scss";
+import "./page.css";
 import { forgotPasswordApi } from "@/src/api/api";
 
 // Simple Mail Icon

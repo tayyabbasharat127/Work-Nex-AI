@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signupApi } from "@/src/api/api";
+import "./page.css";
 
 export default function Register() {
   const router = useRouter();

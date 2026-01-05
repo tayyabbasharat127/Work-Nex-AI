@@ -1,0 +1,37 @@
+/* searchBox.css - Converted from SCSS */
+
+.header {
+  margin-bottom: 30px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.header .search-box {
+  width: 300px;
+  background: #ffffff;
+  border: 1px solid #e8eaf6;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.header .search-box input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 12px 0;
+  font-size: 14px;
+  background: transparent;
+}
+
+.header .search-box input::placeholder {
+  color: #8b92a9;
+}
+
+.header .search-box svg {
+  color: #6c5ce7;
+  cursor: pointer;
+}
+

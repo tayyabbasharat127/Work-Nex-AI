@@ -1,0 +1,221 @@
+/* Leaves Dashboard.css - Converted from SCSS */
+
+.leave-dashboard {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e8f0fe 0%, #f3e5f5 100%);
+}
+
+.leave-dashboard .main-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.leave-dashboard .main-content .header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 2rem;
+}
+
+/* KPI Cards */
+.leave-dashboard .main-content .kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.leave-dashboard .main-content .kpi-grid .kpi-card {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.leave-dashboard .main-content .kpi-grid .kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+}
+
+.leave-dashboard .main-content .kpi-grid .kpi-card h4 {
+  font-size: 14px;
+  color: #8b92a9;
+  margin-bottom: 0.5rem;
+}
+
+.leave-dashboard .main-content .kpi-grid .kpi-card .kpi-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: #6c5ce7;
+}
+
+.leave-dashboard .main-content .kpi-grid .kpi-card .kpi-trend {
+  font-size: 13px;
+  margin-top: 0.25rem;
+}
+
+.leave-dashboard .main-content .kpi-grid .kpi-card .kpi-trend.up {
+  color: #22c55e;
+}
+
+.leave-dashboard .main-content .kpi-grid .kpi-card .kpi-trend.down {
+  color: #ef4444;
+}
+
+/* Layout Grid */
+.leave-dashboard .main-content .leave-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 1024px) {
+  .leave-dashboard .main-content .leave-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Calendar */
+.leave-dashboard .main-content .leave-grid .calendar-card {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.leave-dashboard .main-content .leave-grid .calendar-card .calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.leave-dashboard .main-content .leave-grid .calendar-card .calendar-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3436;
+}
+
+.leave-dashboard .main-content .leave-grid .calendar-card .calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.leave-dashboard .main-content .leave-grid .calendar-card .calendar-weekdays span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b92a9;
+}
+
+.leave-dashboard .main-content .leave-grid .calendar-card .calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.leave-dashboard .main-content .leave-grid .calendar-card .calendar-days .calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #f5f6fa;
+  color: #8b92a9;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.leave-dashboard .main-content .leave-grid .calendar-card .calendar-days .calendar-day.approved {
+  background: #22c55e;
+  color: #ffffff;
+}
+
+.leave-dashboard .main-content .leave-grid .calendar-card .calendar-days .calendar-day.pending {
+  background: #ff8c42;
+  color: #ffffff;
+}
+
+.leave-dashboard .main-content .leave-grid .calendar-card .calendar-days .calendar-day:hover:not(.approved):not(.pending) {
+  background: #eaeaea;
+}
+
+.leave-dashboard .main-content .leave-grid .calendar-card .legend {
+  margin-top: 1rem;
+  font-size: 12px;
+  color: #8b92a9;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.leave-dashboard .main-content .leave-grid .calendar-card .legend .approved-dot,
+.leave-dashboard .main-content .leave-grid .calendar-card .legend .pending-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.leave-dashboard .main-content .leave-grid .calendar-card .legend .approved-dot {
+  background: #22c55e;
+}
+
+.leave-dashboard .main-content .leave-grid .calendar-card .legend .pending-dot {
+  background: #ff8c42;
+}
+
+/* Table */
+.leave-dashboard .main-content .leave-grid .table-section {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.leave-dashboard .main-content .leave-grid .table-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3436;
+  margin-bottom: 1rem;
+}
+
+.leave-dashboard .main-content .leave-grid .table-section table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.leave-dashboard .main-content .leave-grid .table-section table th,
+.leave-dashboard .main-content .leave-grid .table-section table td {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid #e8eaf6;
+}
+
+.leave-dashboard .main-content .leave-grid .table-section table th {
+  background: #f5f6fa;
+  color: #8b92a9;
+}
+
+.leave-dashboard .main-content .leave-grid .table-section table td.approved {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.leave-dashboard .main-content .leave-grid .table-section table td.pending {
+  color: #ff8c42;
+  font-weight: 600;
+}
+
+.leave-dashboard .main-content .leave-grid .table-section table td.rejected {
+  color: #ef4444;
+  font-weight: 600;
+}
+

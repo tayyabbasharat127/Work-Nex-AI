@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import SidebarAdmin from "@/src/app/components/sideBar/admin/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
-import "./page.scss";
+import "./page.css";
 
 import {
   getAllLeavesApi,

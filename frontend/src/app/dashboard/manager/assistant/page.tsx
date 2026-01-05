@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import SidebarManager from "@/src/app/components/sideBar/manager/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import { Bot, User, Send } from "lucide-react";
-import "./page.scss";
+import "./page.css";
 
 const ManagerAssistantPage: React.FC = () => {
   const [query, setQuery] = useState("");

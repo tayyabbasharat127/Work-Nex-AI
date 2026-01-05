@@ -22,7 +22,7 @@ import {
   TrendingUp,
   LayoutDashboard,
 } from "lucide-react";
-import "./sidebar.scss";
+import "./sidebar.css";
 
 const SidebarManager: React.FC = () => {
   return (

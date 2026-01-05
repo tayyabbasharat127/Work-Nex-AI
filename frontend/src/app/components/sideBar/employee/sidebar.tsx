@@ -21,7 +21,7 @@ import {
   Bot,
   TrendingUp
 } from "lucide-react";
-import "./sidebar.scss";
+import "./sidebar.css";
 
 const SidebarEmployee: React.FC = () => {
   return (

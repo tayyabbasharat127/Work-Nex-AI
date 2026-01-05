@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import "./page.scss";
+import "./page.css";
 import {
   ArrowRight,
   Brain,

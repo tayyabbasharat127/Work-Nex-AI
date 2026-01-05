@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import "./page.scss";
+import { changePasswordApi } from "@/src/api/api";
 
 // Eye icon toggle
 const EyeIcon = ({ open }: { open: boolean }) => (
@@ -30,24 +32,55 @@ const EyeIcon = ({ open }: { open: boolean }) => (
 );
 
 export default function ResetPassword() {
-  const [password, setPassword] = useState("");
+  const router = useRouter();
+
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPass, setShowPass] = useState(false);
+
+  const [showOldPass, setShowOldPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const handleSubmit = () => {
-    if (!password || !confirm) return alert("Please fill both fields.");
-    if (password !== confirm) return alert("Passwords do not match!");
-    if (password.length < 8)
-      return alert("Password must be at least 8 characters.");
+  const [error, setError] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
+
+  const handleSubmit = async () => {
+    setError("");
+    setMessage("");
+
+    if (!oldPassword || !newPassword || !confirm)
+      return setError("Please fill all password fields.");
+
+    if (newPassword !== confirm) return setError("Passwords do not match!");
+    if (newPassword.length < 8) return setError("Password must be at least 8 characters.");
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+
+    try {
+      const res = await changePasswordApi({
+        oldPassword,
+        newPassword,
+      });
+
+      setMessage(res.data?.message || "Password updated successfully.");
       setSuccess(true);
-    }, 2000);
+
+      // Optional auto-redirect after success
+      // setTimeout(() => router.push("/auth/login"), 1200);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Reset password failed";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -60,32 +93,56 @@ export default function ResetPassword() {
           <p className="subtitle">
             {success
               ? "Your password has been successfully updated."
-              : "Enter your new password below."}
+              : "Enter your current and new password below."}
           </p>
         </div>
 
         {!success ? (
           <div className="reset-form">
+            {/* Old Password */}
+            <div className="input-group">
+              <label htmlFor="oldPassword" className="input-label">
+                Current Password
+              </label>
+              <div className="input-wrapper">
+                <input
+                  id="oldPassword"
+                  type={showOldPass ? "text" : "password"}
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  placeholder="Enter current password"
+                  className="input-field"
+                />
+                <button
+                  type="button"
+                  className="toggle-password"
+                  onClick={() => setShowOldPass(!showOldPass)}
+                >
+                  <EyeIcon open={showOldPass} />
+                </button>
+              </div>
+            </div>
+
             {/* New Password */}
             <div className="input-group">
-              <label htmlFor="password" className="input-label">
+              <label htmlFor="newPassword" className="input-label">
                 New Password
               </label>
               <div className="input-wrapper">
                 <input
-                  id="password"
-                  type={showPass ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  id="newPassword"
+                  type={showNewPass ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Enter new password"
                   className="input-field"
                 />
                 <button
                   type="button"
                   className="toggle-password"
-                  onClick={() => setShowPass(!showPass)}
+                  onClick={() => setShowNewPass(!showNewPass)}
                 >
-                  <EyeIcon open={showPass} />
+                  <EyeIcon open={showNewPass} />
                 </button>
               </div>
             </div>
@@ -101,7 +158,7 @@ export default function ResetPassword() {
                   type={showConfirm ? "text" : "password"}
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
-                  placeholder="Confirm your password"
+                  placeholder="Confirm your new password"
                   className="input-field"
                 />
                 <button
@@ -130,6 +187,10 @@ export default function ResetPassword() {
               )}
               <span className="button-glow"></span>
             </button>
+
+            {/* Messages */}
+            {error && <p className="error-text">{error}</p>}
+            {message && !error && <p className="success-text">{message}</p>}
 
             <a href="/auth/login" className="back-link">
               ← Back to Login

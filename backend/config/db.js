@@ -3,7 +3,7 @@ const { Pool } = require('pg');
 const pool = new Pool({
   user: 'postgres',          // or hr_admin (if you created that user)
   host: 'localhost',
-  database: 'hr_dashboard',
+  database: 'WORKNEX-AI',
   password: 'underrated123', // your PostgreSQL password
   port: 5432,
 });

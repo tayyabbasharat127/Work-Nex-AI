@@ -1,79 +1,24 @@
 "use client";
 
 import React, { useState } from "react";
-import "./page.scss";
-
-// Icons initialization
-const UserIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 12c2.67 0 8 1.34 8 4v4H4v-4c0-2.66 5.33-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
-  </svg>
-);
-
-const EmailIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-    <path
-      d="M20 4H4a2 2 0 0 0-2 2v12a2 
-    2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 
-    2 0 0 0-2-2zm0 4l-8 5-8-5V6l8 5 
-    8-5v2z"
-    />
-  </svg>
-);
-
-const LockIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-    <path
-      d="M12 17a2 2 0 1 0 0-4 2 
-    2 0 0 0 0 4zm6-9h-1V6a5 5 0 0 
-    0-10 0v2H6a2 2 0 0 0-2 
-    2v10a2 2 0 0 0 2 2h12a2 
-    2 0 0 0 2-2V10a2 2 0 0 
-    0-2-2zm-3 0H9V6a3 3 0 0 
-    1 6 0v2z"
-    />
-  </svg>
-);
-
-const VisibilityIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-    <path
-      d="M12 4.5C7 4.5 2.73 7.61 1 
-    12c1.73 4.39 6 7.5 11 
-    7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 
-    12.5a5 5 0 1 1 0-10 5 5 
-    0 0 1 0 10z"
-    />
-  </svg>
-);
-
-const VisibilityOffIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-    <path
-      d="M2 4.27L3.28 3l17.46 
-    17.46L20.73 22l-2.5-2.5A10.939 
-    10.939 0 0 1 12 19.5C7 19.5 
-    2.73 16.39 1 12a10.94 10.94 0 
-    0 1 4.27-5.73L2 4.27zM12 
-    7a5 5 0 0 1 5 5c0 .82-.2 
-    1.58-.54 2.25l-6.71-6.71C10.42 
-    7.2 11.18 7 12 7z"
-    />
-  </svg>
-);
+import { useRouter } from "next/navigation";
+import { signupApi } from "@/src/api/api";
 
 export default function Register() {
+  const router = useRouter();
+
   const [form, setForm] = useState({
-    fullName: "",
-    email: "",
+    organizationName: "",
+    organizationEmail: "",
+    adminName: "",
+    adminEmail: "",
+    subscriptionPlan: "basic",
     password: "",
     confirmPassword: "",
-    role: "",
   });
 
-  const [showPass, setShowPass] = useState<boolean>(false);
-  const [showConfirm, setShowConfirm] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -81,175 +26,193 @@ export default function Register() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    setError("");
     setLoading(true);
-    setTimeout(() => {
-      console.log("Registered:", form);
+
+    const {
+      organizationName,
+      organizationEmail,
+      adminName,
+      adminEmail,
+      subscriptionPlan,
+      password,
+      confirmPassword,
+    } = form;
+
+    if (
+      !organizationName ||
+      !organizationEmail ||
+      !adminName ||
+      !adminEmail ||
+      !password ||
+      !confirmPassword
+    ) {
+      setError("All fields are required");
       setLoading(false);
-    }, 2000);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // ✅ EXACT backend payload
+      await signupApi({
+        organization_name: organizationName,
+        organization_email: organizationEmail,
+        admin_name: adminName,
+        admin_email: adminEmail,
+        password,
+        subscription_plan: subscriptionPlan,
+      });
+
+      router.push(
+        `/auth/verify-otp?email=${encodeURIComponent(adminEmail)}`
+      );
+    } catch (err: any) {
+        console.log("error",err);
+      setError(
+      
+        err?.response?.data?.message ||
+          err?.message ||
+          "Signup failed"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="register-container">
-      <div className="register-card">
-        <div className="register-header">
-          <h1 className="title">Create Account</h1>
-          <p className="subtitle">Join us and start your journey today</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-200 px-4">
+      <div className="w-full max-w-xl bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200 p-8 md:p-10">
+        
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Create Organization
+          </h1>
+          <p className="text-gray-600 mt-2 text-sm">
+            Register your organization and admin account
+          </p>
         </div>
 
-        <div className="register-form">
-          {/* Full Name */}
-          <div className="input-group">
-            <label htmlFor="fullName" className="input-label">
-              Full Name
-            </label>
-            <div className="input-wrapper">
-              <span className="input-icon">
-                <UserIcon />
-              </span>
-              <input
-                id="fullName"
-                name="fullName"
-                type="text"
-                placeholder="Enter your full name"
-                value={form.fullName}
-                onChange={handleChange}
-                className="input-field"
-                required
-              />
-            </div>
-          </div>
+        {/* Organization Section */}
+        <div className="mb-6">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
+            Organization Details
+          </p>
 
-          {/* Email */}
-          <div className="input-group">
-            <label htmlFor="email" className="input-label">
-              Email
-            </label>
-            <div className="input-wrapper">
-              <span className="input-icon">
-                <EmailIcon />
-              </span>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="Enter your email"
-                value={form.email}
-                onChange={handleChange}
-                className="input-field"
-                required
-              />
-            </div>
-          </div>
+          <Input
+            name="organizationName"
+            placeholder="Organization Name"
+            value={form.organizationName}
+            onChange={handleChange}
+          />
 
-          {/* Password */}
-          <div className="input-group">
-            <label htmlFor="password" className="input-label">
-              Password
-            </label>
-            <div className="input-wrapper">
-              <span className="input-icon">
-                <LockIcon />
-              </span>
-              <input
-                id="password"
-                name="password"
-                type={showPass ? "text" : "password"}
-                placeholder="Enter your password"
-                value={form.password}
-                onChange={handleChange}
-                className="input-field"
-                required
-              />
-              <button
-                type="button"
-                className="toggle-password"
-                onClick={() => setShowPass(!showPass)}
-              >
-                {showPass ? <VisibilityOffIcon /> : <VisibilityIcon />}
-              </button>
-            </div>
-          </div>
+          <Input
+            name="organizationEmail"
+            type="email"
+            placeholder="Organization Email"
+            value={form.organizationEmail}
+            onChange={handleChange}
+          />
+        </div>
 
-          {/* Confirm Password */}
-          <div className="input-group">
-            <label htmlFor="confirmPassword" className="input-label">
-              Confirm Password
-            </label>
-            <div className="input-wrapper">
-              <span className="input-icon">
-                <LockIcon />
-              </span>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type={showConfirm ? "text" : "password"}
-                placeholder="Confirm your password"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                className="input-field"
-                required
-              />
-              <button
-                type="button"
-                className="toggle-password"
-                onClick={() => setShowConfirm(!showConfirm)}
-              >
-                {showConfirm ? <VisibilityOffIcon /> : <VisibilityIcon />}
-              </button>
-            </div>
-          </div>
+        {/* Admin Section */}
+        <div className="mb-6">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
+            Admin Account
+          </p>
 
-          {/* Role Dropdown */}
-          <div className="input-group">
-            <label htmlFor="role" className="input-label">
-              Role
-            </label>
-            <div className="input-wrapper">
-              <select
-                id="role"
-                name="role"
-                value={form.role}
-                onChange={handleChange}
-                className="input-field select-field"
-                required
-              >
-                <option value="">Select your role</option>
-                <option value="teacher">Teacher</option>
-                <option value="admin">Admin</option>
-                <option value="employee">Employee</option>
-              </select>
-            </div>
-          </div>
+          <Input
+            name="adminName"
+            placeholder="Admin Full Name"
+            value={form.adminName}
+            onChange={handleChange}
+          />
 
-          {/* Buttons */}
-          <div className="button-group">
-            <button
-              type="button"
-              className={`submit-button ${loading ? "loading" : ""}`}
-              disabled={loading}
-              onClick={handleSubmit}
-            >
-              {loading ? (
-                <>
-                  <span className="spinner"></span> Registering...
-                </>
-              ) : (
-                "Register"
-              )}
-              <span className="button-glow"></span>
-            </button>
+          <Input
+            name="adminEmail"
+            type="email"
+            placeholder="Admin Email"
+            value={form.adminEmail}
+            onChange={handleChange}
+          />
+        </div>
 
-            <button
-              type="button"
-              className="back-button"
-              onClick={() => (window.location.href = "/auth/login")}
-            >
-              ← Back to Login
-            </button>
-          </div>
+        {/* Subscription */}
+        <div className="mb-6">
+          <select
+            name="subscriptionPlan"
+            value={form.subscriptionPlan}
+            onChange={handleChange}
+            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-cyan-200 focus:border-cyan-400"
+          >
+            <option value="basic">Basic Plan</option>
+            <option value="pro">Pro Plan</option>
+            <option value="enterprise">Enterprise Plan</option>
+          </select>
+        </div>
+
+        {/* Passwords */}
+        <Input
+          name="password"
+          type="password"
+          placeholder="Password"
+          value={form.password}
+          onChange={handleChange}
+        />
+
+        <Input
+          name="confirmPassword"
+          type="password"
+          placeholder="Confirm Password"
+          value={form.confirmPassword}
+          onChange={handleChange}
+        />
+
+        {/* Error */}
+        {error && (
+          <p className="mt-4 text-sm text-red-600 text-center font-medium">
+            {error}
+          </p>
+        )}
+
+        {/* Buttons */}
+        <div className="mt-8 space-y-4">
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {loading ? "Creating account..." : "Create Account"}
+          </button>
+
+          <button
+            onClick={() => router.push("/auth/login")}
+            className="w-full py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition"
+          >
+            ← Back to Login
+          </button>
         </div>
       </div>
     </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Reusable Input Component                                                   */
+/* -------------------------------------------------------------------------- */
+
+function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className="w-full mb-4 rounded-lg border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-cyan-200 focus:border-cyan-400"
+    />
   );
 }

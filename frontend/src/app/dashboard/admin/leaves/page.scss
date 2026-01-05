@@ -11,6 +11,31 @@ $border-light: #e8eaf6;
 $mobile: 768px;
 $tablet: 1024px;
 
+.banner { margin: 12px 0; padding: 10px 12px; border-radius: 10px; font-size: 14px; }
+.banner-error { background: #ffe8e8; border: 1px solid #ffb5b5; color: #7a0b0b; }
+.banner-loading { background: #eef6ff; border: 1px solid #cfe4ff; color: #0b3a7a; }
+
+.rejected-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin: 0 8px 0 16px; background: #ef4444; }
+.pending-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin: 0 8px 0 16px; background: #f59e0b; }
+.approved-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin: 0 8px 0 16px; background: #22c55e; }
+
+.btn-refresh, .btn-approve, .btn-reject, .btn-delete {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  cursor: pointer;
+}
+
+.btn-approve { border-color: #86efac; }
+.btn-reject { border-color: #fca5a5; }
+.btn-delete { border-color: #d1d5db; }
+
+td.approved { color: #16a34a; font-weight: 600; }
+td.pending { color: #d97706; font-weight: 600; }
+td.rejected { color: #dc2626; font-weight: 600; }
+
+
 .leave-dashboard {
   display: flex;
   min-height: 100vh;

@@ -1,10 +1,12 @@
 "use client";
 
-// LoginPage.tsx
+// src/app/auth/Login.tsx
 import React, { useState } from "react";
 import "./page.scss";
+import { useRouter } from "next/navigation";
+import { loginApi,getDeviceId } from "@/src/api/api";
 
-// Material UI Icons (using Unicode equivalents for compatibility)
+// Material UI Icons (SVG)
 const EmailIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
     <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
@@ -57,19 +59,41 @@ const GitHubIcon = () => (
 );
 
 export default function Login() {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>("");
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setIsLoading(true);
+    setError("");
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Login:", { email, password });
+    try {
+      const res = await loginApi({ email, password, deviceId: getDeviceId() });
+
+      // If backend returns tokens:
+      if (res.data?.token) localStorage.setItem("token", res.data.token);
+      if (res.data?.accessToken) localStorage.setItem("accessToken", res.data.accessToken);
+      if (res.data?.refreshToken) localStorage.setItem("refreshToken", res.data.refreshToken);
+
+      // Optional: store user payload if backend returns it
+      if (res.data?.user) localStorage.setItem("user", JSON.stringify(res.data.user));
+
+      router.push("/dashboard/employee/main");
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Login failed";
+      setError(msg);
+      console.log("Error", err);
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   const handleSocialLogin = (provider: string): void => {
@@ -165,6 +189,9 @@ export default function Login() {
             </span>
             <span className="button-glow"></span>
           </button>
+
+          {/* Error Message */}
+          {error && <p className="error-text">{error}</p>}
         </div>
 
         {/* Divider */}

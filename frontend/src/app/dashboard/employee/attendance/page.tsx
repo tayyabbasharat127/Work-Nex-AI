@@ -1,157 +1,251 @@
 "use client";
 
-import React, { useState } from "react";
-import Sidebar from "@/src/app/components/sideBar/admin/sidebar";
+import React, { useEffect, useState } from "react";
+import SidebarEmployee from "@/src/app/components/sideBar/employee/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
-import { Clock, CalendarCheck, LogIn, LogOut, Download } from "lucide-react";
+import { Download } from "lucide-react";
+
+import {
+  todayStatusApi,
+  historyApi,
+  pingApi,
+  api,
+} from "@/src/api/api";
 
 import "./page.scss";
-import SidebarEmployee from "@/src/app/components/sideBar/employee/sidebar";
 
 export default function EmployeeAttendancePage() {
-  // KPI DATA
-  const kpis = [
-    { label: "Working Days (This Month)", value: "22" },
-    { label: "Days Present", value: "19" },
-    { label: "Days Absent", value: "3" },
-    { label: "Avg Daily Hours", value: "7.4h" },
-  ];
+  const [today, setToday] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // sample attendance records
-  const attendance = [
-    {
-      date: "Jan 18, 2025",
-      checkIn: "09:02 AM",
-      checkOut: "05:46 PM",
-      hours: "8h 44m",
-      status: "Present",
-    },
-    {
-      date: "Jan 17, 2025",
-      checkIn: "—",
-      checkOut: "—",
-      hours: "—",
-      status: "Absent",
-    },
-    {
-      date: "Jan 16, 2025",
-      checkIn: "09:10 AM",
-      checkOut: "05:30 PM",
-      hours: "8h 20m",
-      status: "Present",
-    },
-  ];
+  /* ------------------ AUTO PING + WIFI DISCONNECT LOGIC ------------------ */
+  useEffect(() => {
+    let isOnline = navigator.onLine;
+    let lastSuccessfulPing = Date.now();
+    let checkoutTimeout: NodeJS.Timeout | null = null;
+
+    const pingOffice = async () => {
+      try {
+        await pingApi();
+        lastSuccessfulPing = Date.now();
+        console.log("✅ Office ping successful - Attendance marked automatically");
+        
+        // Clear any pending checkout timeout
+        if (checkoutTimeout) {
+          clearTimeout(checkoutTimeout);
+        }
+        
+      } catch (err: any) {
+        console.log("❌ Network error or not in office:", err.message);
+        
+        // Check if it's a network error (WiFi disconnected)
+        if (err.code === 'NETWORK_ERROR' || 
+            err.code === 'ECONNREFUSED' || 
+            err.message?.includes('Network Error') ||
+            err.message?.includes('fetch') ||
+            !navigator.onLine) {
+          console.log("📶 Network disconnected - Immediate checkout");
+          handleImmediateCheckout();
+        }
+      }
+    };
+
+    const handleImmediateCheckout = async () => {
+      try {
+        console.log("🚪 WiFi disconnected - Immediate checkout triggered");
+        
+        // Call checkout API immediately
+        await api.post("/api/attendance/auto-checkout");
+        console.log("🚪 Immediate checkout successful");
+        
+        // Refresh status
+        fetchTodayStatus();
+        fetchHistory();
+        
+      } catch (err) {
+        console.log("Immediate checkout failed:", err);
+      }
+    };
+
+    // Listen for online/offline events
+    const handleOnline = () => {
+      if (!isOnline) {
+        console.log("📶 WiFi reconnected - Resuming ping");
+        isOnline = true;
+        pingOffice(); // Ping immediately when back online
+      }
+    };
+
+    const handleOffline = () => {
+      if (isOnline) {
+        console.log("📶 WiFi disconnected - Immediate checkout");
+        isOnline = false;
+        handleImmediateCheckout(); // Checkout immediately when disconnected
+      }
+    };
+
+    // Add event listeners for WiFi connect/disconnect
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Listen for custom network disconnect event from API interceptor
+    const handleNetworkDisconnect = () => {
+      console.log("📶 Network disconnect detected from API");
+      handleImmediateCheckout();
+    };
+    window.addEventListener('network-disconnect', handleNetworkDisconnect);
+
+    // Fallback: If no ping success for 2 minutes, assume disconnected
+    const fallbackTimeout = setTimeout(() => {
+      if (Date.now() - lastSuccessfulPing > 2 * 60 * 1000) {
+        console.log("⏰ 2 minutes no ping - Fallback checkout");
+        handleImmediateCheckout();
+      }
+    }, 2 * 60 * 1000); // 2 minutes
+
+    // Ping immediately when page loads
+    pingOffice();
+
+    // Ping every 5 minutes to maintain presence
+    const interval = setInterval(pingOffice, 5 * 60 * 1000);
+    
+    return () => {
+      clearInterval(interval);
+      if (checkoutTimeout) {
+        clearTimeout(checkoutTimeout);
+      }
+      clearTimeout(fallbackTimeout);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('network-disconnect', handleNetworkDisconnect);
+    };
+  }, []);
+
+  /* ------------------ FETCH TODAY STATUS ------------------ */
+  const fetchTodayStatus = async () => {
+    try {
+      const res = await todayStatusApi();
+      setToday(res.data.attendance || { status: "absent" });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  /* ------------------ FETCH HISTORY ------------------ */
+  const fetchHistory = async () => {
+    try {
+      const res = await historyApi();
+      setHistory(res.data.history || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  /* ------------------ INIT LOAD ------------------ */
+  useEffect(() => {
+    fetchTodayStatus();
+    fetchHistory();
+  }, []);
+
+  const getStatusIcon = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "present":
+        return "✅";
+      case "late":
+        return "⏰";
+      case "early_leave":
+        return "🚪";
+      case "absent":
+        return "❌";
+      default:
+        return "❓";
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "present":
+        return "#4caf50";
+      case "late":
+        return "#ff9800";
+      case "early_leave":
+        return "#2196f3";
+      case "absent":
+        return "#f44336";
+      default:
+        return "#9e9e9e";
+    }
+  };
 
   return (
     <div className="employee-attendance">
       <SidebarEmployee />
 
       <main className="main-content">
-        {/* Header */}
         <div className="header">
           <SearchBox />
         </div>
 
-        {/* Page Title */}
         <div className="page-heading">
           <h1>Attendance</h1>
-          <p>View and manage your attendance activity.</p>
+          <p>Your attendance is marked automatically when you're in office.</p>
         </div>
 
-        {/* KPI GRID */}
-        <div className="kpi-grid">
-          {kpis.map((k, i) => (
-            <div className="kpi-card" key={i}>
-              <h4>{k.label}</h4>
-              <p className="kpi-value">{k.value}</p>
-            </div>
-          ))}
-        </div>
-
+        {/* TODAY'S STATUS CARD */}
         <div className="attendance-grid">
-          {/* LEFT COLUMN */}
           <div className="column">
-            {/* Check-in / Check-out */}
-            <div className="card-box checkin-card">
-              <h3>Check In / Check Out</h3>
+            <div className="card-box status-card">
+              <h3>Today's Status</h3>
+              
+              <div className="status-display">
+                <div className="status-icon" style={{ color: getStatusColor(today?.status) }}>
+                  {getStatusIcon(today?.status)}
+                </div>
+                
+                <div className="status-details">
+                  <h4>{today?.status || "Absent"}</h4>
+                  <p>
+                    {today?.status?.toLowerCase() === "absent" 
+                      ? "No attendance recorded today" 
+                      : "Attendance marked automatically"}
+                  </p>
+                </div>
+              </div>
 
               <div className="datetime">
                 <p>
-                  <strong>Date:</strong> Jan 18, 2025
+                  <strong>Check In:</strong>{" "}
+                  {today?.check_in
+                    ? new Date(today.check_in).toLocaleTimeString()
+                    : "—"}
                 </p>
                 <p>
-                  <strong>Time:</strong> 09:02 AM
+                  <strong>Check Out:</strong>{" "}
+                  {today?.check_out
+                    ? new Date(today.check_out).toLocaleTimeString()
+                    : "—"}
                 </p>
               </div>
 
-              <div className="geo">
+              <div className="info-box">
                 <p>
-                  <strong>IP:</strong> 192.168.1.10
+                  <strong>📍 Automatic Attendance</strong><br/>
+                  Your attendance is marked automatically when you connect to office Wi-Fi.
+                  No manual check-in required.
                 </p>
-                <p>
-                  <strong>Location:</strong> Karachi, PK
-                </p>
-              </div>
-
-              <div className="check-buttons">
-                <button className="btn checkin">
-                  <LogIn size={18} />
-                  Check In
-                </button>
-                <button className="btn checkout">
-                  <LogOut size={18} />
-                  Check Out
-                </button>
-              </div>
-            </div>
-
-            {/* Monthly Attendance Trend */}
-            <div className="card-box chart-card">
-              <h3>Monthly Attendance Trend</h3>
-              <svg viewBox="0 0 400 200" className="line-chart">
-                <polyline
-                  points="20,150 60,100 100,120 140,80 180,110 220,60 260,100 300,70 340,90 380,80"
-                  fill="none"
-                  stroke="#6C5CE7"
-                  strokeWidth="4"
-                />
-              </svg>
-              <div className="chart-xlabels">
-                {["W1", "W2", "W3", "W4", "W5"].map((w) => (
-                  <span key={w}>{w}</span>
-                ))}
-              </div>
-            </div>
-
-            {/* Weekly Attendance % */}
-            <div className="card-box chart-card">
-              <h3>Weekly Attendance %</h3>
-
-              <div className="bar-container">
-                {[75, 92, 88, 96, 81].map((val, idx) => (
-                  <div key={idx} className="bar-row">
-                    <span>W{idx + 1}</span>
-                    <div className="bar-track">
-                      <div
-                        className="bar-fill"
-                        style={{ width: `${val}%` }}
-                      ></div>
-                    </div>
-                    <p className="bar-value">{val}%</p>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
 
-          {/* RIGHT COLUMN: ATTENDANCE TABLE */}
+          {/* ATTENDANCE HISTORY */}
           <div className="column">
             <div className="card-box table-card">
               <div className="table-header">
                 <h3>Attendance History</h3>
                 <button className="export-btn">
                   <Download size={16} />
-                  Export Report
+                  Export
                 </button>
               </div>
 
@@ -161,25 +255,44 @@ export default function EmployeeAttendancePage() {
                     <th>Date</th>
                     <th>Check-In</th>
                     <th>Check-Out</th>
-                    <th>Hours</th>
                     <th>Status</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {attendance.map((a, i) => (
+                  {history.map((row, i) => (
                     <tr key={i}>
-                      <td>{a.date}</td>
-                      <td>{a.checkIn}</td>
-                      <td>{a.checkOut}</td>
-                      <td>{a.hours}</td>
                       <td>
-                        <span className={`status ${a.status.toLowerCase()}`}>
-                          {a.status}
+                        {new Date(row.check_in).toLocaleDateString()}
+                      </td>
+                      <td>
+                        {row.check_in
+                          ? new Date(row.check_in).toLocaleTimeString()
+                          : "—"}
+                      </td>
+                      <td>
+                        {row.check_out
+                          ? new Date(row.check_out).toLocaleTimeString()
+                          : "—"}
+                      </td>
+                      <td>
+                        <span className={`status ${row.status}`}>
+                          {getStatusIcon(row.status)} {row.status}
                         </span>
                       </td>
                     </tr>
                   ))}
+
+                  {history.length === 0 && (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: "center", padding: "40px" }}>
+                        <div>
+                          <p style={{ opacity: 0.6 }}>No attendance records found</p>
+                          <small>Connect to office Wi-Fi to mark attendance automatically</small>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

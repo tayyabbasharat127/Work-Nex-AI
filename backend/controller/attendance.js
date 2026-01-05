@@ -1,0 +1,252 @@
+// controllers/attendanceController.js
+const pool = require('../config/db'); // PostgreSQL pool
+
+// Helper to get client IP
+const getClientIP = (req) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.socket.remoteAddress;
+};
+
+
+exports.checkIn = async (req, res) => {
+  try {
+    const userId = req.user.userId; // from JWT
+    const clientIP = getClientIP(req);
+console.log('Client IP:', clientIP);
+    // OPTIONAL: office Wi-Fi validation (example subnet)
+    if (!clientIP.startsWith('192.168.1.') && clientIP !== '::1') {
+  return res.status(403).json({
+    success: false,
+    message: 'Not connected to office Wi-Fi'
+  });
+}
+    // Check if already checked in today
+    const already = await pool.query(
+      `SELECT * FROM attendance
+       WHERE user_id = $1
+       AND DATE(check_in) = CURRENT_DATE`,
+      [userId]
+    );
+
+    if (already.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Already checked in today'
+      });
+    }
+
+    // Shift timing (example: 10:00 AM)
+    const now = new Date();
+    const shiftStart = new Date();
+    shiftStart.setHours(10, 0, 0, 0);
+
+    const status = now > shiftStart ? 'late' : 'present';
+
+    // Insert attendance record
+    await pool.query(
+      `INSERT INTO attendance
+       (user_id, check_in, status, source, location)
+       VALUES ($1, NOW(), $2, 'wifi', $3)`,
+      [userId, status, clientIP]
+    );
+
+    res.json({
+      success: true,
+      message: 'Check-in successful',
+      status
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// controllers/attendanceController.js
+
+exports.checkOut = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // Find today's active attendance
+    const result = await pool.query(
+      `SELECT * FROM attendance
+       WHERE user_id = $1
+       AND DATE(check_in) = CURRENT_DATE
+       AND check_out IS NULL`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No active check-in found"
+      });
+    }
+
+    const attendance = result.rows[0];
+
+    // Shift end time 7 PM
+    const shiftEnd = new Date();
+    shiftEnd.setHours(19, 0, 0, 0);
+
+    const now = new Date();
+    const status =
+      now < shiftEnd ? "early_leave" : attendance.status;
+
+    await pool.query(
+      `UPDATE attendance
+       SET check_out = NOW(),
+           status = $1
+       WHERE attendance_id = $2`,
+      [status, attendance.attendance_id]
+    );
+
+    res.json({
+      success: true,
+      message: "Checked out successfully",
+      status
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
+  }
+};
+// Auto checkout when employee leaves office (WiFi disconnect)
+exports.autoCheckout = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const clientIP = getClientIP(req);
+
+    // Find today's active attendance (check-in without checkout)
+    const result = await pool.query(
+      `SELECT * FROM attendance
+       WHERE user_id = $1
+       AND DATE(check_in) = CURRENT_DATE
+       AND check_out IS NULL`,
+      [userId]
+    );
+
+    if (result.rows.length > 0) {
+      // Auto checkout with current timestamp
+      await pool.query(
+        `UPDATE attendance
+         SET check_out = NOW(),
+             status = CASE 
+               WHEN EXTRACT(HOUR FROM NOW()) > 17 THEN 'overtime'
+               WHEN EXTRACT(HOUR FROM NOW()) < 17 THEN 'early_leave'
+               ELSE 'present'
+             END
+         WHERE attendance_id = $1`,
+        [result.rows[0].attendance_id]
+      );
+      
+      console.log(`🚪 Auto checkout for user ${userId} at ${new Date().toISOString()}`);
+      console.log(`📍 Last known IP: ${clientIP}`);
+    }
+
+    res.json({ 
+      success: true,
+      message: result.rows.length > 0 ? "Auto checkout successful" : "No active attendance found"
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
+  }
+};
+
+exports.ping = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { deviceId } = req.body;
+    const clientIP = getClientIP(req);
+
+    // 1. Office Wi-Fi check (192.168.100.x)
+    if (!clientIP.startsWith("192.168.100.") && clientIP !== "::1") {
+      return res.status(403).json({ success: false });
+    }
+
+    // 2. Device validation
+    const user = await pool.query(
+      "SELECT device_id FROM users WHERE user_id = $1",
+      [userId]
+    );
+
+    if (!user.rows[0] || user.rows[0].device_id !== deviceId) {
+      return res.status(403).json({ success: false });
+    }
+
+    // 3. Auto check-in
+    const today = await pool.query(
+      `SELECT * FROM attendance WHERE user_id = $1 AND DATE(check_in) = CURRENT_DATE`,
+      [userId]
+    );
+
+    if (today.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO attendance (user_id, check_in, status, source, location, device_id)
+         VALUES ($1, NOW(), 'present', 'wifi', $2, $3)`,
+        [userId, clientIP, deviceId]
+      );
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
+  }
+};
+
+exports.todayStatus = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const result = await pool.query(
+      `SELECT check_in, check_out, status, source
+       FROM attendance
+       WHERE user_id = $1
+       AND DATE(check_in) = CURRENT_DATE`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({ status: "absent" });
+    }
+
+    res.json({
+      success: true,
+      attendance: result.rows[0]
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
+  }
+};
+
+exports.history = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const result = await pool.query(
+      `SELECT check_in, check_out, status, source
+       FROM attendance
+       WHERE user_id = $1
+       ORDER BY check_in DESC`,
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      history: result.rows
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
+  }
+};

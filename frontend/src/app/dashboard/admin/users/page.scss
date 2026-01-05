@@ -8,6 +8,33 @@ $border-light: #e8eaf6;
 $tablet: 1024px;
 $mobile: 768px;
 
+.banner {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.banner-error {
+  background: #ffe8e8;
+  border: 1px solid #ffb5b5;
+  color: #7a0b0b;
+}
+
+.banner-loading {
+  background: #eef6ff;
+  border: 1px solid #cfe4ff;
+  color: #0b3a7a;
+}
+
+.hint {
+  display: block;
+  margin-top: 6px;
+  opacity: 0.7;
+  font-size: 12px;
+}
+
+
 .users-dashboard {
   display: flex;
   min-height: 100vh;

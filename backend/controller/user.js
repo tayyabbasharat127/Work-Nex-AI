@@ -1,4 +1,4 @@
-const { User } = require('../models');
+const { User } = require('../models/user');
 exports.createuser = async (req, res) => {
   try {
     const { email } = req.body;

@@ -1,125 +1,247 @@
-import React from "react";
+import React, { useState } from "react";
 import {
-  Home,
-  User,
-  MessageCircle,
-  Star,
-  Settings,
-  Menu,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  Shield,
+  Bot,
   CalendarClock,
+  Eye,
   FileCheck2,
+  Home,
+  KeyRound,
+  LayoutDashboard,
   LineChart,
+  LogOut,
+  Shield,
+  User,
+  Users,
   BarChart2,
   Database,
+  Settings,
+  ChevronLeft,
+  TrendingUp,
   Bell,
   ListOrdered,
-  Users,
-  Bot,
-  TrendingUp,
-  Eye,
-  KeyRound,
-  LogOut,
 } from "lucide-react";
 import "./sidebar.scss";
 
 const SidebarEmployee: React.FC = () => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] =
+    useState(false);
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+
+  // Function to toggle the dropdown visibility
+  const toggleDropdown = () => {
+    setIsDropdownOpen((prevState) => !prevState);
+  };
+
+  // Function to open the profile modal
+  const openModal = () => {
+    setIsModalOpen(true);
+  };
+
+  // Function to close the profile modal
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+
+  // Function to open the forgot password modal
+  const openForgotPasswordModal = () => {
+    setIsForgotPasswordModalOpen(true);
+  };
+
+  // Function to close the forgot password modal
+  const closeForgotPasswordModal = () => {
+    setIsForgotPasswordModalOpen(false);
+  };
+
+  // Handle form submission for forgot password
+  const handleForgotPasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // You can add logic to handle password reset here.
+    console.log("Current Password:", currentPassword);
+    console.log("New Password:", newPassword);
+    console.log("Confirm New Password:", confirmNewPassword);
+  };
+
   return (
     <aside className="sidebar">
-      {/* ✅ TOP PROFILE (Hover Dropdown) */}
+      {/* Profile Section */}
       <div className="profile-wrap">
-        <div className="profile-trigger">
+        <div className="profile-trigger" onClick={toggleDropdown}>
+          {/* Profile Avatar */}
           <div className="profile-avatar">
-            <User size={22} />
+            <User size={24} />
           </div>
-
-          <div className="profile-meta">
-            <div className="profile-name">Employee</div>
-            <div className="profile-email">employee@responder.com</div>
-          </div>
+          <div className="profile-name">Employee</div>
         </div>
 
-        {/* ✅ Dropdown items */}
-        <div className="profile-dropdown">
-          <a href="/dashboard/employee/profile" className="dropdown-item">
-            <Eye size={18} />
-            <span>View Profile</span>
-          </a>
+        {/* Dropdown menu */}
+        {isDropdownOpen && (
+          <div className="profile-dropdown">
+            <div className="profile-meta">
+              <div className="profile-name">Employee</div>
+              <div className="profile-email">employee@responder.com</div>
+            </div>
+            <a
+              href="#"
+              className="dropdown-item"
+              onClick={openModal} // Open profile modal
+            >
+              <Eye size={18} />
+              <span>View Profile</span>
+            </a>
 
-          <a
-            href="/dashboard/employee/change-password"
-            className="dropdown-item"
-          >
-            <KeyRound size={18} />
-            <span>Change Password</span>
-          </a>
+            <a
+              href="#"
+              className="dropdown-item"
+              onClick={openForgotPasswordModal} // Open forgot password modal
+            >
+              <KeyRound size={18} />
+              <span>Forgot Password</span>
+            </a>
 
-          <a href="/logout" className="dropdown-item danger">
-            <LogOut size={18} />
-            <span>Logout</span>
-          </a>
-        </div>
+            <a href="/logout" className="dropdown-item danger">
+              <LogOut size={18} />
+              <span>Logout</span>
+            </a>
+          </div>
+        )}
       </div>
-
-      {/* Logo Section (kept exactly same) */}
-      <div className="sidebar-logo">
-        <User size={24} />
-        <span className="logo-text">Employee</span>
-      </div>
-
-      {/* Navigation (kept exactly same) */}
+      {/* Sidebar Navigation Items */}
       <nav className="sidebar-nav">
-        {/* Dashboard */}
+        {" "}
+        {/* Dashboard */}{" "}
         <a href="/dashboard/employee/main" className="nav-item active">
-          <Home size={20} />
-          <span>Dashboard</span>
-        </a>
-
-        {/* Attendance */}
+          {" "}
+          <Home size={20} /> <span>Dashboard</span>{" "}
+        </a>{" "}
+        {/* Attendance */}{" "}
         <a href="/dashboard/employee/attendance" className="nav-item">
-          <CalendarClock size={20} />
-          <span>Attendance</span>
-        </a>
-
-        {/* Leaves */}
+          {" "}
+          <CalendarClock size={20} /> <span>Attendance</span>{" "}
+        </a>{" "}
+        {/* Leaves */}{" "}
         <a href="/dashboard/employee/leaves" className="nav-item">
-          <FileCheck2 size={20} />
-          <span>Leaves</span>
-        </a>
-
-        {/* Performance */}
+          {" "}
+          <FileCheck2 size={20} /> <span>Leaves</span>{" "}
+        </a>{" "}
+        {/* Performance */}{" "}
         <a href="/dashboard/employee/performance" className="nav-item">
-          <LineChart size={20} />
-          <span>Performance</span>
-        </a>
-
-        {/* Analytics */}
+          {" "}
+          <LineChart size={20} /> <span>Performance</span>{" "}
+        </a>{" "}
+        {/* Analytics */}{" "}
         <a href="/dashboard/employee/analytics" className="nav-item">
-          <BarChart2 size={20} />
-          <span>Analytics</span>
-        </a>
-
-        {/* Assistant */}
+          {" "}
+          <BarChart2 size={20} /> <span>Analytics</span>{" "}
+        </a>{" "}
+        {/* Assistant */}{" "}
         <a href="/dashboard/employee/assistant" className="nav-item">
-          <Bot size={20} />
-          <span>Assistant</span>
-        </a>
-
-        {/* Forecast */}
+          {" "}
+          <Bot size={20} /> <span>Assistant</span>{" "}
+        </a>{" "}
+        {/* Forecast */}{" "}
         <a href="/dashboard/employee/forecast" className="nav-item">
-          <TrendingUp size={20} />
-          <span>Forecast</span>
-        </a>
+          {" "}
+          <TrendingUp size={20} /> <span>Forecast</span>{" "}
+        </a>{" "}
       </nav>
-
-      {/* Footer (kept exactly same) */}
+      {/* Footer */}{" "}
       <div className="sidebar-footer">
-        <ChevronLeft size={20} />
+        {" "}
+        <ChevronLeft size={20} /> <span>Collapse</span>{" "}
+      </div>
+      {/* Footer */}
+      <div className="sidebar-footer">
         <span>Collapse</span>
       </div>
+      {/* Modal for View Profile */}
+      {isModalOpen && (
+        <div className="profile-modal">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>User Profile</h2>
+              <button className="close-button" onClick={closeModal}>
+                &times;
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="profile-detail">
+                <User size={24} className="modal-icon" />
+                <div className="profile-name">employee</div>
+              </div>
+              <div className="profile-detail">
+                <LogOut size={24} className="modal-icon" />
+                <div className="profile-email">employee@responder.com</div>
+              </div>
+              <div className="profile-detail">
+                <Users size={24} className="modal-icon" />
+                <div className="profile-role">Super Admin</div>
+              </div>
+              <button className="modal-button">Change Name</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal for Forgot Password */}
+      {isForgotPasswordModalOpen && (
+        <div className="forgot-password-modal">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Forgot Password</h2>
+              <button
+                className="close-button"
+                onClick={closeForgotPasswordModal}
+              >
+                &times;
+              </button>
+            </div>
+            <form className="modal-body" onSubmit={handleForgotPasswordSubmit}>
+              <div className="modal-input-group">
+                <label htmlFor="current-password">Current Password</label>
+                <input
+                  id="current-password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter your current password"
+                  required
+                />
+              </div>
+              <div className="modal-input-group">
+                <label htmlFor="new-password">New Password</label>
+                <input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  required
+                />
+              </div>
+              <div className="modal-input-group">
+                <label htmlFor="confirm-new-password">
+                  Confirm New Password
+                </label>
+                <input
+                  id="confirm-new-password"
+                  type="password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  required
+                />
+              </div>
+              <button className="modal-button" type="submit">
+                Submit
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </aside>
   );
 };

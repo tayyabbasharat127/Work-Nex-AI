@@ -19,20 +19,58 @@ import {
   ListOrdered,
   Users,
   Bot,
-  TrendingUp
+  TrendingUp,
+  Eye,
+  KeyRound,
+  LogOut,
 } from "lucide-react";
 import "./sidebar.scss";
 
 const SidebarEmployee: React.FC = () => {
   return (
     <aside className="sidebar">
-      {/* Logo Section */}
+      {/* ✅ TOP PROFILE (Hover Dropdown) */}
+      <div className="profile-wrap">
+        <div className="profile-trigger">
+          <div className="profile-avatar">
+            <User size={22} />
+          </div>
+
+          <div className="profile-meta">
+            <div className="profile-name">Employee</div>
+            <div className="profile-email">employee@responder.com</div>
+          </div>
+        </div>
+
+        {/* ✅ Dropdown items */}
+        <div className="profile-dropdown">
+          <a href="/dashboard/employee/profile" className="dropdown-item">
+            <Eye size={18} />
+            <span>View Profile</span>
+          </a>
+
+          <a
+            href="/dashboard/employee/change-password"
+            className="dropdown-item"
+          >
+            <KeyRound size={18} />
+            <span>Change Password</span>
+          </a>
+
+          <a href="/logout" className="dropdown-item danger">
+            <LogOut size={18} />
+            <span>Logout</span>
+          </a>
+        </div>
+      </div>
+
+      {/* Logo Section (kept exactly same) */}
       <div className="sidebar-logo">
         <User size={24} />
         <span className="logo-text">Employee</span>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation (kept exactly same) */}
       <nav className="sidebar-nav">
         {/* Dashboard */}
         <a href="/dashboard/employee/main" className="nav-item active">
@@ -63,20 +101,21 @@ const SidebarEmployee: React.FC = () => {
           <BarChart2 size={20} />
           <span>Analytics</span>
         </a>
+
         {/* Assistant */}
         <a href="/dashboard/employee/assistant" className="nav-item">
           <Bot size={20} />
           <span>Assistant</span>
         </a>
+
         {/* Forecast */}
         <a href="/dashboard/employee/forecast" className="nav-item">
-  <TrendingUp size={20} />
-  <span>Forecast</span>
-</a>
-
+          <TrendingUp size={20} />
+          <span>Forecast</span>
+        </a>
       </nav>
 
-      {/* Footer */}
+      {/* Footer (kept exactly same) */}
       <div className="sidebar-footer">
         <ChevronLeft size={20} />
         <span>Collapse</span>

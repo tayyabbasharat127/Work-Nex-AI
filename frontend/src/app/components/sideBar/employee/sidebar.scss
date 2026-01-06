@@ -12,14 +12,160 @@ $border-light: #e8eaf6;
 $mobile: 768px;
 $tablet: 1024px;
 
+// ==========================
+// Profile Hover Dropdown
+// ==========================
+
+.profile-wrap {
+  position: relative;
+  padding: 8px 8px;
+  margin-bottom: 16px;
+}
+
+.profile-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba($white, 0.18);
+  background: rgba($white, 0.08);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.25s ease;
+
+  &:hover {
+    background: rgba($white, 0.12);
+    border-color: rgba($white, 0.25);
+  }
+}
+
+.profile-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba($white, 0.15);
+  color: $white;
+
+  svg {
+    opacity: 0.95;
+  }
+}
+
+.profile-meta {
+  min-width: 0;
+
+  .profile-name {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: $white;
+    line-height: 1.1;
+  }
+
+  /* ✅ FIXED EMAIL — FULLY VISIBLE */
+  .profile-email {
+    margin: 2px 0 0;
+    font-size: 10px;
+    color: rgba($white, 0.75);
+
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    word-break: break-word;
+    max-width: 100%;
+    line-height: 1.2;
+  }
+}
+
+.profile-dropdown {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: calc(100% + 8px);
+  border-radius: 14px;
+  padding: 10px;
+  border: 1px solid rgba($white, 0.18);
+
+  background: rgba(25, 18, 68, 0.92);
+  backdrop-filter: blur(10px);
+
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: all 0.2s ease;
+  z-index: 50;
+}
+
+.profile-wrap:hover .profile-dropdown,
+.profile-wrap:focus-within .profile-dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: 12px;
+  color: rgba($white, 0.85);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba($white, 0.12);
+    color: $white;
+  }
+
+  &.danger {
+    color: rgba($secondary-color, 0.95);
+
+    &:hover {
+      background: rgba($secondary-color, 0.15);
+      color: $secondary-color;
+    }
+  }
+}
+
+// Mobile profile behavior
+@media (max-width: $mobile) {
+  .profile-meta {
+    display: none;
+  }
+
+  .profile-trigger {
+    justify-content: center;
+  }
+
+  .profile-dropdown {
+    left: calc(100% + 10px);
+    right: auto;
+    width: 260px;
+  }
+}
+
+// ==========================
+// Sidebar
+// ==========================
+
 .sidebar {
-  width: 220px; // increased width
+  width: 220px;
   background: linear-gradient(180deg, $primary-color 0%, $sidebar-bg 100%);
   display: flex;
   flex-direction: column;
   padding: 30px 0;
   box-shadow: 0 8px 32px rgba($primary-color, 0.1);
   transition: width 0.3s ease;
+  overflow: visible;
 
   .sidebar-logo {
     width: 100%;
@@ -104,11 +250,13 @@ $tablet: 1024px;
 
   @media (max-width: $mobile) {
     width: 80px;
+
     .nav-item span,
     .sidebar-footer span,
     .logo-text {
       display: none;
     }
+
     .nav-item {
       justify-content: center;
       padding: 12px 0;

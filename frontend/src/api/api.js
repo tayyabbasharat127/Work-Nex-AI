@@ -116,4 +116,27 @@ export const updateLeaveStatusApi = (leaveId, payload) =>
 export const deleteLeaveApi = (leaveId) =>
   api.delete(`/api/leaves/${leaveId}`);
 
+// Leave Balance API
+export const getLeaveBalanceApi = () => api.get("/api/leaves/balance");
+
+// Department Management APIs
+export const getAllDepartmentsApi = () => api.get("/api/departments");
+export const createDepartmentApi = (payload) => api.post("/api/departments", payload);
+export const updateDepartmentApi = (id, payload) => api.put(`/api/departments/${id}`, payload);
+export const deleteDepartmentApi = (id) => api.delete(`/api/departments/${id}`);
+
+// Notification APIs
+export const getNotificationsApi = (params = {}) => api.get("/api/notifications", { params });
+export const sendNotificationApi = (payload) => api.post("/api/notifications/send", payload);
+export const markNotificationReadApi = (id) => api.put(`/api/notifications/read/${id}`);
+
+// Analytics APIs
+export const getKPIsApi = (params = {}) => api.get("/api/analytics/kpis", { params });
+export const getTrendsApi = (params = {}) => api.get("/api/analytics/trends", { params });
+export const getDepartmentAnalyticsApi = () => api.get("/api/analytics/departments");
+
+// Reports APIs
+export const generateReportApi = (payload) => api.post("/api/reports/generate", payload);
+export const getReportsApi = () => api.get("/api/reports");
+
 export default api;

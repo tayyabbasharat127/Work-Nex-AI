@@ -250,3 +250,42 @@ exports.history = async (req, res) => {
     res.status(500).json({ success: false });
   }
 };
+
+exports.attendanceOverview = async (req, res) => {
+  try {
+    const { organizationId } = req.user || {};
+
+    if (!organizationId) {
+      return res.status(403).json({ success: false, message: 'Missing organization context' });
+    }
+
+    const result = await pool.query(
+      `SELECT
+         u.user_id,
+         u.name,
+         u.email,
+         d.department_id,
+         d.name AS department_name,
+         COALESCE(a.status, 'absent') AS attendance_status,
+         a.check_in,
+         a.check_out,
+         a.source,
+         a.location
+       FROM users u
+       LEFT JOIN departments d
+         ON d.department_id = u.department_id
+        AND d.organization_id = u.organization_id
+       LEFT JOIN attendance a
+         ON a.user_id = u.user_id
+        AND DATE(a.check_in) = CURRENT_DATE
+       WHERE u.organization_id = $1
+       ORDER BY d.name NULLS LAST, u.name`,
+      [organizationId]
+    );
+
+    return res.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

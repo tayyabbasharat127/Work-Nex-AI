@@ -1,91 +1,161 @@
 "use client";
 
-import React from "react";
-import Sidebar from "@/src/app/components/sideBar/admin/sidebar";
-import { SearchBox } from "@/src/app/components/searchBox/searchBox";
-import "./page.scss";
-import { StatsCard } from "@/src/app/components/card/statsCard";
+import React, { useEffect, useState } from "react";
 import SidebarAdmin from "@/src/app/components/sideBar/admin/sidebar";
+import { SearchBox } from "@/src/app/components/searchBox/searchBox";
+import { getKPIsApi, getTrendsApi, getDepartmentAnalyticsApi } from "@/src/api/api";
+import "./page.scss";
 
 export default function AnalyticsPage() {
-  // sample data
-  const kpis = [
-    { title: "Total Attendance", value: "92%", trend: "up", change: "+4.2%" },
-    { title: "Average Points", value: "84", trend: "down", change: "-1.8%" },
-    { title: "Active Users", value: "1,245", trend: "up", change: "+3.5%" },
-  ];
+  const [kpiData, setKpiData] = useState<any>(null);
+  const [trendsData, setTrendsData] = useState<any[]>([]);
+  const [departmentData, setDepartmentData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const months = ["Jan", "Feb", "Mar", "Apr", "May"];
+  // Load KPIs
+  const loadKPIs = async () => {
+    try {
+      const res = await getKPIsApi();
+      setKpiData(res.data?.data || res.data);
+    } catch (e: any) {
+      console.error("Error loading KPIs:", e);
+      setError("Failed to load KPIs");
+    }
+  };
+
+  // Load Trends
+  const loadTrends = async () => {
+    try {
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      const res = await getTrendsApi({ startDate, endDate });
+      setTrendsData(res.data?.data || res.data);
+    } catch (e: any) {
+      console.error("Error loading trends:", e);
+    }
+  };
+
+  // Load Department Analytics
+  const loadDepartmentAnalytics = async () => {
+    try {
+      const res = await getDepartmentAnalyticsApi();
+      setDepartmentData(res.data?.data || res.data);
+    } catch (e: any) {
+      console.error("Error loading department analytics:", e);
+    }
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([loadKPIs(), loadTrends(), loadDepartmentAnalytics()])
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="analytics-dashboard">
       <SidebarAdmin />
 
       <main className="main-content">
-        {/* Header */}
         <div className="header">
           <SearchBox />
         </div>
 
-        {/* KPI Cards */}
-        <div className="kpi-grid">
-          {kpis.map((kpi, i) => (
-            <div key={i} className="kpi-card">
-              <h4>{kpi.title}</h4>
-              <p className="kpi-value">{kpi.value}</p>
-              <p className={`kpi-trend ${kpi.trend}`}>
-                {kpi.trend === "up" ? "↑" : "↓"} {kpi.change}
-              </p>
-            </div>
-          ))}
+        <div className="page-heading">
+          <h1>Analytics Dashboard</h1>
+          <p>Real-time insights and performance metrics</p>
         </div>
 
-        {/* Charts Section */}
-        <div className="charts-row">
-          <div className="chart-card">
-            <h3>Monthly Attendance Trend</h3>
-            <svg viewBox="0 0 400 200" className="line-chart">
-              <polyline
-                points="20,150 60,120 100,140 140,80 180,100 220,60 260,90 300,50 340,80 380,120"
-                fill="none"
-                stroke="#6C5CE7"
-                strokeWidth="3"
-              />
-              <polyline
-                points="20,160 60,140 100,155 140,110 180,130 220,100 260,120 300,90 340,110 380,145"
-                fill="none"
-                stroke="#FF8C42"
-                strokeWidth="3"
-              />
-            </svg>
-            <div className="chart-legend">
-              <span className="legend-item">
-                <span className="dot purple"></span> Weekly
-              </span>
-              <span className="legend-item">
-                <span className="dot orange"></span> Monthly
-              </span>
-            </div>
+        {error && (
+          <div className="banner banner-error">
+            {error}
+            <button onClick={() => setError(null)} style={{ marginLeft: 10 }}>×</button>
           </div>
+        )}
+        
+        {loading && <div className="banner banner-loading">Loading analytics...</div>}
 
-          <div className="chart-card bar-chart">
-            <h3>Performance Breakdown</h3>
-            <div className="bars">
-              {months.map((month, i) => (
-                <div key={i} className="bar-row">
-                  <span className="bar-label">{month}</span>
-                  <div className="bar-container">
-                    <div
-                      className="bar-fill"
-                      style={{
-                        width: `${60 + Math.random() * 30}%`,
-                        background: "#6C5CE7",
-                      }}
-                    ></div>
+        {/* KPI Cards */}
+        <div className="kpi-grid">
+          {kpiData && (
+            <>
+              <div className="kpi-card">
+                <h4>Total Employees</h4>
+                <p className="value">{kpiData.totalEmployees || 0}</p>
+              </div>
+              <div className="kpi-card">
+                <h4>Present Today</h4>
+                <p className="value present">{kpiData.presentToday || 0}</p>
+              </div>
+              <div className="kpi-card">
+                <h4>Absent Today</h4>
+                <p className="value absent">{kpiData.absentToday || 0}</p>
+              </div>
+              <div className="kpi-card">
+                <h4>On Leave Today</h4>
+                <p className="value leave">{kpiData.onLeaveToday || 0}</p>
+              </div>
+              <div className="kpi-card">
+                <h4>Attendance Rate</h4>
+                <p className="value">{kpiData.attendanceRate || 0}%</p>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Department Analytics */}
+        <div className="card-box">
+          <h3>Department Analytics</h3>
+          <div className="department-grid">
+            {departmentData.map((dept, index) => (
+              <div key={index} className="dept-card">
+                <h4>{dept.department}</h4>
+                <div className="dept-stats">
+                  <div className="stat">
+                    <span className="label">Total:</span>
+                    <span className="value">{dept.total_employees}</span>
+                  </div>
+                  <div className="stat">
+                    <span className="label">Present:</span>
+                    <span className="value present">{dept.present_today}</span>
+                  </div>
+                  <div className="stat">
+                    <span className="label">On Leave:</span>
+                    <span className="value leave">{dept.on_leave_today}</span>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Attendance Trends */}
+        <div className="card-box">
+          <h3>Attendance Trends (Last 7 Days)</h3>
+          <div className="trends-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Total</th>
+                  <th>Present</th>
+                  <th>Absent</th>
+                  <th>Late</th>
+                </tr>
+              </thead>
+              <tbody>
+                {trendsData.map((trend, index) => (
+                  <tr key={index}>
+                    <td>{new Date(trend.date).toLocaleDateString()}</td>
+                    <td>{trend.total}</td>
+                    <td className="present">{trend.present}</td>
+                    <td className="absent">{trend.absent}</td>
+                    <td className="late">{trend.late}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </main>

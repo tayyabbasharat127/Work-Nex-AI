@@ -11,7 +11,7 @@ import {
   Filter,
   Building2,
 } from "lucide-react";
-import "./page.scss";
+import "./page.css";
 
 const ManagerTeamPage: React.FC = () => {
   const [search, setSearch] = useState("");

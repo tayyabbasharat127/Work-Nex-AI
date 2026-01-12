@@ -13,7 +13,7 @@ import {
   UserCheck,
   UserX,
 } from "lucide-react";
-import "./page.scss";
+import "./page.css";
 
 const ManagerAttendancePage: React.FC = () => {
   const [search, setSearch] = useState("");

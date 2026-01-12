@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import "./page.css";
 import SidebarAdmin from "@/src/app/components/sideBar/admin/sidebar";
-import "./page.scss";
+import "./page.css";
 
 // ✅ import from your existing api.js (adjust path if needed)
 import { todayStatusApi, historyApi } from "@/src/api/api"; 

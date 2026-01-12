@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import SidebarAdmin from "@/src/app/components/sideBar/admin/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import { UserPlus, Edit2, Trash2, Download, X } from "lucide-react";
-import "./page.scss";
+import "./page.css";
 
 import {
   createUserApi,

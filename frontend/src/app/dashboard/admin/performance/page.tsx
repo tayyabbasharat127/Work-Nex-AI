@@ -10,7 +10,7 @@ import {
   Activity,
   ChevronRight,
 } from "lucide-react";
-import "./page.scss";
+import "./page.css";
 import SidebarAdmin from "@/src/app/components/sideBar/admin/sidebar";
 
 export default function PerformancePage() {

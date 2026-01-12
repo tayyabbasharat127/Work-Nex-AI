@@ -10,7 +10,7 @@ import {
   Activity,
   Brain,
 } from "lucide-react";
-import "./page.scss";
+import "./page.css";
 
 const EmployeeForecastPage: React.FC = () => {
   const [loading, setLoading] = useState(true);

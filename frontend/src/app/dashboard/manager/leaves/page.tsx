@@ -12,7 +12,7 @@ import {
   X,
   Check,
 } from "lucide-react";
-import "./page.scss";
+import "./page.css";
 
 const ManagerLeavesPage: React.FC = () => {
   const [search, setSearch] = useState("");

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Sidebar from "@/src/app/components/sideBar/admin/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import { Activity, BarChart3, LineChart, Cpu, Send } from "lucide-react";
-import "./page.scss";
+import "./page.css";
 import SidebarEmployee from "@/src/app/components/sideBar/employee/sidebar";
 
 const EmployeeAnalyticsPage: React.FC = () => {

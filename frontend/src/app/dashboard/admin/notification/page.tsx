@@ -4,7 +4,7 @@ import React from "react";
 import Sidebar from "@/src/app/components/sideBar/admin/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import { Bell, Mail, AlertTriangle, CheckCircle, Info } from "lucide-react";
-import "./page.scss";
+import "./page.css";
 import SidebarAdmin from "@/src/app/components/sideBar/admin/sidebar";
 
 export default function NotificationsPage() {

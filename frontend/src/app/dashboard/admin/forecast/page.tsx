@@ -11,7 +11,7 @@ import {
   BarChart3,
   Brain,
 } from "lucide-react";
-import "./page.scss";
+import "./page.css";
 
 const AdminForecastPage: React.FC = () => {
   const [loading, setLoading] = useState(true);

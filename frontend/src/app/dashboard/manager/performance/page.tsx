@@ -13,7 +13,7 @@ import {
   User,
   Users
 } from "lucide-react";
-import "./page.scss";
+import "./page.css";
 
 const ManagerPerformancePage: React.FC = () => {
   const [search, setSearch] = useState("");

@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import SidebarEmployee from "@/src/app/components/sideBar/employee/sidebar";
 import { Upload } from "lucide-react";
-import "./page.scss";
+import "./page.css";
 
 import {
   createLeaveApi,

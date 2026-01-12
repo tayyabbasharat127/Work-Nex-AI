@@ -12,7 +12,7 @@ import {
   api,
 } from "@/src/api/api";
 
-import "./page.scss";
+import "./page.css";
 
 export default function EmployeeAttendancePage() {
   const [today, setToday] = useState<any>(null);

@@ -7,23 +7,116 @@ exports.createLeave = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { leave_type, start_date, end_date, reason } = req.body;
+    
+    // Get user's leave balance
+    const balance = await pool.query(
+      `SELECT * FROM leave_balances WHERE user_id = $1`,
+      [userId]
+    );
+    
+    // Calculate leave days
+    const leaveDays = Math.ceil((new Date(end_date) - new Date(start_date)) / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Check leave balance
+    let availableBalance = 0;
+    switch (leave_type) {
+      case 'Annual':
+        availableBalance = balance.rows[0]?.annual_balance - balance.rows[0]?.used_annual || 20;
+        break;
+      case 'Sick':
+        availableBalance = balance.rows[0]?.sick_balance - balance.rows[0]?.used_sick || 10;
+        break;
+      case 'Casual':
+        availableBalance = balance.rows[0]?.casual_balance - balance.rows[0]?.used_casual || 7;
+        break;
+    }
+    
+    if (leaveDays > availableBalance) {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Insufficient ${leave_type} leave balance. Available: ${availableBalance} days` 
+      });
+    }
+    
+    // Check for overlapping leaves
+    let overlapQuery = `SELECT 1
+       FROM leaves
+      WHERE user_id = $1
+        AND status = 'approved'
+        AND (($2 BETWEEN start_date AND end_date)
+          OR ($3 BETWEEN start_date AND end_date)
+          OR ($2 < start_date AND $3 > end_date))`;
 
+    const overlapParams = [userId, start_date, end_date];
+
+    if (req.body.leaveId) {
+      overlapQuery += ' AND leave_id <> $4';
+      overlapParams.push(req.body.leaveId);
+    }
+
+    const overlapCheck = await pool.query(overlapQuery, overlapParams);
+    if (overlapCheck.rows.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Leave dates overlap with existing approved leave' 
+      });
+    }
+    
+    // Create leave (existing code continues...)
     const result = await pool.query(
-      `INSERT INTO leaves
-       (user_id, leave_type, start_date, end_date, reason, status)
+      `INSERT INTO leaves (user_id, leave_type, start_date, end_date, reason, status)
        VALUES ($1, $2, $3, $4, $5, 'Pending')
        RETURNING *`,
       [userId, leave_type, start_date, end_date, reason]
     );
-
-    res.status(201).json({
+    
+    // Update used balance
+    await pool.query(
+      `UPDATE leave_balances 
+       SET used_${leave_type.toLowerCase()} = used_${leave_type.toLowerCase()} + $1,
+           updated_at = NOW()
+       WHERE user_id = $2`,
+      [leaveDays, userId]
+    );
+    
+    res.json({
       success: true,
+      message: 'Leave application submitted successfully',
       leave: result.rows[0]
     });
-
+    
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false });
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+
+exports.getLeaveBalance = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    const balance = await pool.query(
+      `SELECT * FROM leave_balances WHERE user_id = $1`,
+      [userId]
+    );
+    
+    const data = balance.rows[0] || {
+      annual_balance: 20, used_annual: 0,
+      sick_balance: 10, used_sick: 0,
+      casual_balance: 7, used_casual: 0
+    };
+    
+    res.json({ 
+      success: true, 
+      data: {
+        ...data,
+        remaining_annual: data.annual_balance - data.used_annual,
+        remaining_sick: data.sick_balance - data.used_sick,
+        remaining_casual: data.casual_balance - data.used_casual
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 

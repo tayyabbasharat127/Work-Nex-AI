@@ -10,6 +10,7 @@ import {
   createLeaveApi,
   getMyLeavesApi,
   deleteLeaveApi,
+  getLeaveBalanceApi,
 } from "@/src/api/api";
 
 type LeaveRow = {
@@ -43,6 +44,17 @@ export default function EmployeeLeavesPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [leaveBalance, setLeaveBalance] = useState<any>(null);
+
+  // Load leave balance
+  const loadLeaveBalance = async () => {
+    try {
+      const res = await getLeaveBalanceApi();
+      setLeaveBalance(res.data?.data || res.data);
+    } catch (e: any) {
+      console.error("Error loading leave balance:", e);
+    }
+  };
 
   // Load my leaves
   const loadMyLeaves = async () => {
@@ -69,6 +81,7 @@ export default function EmployeeLeavesPage() {
 
   useEffect(() => {
     loadMyLeaves();
+    loadLeaveBalance();
   }, []);
 
   // Clear success message after 5 seconds
@@ -209,6 +222,27 @@ export default function EmployeeLeavesPage() {
         )}
         
         {loading && <div className="banner banner-loading">Working...</div>}
+
+        {/* Leave Balance Cards */}
+        {leaveBalance && (
+          <div className="balance-grid">
+            <div className="balance-card">
+              <h4>Annual Leave</h4>
+              <p className="remaining">{leaveBalance.remaining_annual || 0} days</p>
+              <small>Used: {leaveBalance.used_annual || 0} / Total: {leaveBalance.annual_balance || 20}</small>
+            </div>
+            <div className="balance-card">
+              <h4>Sick Leave</h4>
+              <p className="remaining">{leaveBalance.remaining_sick || 0} days</p>
+              <small>Used: {leaveBalance.used_sick || 0} / Total: {leaveBalance.sick_balance || 10}</small>
+            </div>
+            <div className="balance-card">
+              <h4>Casual Leave</h4>
+              <p className="remaining">{leaveBalance.remaining_casual || 0} days</p>
+              <small>Used: {leaveBalance.used_casual || 0} / Total: {leaveBalance.casual_balance || 7}</small>
+            </div>
+          </div>
+        )}
 
         <div className="kpi-grid">
           {kpi.map((k, i) => (

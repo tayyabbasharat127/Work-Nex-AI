@@ -110,15 +110,23 @@ exports.login = async (req, res) => {
 
   const token = jwt.sign(
     {
-      userId: user.rows[0].user_id,
-      role: user.rows[0].role_id,
-      organization_id: user.rows[0].organization_id
-    },
+    userId: user.rows[0].user_id,
+    email: user.rows[0].email,
+    roleId: user.rows[0].role_id,
+    organizationId: user.rows[0].organization_id
+  },
     process.env.JWT_SECRET,
     { expiresIn: "15m" }
   );
 
   res.json({ token });
+  const { deviceId } = req.body; // Frontend se milega
+if (deviceId) {
+  await pool.query(
+    `UPDATE users SET device_id = $1 WHERE user_id = $2 AND device_id IS NULL`,
+    [deviceId, user.rows[0].user_id]
+  );
+}
 };
 exports.refreshToken = async (req, res) => {
   const { refreshToken } = req.body;

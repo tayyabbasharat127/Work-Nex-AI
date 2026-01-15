@@ -45,17 +45,17 @@ const API_PREFIX = "/api";
 
 // Authentication
 export const signupApi = (payload) =>
-  api.post(`${API_PREFIX}/auth/signup`, payload);
+  api.post(`${API_PREFIX}/signup`, payload);
 export const loginApi = (payload) =>
-  api.post(`${API_PREFIX}/auth/login`, payload);
+  api.post(`${API_PREFIX}/login`, payload);
 export const forgotPasswordApi = (payload) =>
-  api.post(`${API_PREFIX}/auth/forgot-password`, payload);
+  api.post(`${API_PREFIX}/forgot-password`, payload);
 export const verifyOtpApi = (payload) =>
-  api.post(`${API_PREFIX}/auth/verify-otp`, payload);
+  api.post(`${API_PREFIX}/verify-otp`, payload);
 export const resetPasswordApi = (payload) =>
-  api.post(`${API_PREFIX}/auth/reset-password`, payload);
+  api.post(`${API_PREFIX}/reset-password`, payload);
 export const changePasswordApi = (payload) =>
-  api.post(`${API_PREFIX}/auth/changePassword`, payload);
+  api.post(`${API_PREFIX}/changePassword`, payload);
 
 // Admin Users CRUD
 // Create user API Admin

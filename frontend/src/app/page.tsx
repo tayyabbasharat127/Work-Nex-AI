@@ -1,9 +1,9 @@
 import Image from "next/image";
-import Login from "./auth/login/page";
-import Register from "./auth/register/page";
-import ResetPassword from "./auth/reset-password/page";
-import VerifyOTP from "./auth/verify-otp/page";
-import ForgotPassword from "./auth/forgot-password/page";
+import Login from "./login/page";
+import Register from "./register/page";
+import ResetPassword from "./reset-password/page";
+import VerifyOTP from "./verify-otp/page";
+import ForgotPassword from "./forgot-password/page";
 import { AdminDashboard } from "./dashboard/admin/main/page";
 import EmployeeDashboard from "./dashboard/employee/main/page";
 import EmployeeAnalyticsPage from "./dashboard/employee/analytics/page";

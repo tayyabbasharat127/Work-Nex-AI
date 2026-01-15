@@ -69,7 +69,7 @@ export default function HomePage() {
         <div className="nav-actions">
           <button
             className="btn-outline"
-            onClick={() => router.push("/auth/register")}
+            onClick={() => router.push("/register")}
           >
             Sign In
           </button>

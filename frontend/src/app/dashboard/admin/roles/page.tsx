@@ -1,52 +1,58 @@
 "use client";
 
-import React from "react";
-import Sidebar from "@/src/app/components/sideBar/admin/sidebar";
+import React, { useEffect, useState } from "react";
+import SidebarAdmin from "@/src/app/components/sideBar/admin/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import { Users, Shield, UserCog, UserPlus } from "lucide-react";
 import "./page.scss";
-import SidebarAdmin from "@/src/app/components/sideBar/admin/sidebar";
+import { getUserApi } from "@/src/api/api";
+
+const SYSTEM_ROLES = [
+  { id: "1", name: "Admin", permissions: "Full access to system & settings", color: "#6C5CE7" },
+  { id: "2", name: "Manager", permissions: "Manage teams, view analytics, approve leave", color: "#FF8C42" },
+  { id: "3", name: "Employee", permissions: "View tasks, mark attendance, request leave", color: "#22C55E" },
+];
 
 export default function RolesPage() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Load users to count by role
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await getUserApi();
+      const userList = res.data?.data || res.data || [];
+      setUsers(userList);
+    } catch (error) {
+      console.error("Failed to load users:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  // Count users by role
+  const roleCounts = SYSTEM_ROLES.reduce((acc, role) => {
+    const count = users.filter((user: any) => String(user.role_id) === role.id).length;
+    acc[role.id] = count;
+    return acc;
+  }, {} as Record<string, number>);
+
   const stats = [
-    { label: "Total Roles", value: "8", trend: "up", change: "+1" },
-    { label: "Admins", value: "3", trend: "up", change: "+1" },
-    { label: "Managers", value: "12", trend: "down", change: "-2" },
-    { label: "Employees", value: "84", trend: "up", change: "+5" },
+    { label: "Total Roles", value: String(SYSTEM_ROLES.length), trend: "up", change: "" },
+    { label: "Admins", value: String(roleCounts["1"] || 0), trend: "up", change: "" },
+    { label: "Managers", value: String(roleCounts["2"] || 0), trend: "up", change: "" },
+    { label: "Employees", value: String(roleCounts["3"] || 0), trend: "up", change: "" },
   ];
 
-  const roles = [
-    {
-      name: "Administrator",
-      users: 3,
-      permissions: "Full access to system & settings",
-      color: "#6C5CE7",
-    },
-    {
-      name: "Manager",
-      users: 12,
-      permissions: "Manage teams, view analytics, approve leave",
-      color: "#FF8C42",
-    },
-    {
-      name: "Employee",
-      users: 84,
-      permissions: "View tasks, mark attendance, request leave",
-      color: "#22C55E",
-    },
-    {
-      name: "HR",
-      users: 4,
-      permissions: "Manage recruitment, leaves, and payroll",
-      color: "#B8C1FF",
-    },
-    {
-      name: "Finance",
-      users: 2,
-      permissions: "Access reports and manage invoices",
-      color: "#FFE4D1",
-    },
-  ];
+  const roles = SYSTEM_ROLES.map(role => ({
+    ...role,
+    users: roleCounts[role.id] || 0,
+  }));
 
   return (
     <div className="roles-dashboard">
@@ -73,10 +79,10 @@ export default function RolesPage() {
         {/* Roles Table */}
         <section className="table-section">
           <div className="table-header">
-            <h3>Roles Overview</h3>
-            <button className="btn-add">
-              <UserPlus size={16} /> Add Role
-            </button>
+            <h3>System Roles Overview</h3>
+            <div className="table-info">
+              <span>These are the three core roles in the system</span>
+            </div>
           </div>
 
           <table>
@@ -88,8 +94,8 @@ export default function RolesPage() {
               </tr>
             </thead>
             <tbody>
-              {roles.map((role, i) => (
-                <tr key={i}>
+              {roles.map((role) => (
+                <tr key={role.id}>
                   <td>
                     <div className="role-cell">
                       <div

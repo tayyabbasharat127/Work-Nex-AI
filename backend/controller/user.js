@@ -1,65 +1,174 @@
-const { User } = require('../models/user');
-exports.createuser = async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (await User.findOne({ where: { email } }))
-      return res.status(400).json({ success: false, message: "Email already exists" });
+const pool = require('../config/db');
+const bcrypt = require('bcrypt');
 
-    const user = await User.create(req.body);
-    const data = user.toJSON(); delete data.password;
-    res.status(201).json({ success: true, message: "User created", data });
-  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
-};
-exports.getuser = async (req,res)=>{
+exports.createUser = async (req, res) => {
   try {
-    const alluser = await User.findAll();
-    if(!alluser || alluser.length == 0){
-      return res.status(404).json({message:'No user Found'});
+    const { organizationId } = req.user || {};
+    const { email, name, password, role_id, department_id, manager_id } = req.body;
+
+    if (!organizationId) {
+      return res.status(403).json({ success: false, message: 'Missing organization context' });
     }
-    return res.status(201).json(alluser);
-  } catch (error) { res.status(500).json({ success: false, message: e.message }); }
-}
-exports.updateuser = async (req, res) => {
-  try {
-    const id = req.params.id; 
+    if (!password) {
+      return res.status(400).json({ success: false, message: 'Password is required' });
+    }
 
-    if (!id) {
+    // Check if email already exists
+    const existingUser = await pool.query(
+      'SELECT user_id FROM users WHERE email = $1',
+      [email]
+    );
+    
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ success: false, message: "Email already exists" });
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Create new user
+    const result = await pool.query(
+      `INSERT INTO users (
+        name,
+        email,
+        password_hash,
+        role_id,
+        department_id,
+        manager_id,
+        organization_id,
+        status,
+        created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', NOW())
+      RETURNING user_id, name, email, role_id, department_id, manager_id, organization_id, created_at`,
+      [name, email, passwordHash, role_id, department_id || null, manager_id || null, organizationId]
+    );
+
+    const user = result.rows[0];
+    res.status(201).json({ success: true, message: "User created", data: user });
+  } catch (e) { 
+    res.status(500).json({ success: false, message: e.message }); 
+  }
+};
+
+exports.getUser = async (req, res) => {
+  try {
+    const { organizationId } = req.user || {};
+    const { department_id } = req.query;
+
+    if (!organizationId) {
+      return res.status(403).json({ success: false, message: 'Missing organization context' });
+    }
+
+    let query = `SELECT user_id, name, email, role_id, department_id, manager_id, organization_id, created_at
+                 FROM users
+                 WHERE organization_id = $1`;
+    const params = [organizationId];
+
+    if (department_id) {
+      query += ' AND department_id = $2';
+      params.push(department_id);
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    const allusers = await pool.query(query, params);
+
+    if (!allusers.rows || allusers.rows.length === 0) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    return res.status(200).json({ success: true, data: allusers.rows });
+  } catch (error) { 
+    res.status(500).json({ success: false, message: error.message }); 
+  }
+};
+
+exports.updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { organizationId } = req.user || {};
+    const { name, email, role_id, department_id, manager_id, password } = req.body;
+
+    if (!id || !organizationId) {
       return res.status(400).json({
         success: false,
-        message: "User ID is required in URL params"
+        message: "User ID and organization context are required"
       });
     }
 
-    const [updated] = await User.update(req.body, { where: { id } });
+    let passwordHash = null;
+    if (password) {
+      passwordHash = await bcrypt.hash(password, 10);
+    }
 
-    if (updated === 0) {
+    // Update user
+    const updateResult = await pool.query(
+      `UPDATE users SET
+        name = COALESCE($1, name),
+        email = COALESCE($2, email),
+        role_id = COALESCE($3, role_id),
+        department_id = COALESCE($4, department_id),
+        manager_id = COALESCE($5, manager_id),
+        password_hash = COALESCE($6, password_hash),
+        updated_at = NOW()
+       WHERE user_id = $7 AND organization_id = $8`,
+      [name || null, email || null, role_id || null, department_id || null, manager_id || null, passwordHash, id, organizationId]
+    );
+
+    if (updateResult.rowCount === 0) {
       return res.status(404).json({
         success: false,
         message: "User not found"
       });
     }
 
-    const updatedUser = await User.findByPk(id, {
-      attributes: { exclude: ["password"] }
-    });
-  // sequelixe method used to find prinary key via id and in atribute exlude passowrd happens to not show 
+    // Get updated user (excluding password)
+    const updatedUser = await pool.query(
+      `SELECT user_id, name, email, role_id, department_id, manager_id, organization_id, created_at, updated_at
+       FROM users WHERE user_id = $1 AND organization_id = $2`,
+      [id, organizationId]
+    );
+
     return res.status(200).json({
       success: true,
       message: "User updated successfully",
-      data: updatedUser
+      data: updatedUser.rows[0]
     });
 
   } catch (e) {
     return res.status(500).json({ success: false, message: e.message });
   }
 };
-exports.deleteuser = async(req,res)=>{
+
+exports.deleteUser = async (req, res) => {
   try {
-     const {id} = req.params;
-     const deleteuser = await User.destroy({where: {id}});
-     return res.status(200).json({ success:true,message:'User deleted Successfully'});
-  } catch (e) {
-    return res.status(500).json({success:false,message:e.message});
+    const { id } = req.params;
+    const { organizationId } = req.user || {};
+
+    if (!organizationId) {
+      return res.status(403).json({ success: false, message: 'Missing organization context' });
+    }
+
+    const deleteResult = await pool.query(
+      'DELETE FROM users WHERE user_id = $1 AND organization_id = $2',
+      [id, organizationId]
+    );
+
+    if (deleteResult.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
     
+    return res.status(200).json({ 
+      success: true, 
+      message: 'User deleted Successfully' 
+    });
+  } catch (e) {
+    return res.status(500).json({ 
+      success: false, 
+      message: e.message 
+    });
   }
 };

@@ -82,7 +82,30 @@ export default function Login() {
       // Optional: store user payload if backend returns it
       if (res.data?.user) localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      router.push("/dashboard/employee/main");
+      // Redirect based on user role
+      const user = res.data?.user;
+      if (user) {
+        const roleId = String(user.roleId || user.role_id);
+        
+        switch (roleId) {
+          case "1": // Admin
+            router.push("/dashboard/admin");
+            break;
+          case "2": // Manager
+            router.push("/dashboard/manager");
+            break;
+          case "3": // Employee
+            router.push("/dashboard/employee");
+            break;
+          default:
+            // Default to employee dashboard if role is unknown
+            router.push("/dashboard/employee");
+            break;
+        }
+      } else {
+        // Fallback to main dashboard redirect
+        router.push("/dashboard");
+      }
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||

@@ -11,16 +11,30 @@ import {
   deleteUserApi,
   getUserApi, // ✅ your api.js exports getUserApi
   updateUserApi,
+  getAllDepartmentsApi,
 } from "@/src/api/api";
 
-// ✅ ADD THIS TYPE (was missing)
+const ROLE_OPTIONS = [
+  { value: "1", label: "Admin" },
+  { value: "2", label: "Manager" },
+  { value: "3", label: "Employee" },
+];
+
+type Department = {
+  department_id: number;
+  name: string;
+};
+
 type UserRow = {
   id: string;
   name: string;
   email: string;
-  role: string;
-  department: string;
-  status: "Active" | "Inactive";
+  roleId: string;
+  roleLabel: string;
+  departmentId: string;
+  departmentName: string;
+  status: string;
+  managerId: string;
   avatar?: string;
   createdAt?: string;
 };
@@ -28,17 +42,19 @@ type UserRow = {
 type FormState = {
   name: string;
   email: string;
-  role: string;
-  department: string;
-  status: "Active" | "Inactive";
+  roleId: string;
+  departmentId: string;
+  managerId: string;
+  password: string;
 };
 
 const EMPTY_FORM: FormState = {
   name: "",
   email: "",
-  role: "Employee",
-  department: "HR",
-  status: "Active",
+  roleId: ROLE_OPTIONS[2].value,
+  departmentId: "",
+  managerId: "",
+  password: "",
 };
 
 export default function UsersPage() {
@@ -46,11 +62,24 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [departments, setDepartments] = useState<Department[]>([]);
+
   const [showModal, setShowModal] = useState(false);
   const [mode, setMode] = useState<"create" | "edit">("create");
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+
+  const departmentMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    departments.forEach((d) => {
+      map[String(d.department_id)] = d.name;
+    });
+    return map;
+  }, [departments]);
+
+  const roleLabel = (roleId: string) =>
+    ROLE_OPTIONS.find((r) => r.value === roleId)?.label ?? "Unknown";
 
   // -----------------------------
   // Helpers
@@ -58,18 +87,24 @@ export default function UsersPage() {
   const normalizeUsers = (list: any[]): UserRow[] => {
     return (list || [])
       .map((u: any) => {
-        const id = u.id || u._id || u.userId;
+        const id = u.user_id ?? u.id ?? u.userId;
         if (!id) return null;
 
         const email = u.email ?? "";
+        const departmentId = u.department_id ? String(u.department_id) : "";
+        const roleId = u.role_id ? String(u.role_id) : "";
         return {
           id: String(id),
           name: u.name ?? "",
           email,
-          role: u.role ?? "Employee",
-          department: u.department ?? "HR",
-          status: (u.status ?? "Active") as "Active" | "Inactive",
-          createdAt: u.createdAt,
+          roleId,
+          roleLabel: roleLabel(roleId),
+          departmentId,
+          departmentName:
+            u.department_name ?? departmentMap[departmentId] ?? "—",
+          status: (u.status ?? "active").toString(),
+          managerId: u.manager_id ? String(u.manager_id) : "",
+          createdAt: u.created_at || u.createdAt,
           avatar:
             u.avatar ||
             `https://i.pravatar.cc/40?u=${encodeURIComponent(email || String(id))}`,
@@ -92,9 +127,10 @@ export default function UsersPage() {
     setForm({
       name: u.name,
       email: u.email,
-      role: u.role,
-      department: u.department,
-      status: u.status,
+      roleId: u.roleId || ROLE_OPTIONS[2].value,
+      departmentId: u.departmentId,
+      managerId: u.managerId,
+      password: "",
     });
     setShowModal(true);
     setError(null);
@@ -108,21 +144,22 @@ export default function UsersPage() {
   };
 
   // -----------------------------
-  // Fetch Users
+  // Fetch Users + Departments
   // -----------------------------
-  const loadUsers = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // ✅ FIX: you have getUserApi, not getUsersApi
-      const res = await getUserApi({});
+      const [deptRes, userRes] = await Promise.all([
+        getAllDepartmentsApi(),
+        getUserApi(),
+      ]);
 
-      // axios -> res.data is the body
-      // Support shapes:
-      // 1) { users: [...] }
-      // 2) [...]
-      const rawList = Array.isArray(res.data) ? res.data : res.data?.users || [];
+      const deptList = deptRes.data?.data ?? deptRes.data ?? [];
+      setDepartments(deptList);
+
+      const rawList = userRes.data?.data ?? userRes.data ?? [];
       setUsers(normalizeUsers(rawList));
     } catch (e: any) {
       setError(
@@ -134,7 +171,7 @@ export default function UsersPage() {
   };
 
   useEffect(() => {
-    loadUsers();
+    loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -182,8 +219,8 @@ export default function UsersPage() {
     const rows = users.map((u) => [
       u.name,
       u.email,
-      u.role,
-      u.department,
+      u.roleLabel,
+      u.departmentName,
       u.status,
     ]);
 
@@ -235,7 +272,11 @@ export default function UsersPage() {
         const created = res.data?.user || res.data;
 
         const normalized = normalizeUsers([created])[0];
-        if (normalized) setUsers((prev) => [normalized, ...prev]);
+        if (!normalized) {
+          await loadData();
+        } else {
+          await loadData();
+        }
 
         closeModal();
         return;
@@ -246,19 +287,31 @@ export default function UsersPage() {
         return;
       }
 
-      const res = await updateUserApi(activeId, form);
+      const payload: Record<string, any> = {
+        name: form.name,
+        email: form.email,
+        role_id: form.roleId ? Number(form.roleId) : null,
+        department_id: form.departmentId ? Number(form.departmentId) : null,
+        manager_id: form.managerId ? Number(form.managerId) : null,
+      };
+
+      if (form.password.trim()) {
+        payload.password = form.password.trim();
+      }
+
+      const res = await updateUserApi(activeId, payload);
       const updated = res.data?.user || res.data;
 
       const normalized =
-        normalizeUsers([updated])[0] || ({
-          id: activeId,
-          ...form,
-          avatar: `https://i.pravatar.cc/40?u=${encodeURIComponent(form.email)}`,
-        } as UserRow);
+        normalizeUsers([updated])[0] || null;
 
-      setUsers((prev) =>
-        prev.map((u) => (u.id === activeId ? { ...u, ...normalized } : u))
-      );
+      if (!normalized) {
+        await loadData();
+      } else {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === activeId ? { ...u, ...normalized } : u))
+        );
+      }
 
       closeModal();
     } catch (e: any) {
@@ -280,13 +333,22 @@ export default function UsersPage() {
       setError(null);
 
       await deleteUserApi(id);
-      setUsers((prev) => prev.filter((u) => u.id !== id));
+      await loadData();
     } catch (e: any) {
       setError(e?.response?.data?.message || e?.message || "Delete failed.");
     } finally {
       setLoading(false);
     }
   };
+
+  const managerOptions = useMemo(
+    () =>
+      users.map((u) => ({
+        value: u.id,
+        label: `${u.name || "Unnamed"} (${u.email})`,
+      })),
+    [users]
+  );
 
   return (
     <div className="users-dashboard">
@@ -358,11 +420,11 @@ export default function UsersPage() {
                       </div>
                     </td>
                     <td>{user.email}</td>
-                    <td>{user.role}</td>
-                    <td>{user.department}</td>
+                    <td>{user.roleLabel}</td>
+                    <td>{user.departmentName}</td>
                     <td>
                       <span className={`status ${user.status.toLowerCase()}`}>
-                        {user.status}
+                        {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                       </span>
                     </td>
                     <td>
@@ -441,51 +503,82 @@ export default function UsersPage() {
                     <div className="form-group">
                       <label>Role</label>
                       <select
-                        value={form.role}
+                        value={form.roleId}
                         onChange={(e) =>
-                          setForm((p) => ({ ...p, role: e.target.value }))
+                          setForm((p) => ({ ...p, roleId: e.target.value }))
                         }
                         disabled={loading}
                       >
-                        <option>Admin</option>
-                        <option>Manager</option>
-                        <option>Employee</option>
+                        {ROLE_OPTIONS.map((role) => (
+                          <option key={role.value} value={role.value}>
+                            {role.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
                     <div className="form-group">
                       <label>Department</label>
                       <select
-                        value={form.department}
+                        value={form.departmentId}
                         onChange={(e) =>
-                          setForm((p) => ({ ...p, department: e.target.value }))
+                          setForm((p) => ({ ...p, departmentId: e.target.value }))
                         }
                         disabled={loading}
                       >
-                        <option>HR</option>
-                        <option>IT</option>
-                        <option>Marketing</option>
-                        <option>Finance</option>
+                        <option value="">Select department</option>
+                        {departments.map((dept) => (
+                          <option
+                            key={dept.department_id}
+                            value={dept.department_id}
+                          >
+                            {dept.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
 
                   <div className="form-group">
-                    <label>Status</label>
+                    <label>Manager (optional)</label>
                     <select
-                      value={form.status}
+                      value={form.managerId}
                       onChange={(e) =>
-                        setForm((p) => ({
-                          ...p,
-                          status: e.target.value as "Active" | "Inactive",
-                        }))
+                        setForm((p) => ({ ...p, managerId: e.target.value }))
                       }
                       disabled={loading}
                     >
-                      <option>Active</option>
-                      <option>Inactive</option>
+                      <option value="">No manager assigned</option>
+                      {managerOptions
+                        .filter((m) => m.value !== activeId)
+                        .map((mgr) => (
+                          <option key={mgr.value} value={mgr.value}>
+                            {mgr.label}
+                          </option>
+                        ))}
                     </select>
                   </div>
+
+                  {mode === "create" || mode === "edit" ? (
+                    <div className="form-group">
+                      <label>
+                        Password{mode === "create" ? " (required)" : " (optional)"}
+                      </label>
+                      <input
+                        type="password"
+                        placeholder={
+                          mode === "create"
+                            ? "Set a temporary password"
+                            : "Leave blank to keep current password"
+                        }
+                        value={form.password}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, password: e.target.value }))
+                        }
+                        disabled={loading}
+                      />
+                    </div>
+                  ) : null}
 
                   <button type="submit" className="btn-save" disabled={loading}>
                     {loading ? "Saving..." : "Save User"}

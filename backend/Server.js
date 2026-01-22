@@ -11,6 +11,8 @@ const notificationroutes = require('./routes/notificationroutes');
 const analyticsroutes = require('./routes/analyticsroutes');
 const reportsRoutes = require('./routes/reportsroutes');
 const userRoutes = require('./routes/userroutes');
+const superAdminRoutes = require('./routes/superAdminRoutes');
+
 const app = express();
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
@@ -30,6 +32,9 @@ app.use('/api/notifications', notificationroutes);
 app.use('/api/analytics', analyticsroutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/users', userRoutes);
+
+// Super admin routes
+app.use('/api/superadmin', superAdminRoutes);
 
 // Test route
 app.get("/test-org", async (req, res) => {

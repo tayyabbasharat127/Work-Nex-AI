@@ -229,3 +229,59 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+/**
+ * Super Admin Login
+ * Separate login endpoint for super admin with role_id = 0
+ */
+exports.superAdminLogin = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Validate email is admin@worknex
+    if (email !== 'admin@worknex') {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Query super admin user
+    const user = await pool.query(
+      `SELECT * FROM users WHERE email=$1 AND role_id=0 AND status='active'`,
+      [email]
+    );
+
+    if (!user.rows.length) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Verify password
+    const match = await bcrypt.compare(password, user.rows[0].password_hash);
+    if (!match) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Generate JWT token with NULL organizationId
+    const token = jwt.sign(
+      {
+        userId: user.rows[0].user_id,
+        email: user.rows[0].email,
+        roleId: 0,
+        organizationId: null
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    res.json({ 
+      token,
+      user: {
+        user_id: user.rows[0].user_id,
+        email: user.rows[0].email,
+        name: user.rows[0].name,
+        role_id: 0
+      }
+    });
+  } catch (err) {
+    console.error('Super admin login error:', err);
+    res.status(500).json({ message: 'Login failed' });
+  }
+};

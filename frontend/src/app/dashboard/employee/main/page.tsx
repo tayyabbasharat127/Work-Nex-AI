@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Sidebar from "@/src/app/components/sideBar/admin/sidebar";
+import SidebarEmployee from "@/src/app/components/sideBar/employee/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import {
   CalendarCheck,
@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 
 import "./page.css";
-import SidebarEmployee from "@/src/app/components/sideBar/employee/sidebar";
 
 export default function EmployeeDashboard() {
   const kpis = [

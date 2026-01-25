@@ -12,7 +12,7 @@ import {
 import "./page.scss";
 
 interface Department {
-  department_id: string;
+  department_id: number;
   name: string;
   manager_id: string;
   description: string;
@@ -62,7 +62,7 @@ export default function DepartmentsPage() {
 
       if (editingDept) {
         // Update existing department
-        await updateDepartmentApi(editingDept.department_id, formData);
+        await updateDepartmentApi(String(editingDept.department_id), formData);
         setSuccessMsg("Department updated successfully!");
       } else {
         // Create new department
@@ -93,12 +93,12 @@ export default function DepartmentsPage() {
   };
 
   // Delete department
-  const handleDelete = async (deptId: string) => {
+  const handleDelete = async (deptId: number) => {
     if (!confirm("Are you sure you want to delete this department?")) return;
     
     try {
       setLoading(true);
-      await deleteDepartmentApi(deptId);
+      await deleteDepartmentApi(String(deptId));
       setSuccessMsg("Department deleted successfully!");
       await loadDepartments();
     } catch (e: any) {

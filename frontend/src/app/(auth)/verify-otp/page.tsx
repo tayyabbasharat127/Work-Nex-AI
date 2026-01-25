@@ -9,7 +9,7 @@ export default function VerifyOTP() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Expect URL like: /auth/verify-otp?email=someone@gmail.com&next=reset-password
+  // Expect URL like: /verify-otp?email=someone@gmail.com&next=reset-password
   const emailFromQuery = useMemo(() => searchParams.get("email") || "", [searchParams]);
   const nextFromQuery = useMemo(() => searchParams.get("next") || "reset-password", [searchParams]);
 
@@ -76,9 +76,9 @@ export default function VerifyOTP() {
       // - If next=reset-password => go to reset page with email
       // - If next=login => go to login page
       if (nextFromQuery === "login") {
-        router.push("/auth/login");
+        router.push("/login");
       } else {
-        router.push(`/auth/reset-password?email=${encodeURIComponent(email)}`);
+        router.push(`/reset-password?email=${encodeURIComponent(email)}`);
       }
     } catch (err: any) {
       const msg =
@@ -178,7 +178,7 @@ export default function VerifyOTP() {
           )}
         </div>
 
-        <a href="/auth/login" className="back-link">
+        <a href="/login" className="back-link">
           ← Back to Login
         </a>
       </div>

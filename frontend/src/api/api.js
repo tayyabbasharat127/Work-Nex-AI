@@ -45,25 +45,25 @@ const API_PREFIX = "/api";
 
 // Authentication
 export const signupApi = (payload) =>
-  api.post(`${API_PREFIX}/auth/signup`, payload);
+  api.post("/api/auth/signup", payload);
 export const loginApi = (payload) =>
-  api.post(`${API_PREFIX}/auth/login`, payload);
+  api.post("/api/auth/login", payload);
 export const forgotPasswordApi = (payload) =>
-  api.post(`${API_PREFIX}/auth/forgot-password`, payload);
+  api.post("/api/auth/forgot-password", payload);
 export const verifyOtpApi = (payload) =>
-  api.post(`${API_PREFIX}/auth/verify-otp`, payload);
+  api.post("/api/auth/verify-otp", payload);
 export const resetPasswordApi = (payload) =>
-  api.post(`${API_PREFIX}/auth/reset-password`, payload);
+  api.post("/api/auth/reset-password", payload);
 export const changePasswordApi = (payload) =>
-  api.post(`${API_PREFIX}/auth/changePassword`, payload);
+  api.post("/api/auth/changePassword", payload);
 
 // Admin Users CRUD
 // Create user API Admin
-export const createUserApi = (payload) => api.post("/api/createuser", payload);
-export const getUserApi = (payload) => api.post("/api/getuser", payload);
+export const createUserApi = (payload) => api.post("/api/users/createuser", payload);
+export const getUserApi = (params = {}) => api.get("/api/users/getuser", { params });
 export const updateUserApi = (id, payload) =>
-  api.put(`/api/users/${id}`, payload);
-export const deleteUserApi = (id) => api.delete(`/api/users/${id}`);
+  api.put(`/api/users/users/${id}`, payload);
+export const deleteUserApi = (id) => api.delete(`/api/users/users/${id}`);
 
 export const createLeaveApi = (payload) => api.post("/api/leaves", payload);
 
@@ -107,10 +107,9 @@ export const historyApi = (params = {}) =>
 export const getAllLeavesApi = () => api.get("/api/leaves"); 
 // OR if your backend route is different, match it exactly (examples below)
 
-// 2) PATCH / PUT update leave status
+// 2) PUT update leave status
 export const updateLeaveStatusApi = (leaveId, payload) =>
-  api.patch(`/api/leaves/${leaveId}/status`, payload);
-// If your backend expects PUT, use api.put(...)
+  api.put(`/api/leaves/${leaveId}/status`, payload);
 
 // 3) DELETE leave
 export const deleteLeaveApi = (leaveId) =>

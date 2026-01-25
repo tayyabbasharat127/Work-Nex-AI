@@ -53,7 +53,7 @@ exports.createUser = async (req, res) => {
 exports.getUser = async (req, res) => {
   try {
     const { organizationId } = req.user || {};
-    const { department_id } = req.body;
+    const { department_id } = req.query;
 
     if (!organizationId) {
       return res.status(403).json({ success: false, message: 'Missing organization context' });

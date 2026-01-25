@@ -114,12 +114,21 @@ exports.login = async (req, res) => {
     email: user.rows[0].email,
     roleId: user.rows[0].role_id,
     organizationId: user.rows[0].organization_id
-  },
+    },
     process.env.JWT_SECRET,
     { expiresIn: "15m" }
   );
 
-  res.json({ token });
+  res.json({ 
+    token,
+    user: {
+      user_id: user.rows[0].user_id,
+      email: user.rows[0].email,
+      name: user.rows[0].name,
+      role_id: user.rows[0].role_id,
+      organization_id: user.rows[0].organization_id
+    }
+  });
   const { deviceId } = req.body; // Frontend se milega
 if (deviceId) {
   await pool.query(

@@ -1,6 +1,6 @@
 "use client";
 
-// src/app/auth/Login.tsx
+// src/app/Login.tsx
 import React, { useState } from "react";
 import "./page.scss";
 import { useRouter } from "next/navigation";
@@ -165,7 +165,7 @@ export default function Login() {
               <input type="checkbox" />
               <span>Remember me</span>
             </label>
-            <a href="/auth/forgot-password" className="forgot-password">
+            <a href="/forgot-password" className="forgot-password">
               Forgot password?
             </a>
           </div>
@@ -219,7 +219,7 @@ export default function Login() {
 
         {/* Sign Up Link */}
         <div className="signup-link">
-          Don't have an account? <a href="/auth/register">Sign up</a>
+          Don't have an account? <a href="/register">Sign up</a>
         </div>
       </div>
     </div>

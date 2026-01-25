@@ -2,31 +2,46 @@ import React from "react";
 import "./statsCard.css";
 
 interface Stat {
+  title?: string;
+  subtitle?: string;
   value?: number | string;
-  trend?: string;
+  trend?: "up" | "down" | "flat";
   change?: string;
-  label: string;
+  label?: string;
 }
 
-interface PROPS {
+interface Props {
   stats: Stat[];
 }
 
-export const StatsCard: React.FC<PROPS> = ({ stats }) => {
+export const StatsCard: React.FC<Props> = ({ stats }) => {
   return (
     <div className="stats-container">
       {stats.map((stat, idx) => (
         <div key={idx} className="stat-card">
           <div className="stat-header">
-            <span className="stat-label">Admin</span>
-            <span className="stat-period">Weekly Attendance</span>
+            <span className="stat-label">{stat.title || "Overview"}</span>
+            {stat.subtitle && (
+              <span className="stat-period">{stat.subtitle}</span>
+            )}
           </div>
-          <div className="stat-value">{stat.value}</div>
+          <div className="stat-value">{stat.value ?? "—"}</div>
           <div className="stat-footer">
-            <span className={`trend ${stat.trend}`}>
-              {stat.trend === "down" ? "↓" : "↑"} {stat.change || ""}
-            </span>
-            <span className="stat-description">{stat.label}</span>
+            {stat.change ? (
+              <span className={`trend ${stat.trend ?? "flat"}`}>
+                {stat.trend === "down"
+                  ? "↓"
+                  : stat.trend === "up"
+                  ? "↑"
+                  : "•"}{" "}
+                {stat.change}
+              </span>
+            ) : (
+              <span className="trend flat">•</span>
+            )}
+            {stat.label && (
+              <span className="stat-description">{stat.label}</span>
+            )}
           </div>
         </div>
       ))}

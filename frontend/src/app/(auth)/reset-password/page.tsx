@@ -70,7 +70,7 @@ export default function ResetPassword() {
       setSuccess(true);
 
       // Optional auto-redirect after success
-      // setTimeout(() => router.push("/auth/login"), 1200);
+      // setTimeout(() => router.push("/login"), 1200);
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||
@@ -192,7 +192,7 @@ export default function ResetPassword() {
             {error && <p className="error-text">{error}</p>}
             {message && !error && <p className="success-text">{message}</p>}
 
-            <a href="/auth/login" className="back-link">
+            <a href="/login" className="back-link">
               ← Back to Login
             </a>
           </div>
@@ -200,7 +200,7 @@ export default function ResetPassword() {
           <div className="success-message">
             <p>You can now log in with your new password.</p>
             <a
-              href="/auth/login"
+              href="/login"
               className="submit-button"
               style={{
                 display: "block",

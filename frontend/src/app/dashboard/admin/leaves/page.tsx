@@ -51,12 +51,12 @@ export default function LeavePage() {
 
         return {
           id: String(id),
-          employee: l.employee_name || l.employee || l.name || "—",
-          type: l.type || l.leave_type || "—",
+          employee: l.user_name || l.employee_name || l.employee || l.name || "—",
+          type: l.leave_type || l.type || "—",
           startDate: start,
           endDate: end,
           status: l.status || "Pending",
-          createdAt: l.createdAt,
+          createdAt: l.created_at || l.createdAt,
         } as LeaveRow;
       })
       .filter(Boolean) as LeaveRow[];
@@ -71,7 +71,7 @@ export default function LeavePage() {
       setError(null);
 
       const res = await getAllLeavesApi();
-      const rawList = Array.isArray(res.data) ? res.data : res.data?.leaves || [];
+      const rawList = Array.isArray(res.data?.leaves) ? res.data.leaves : res.data?.data || [];
       setLeaves(normalizeLeaves(rawList));
     } catch (e: any) {
       setError(e?.response?.data?.message || e?.message || "Failed to load leaves.");

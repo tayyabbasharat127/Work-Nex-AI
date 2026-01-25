@@ -1,4 +1,5 @@
 import React from "react";
+import { useAuth } from "@/src/app/providers/AuthProvider";
 import {
   Home,
   User,
@@ -21,10 +22,17 @@ import {
   Bot,
   TrendingUp,
   LayoutDashboard,
+  LogOut,
 } from "lucide-react";
 import "./sidebar.css";
 
 const SidebarManager: React.FC = () => {
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
     <aside className="sidebar">
       {/* Logo Section */}
@@ -75,8 +83,10 @@ const SidebarManager: React.FC = () => {
 
       {/* Footer */}
       <div className="sidebar-footer">
-        <ChevronLeft size={20} />
-        <span>Collapse</span>
+        <button onClick={handleLogout} className="logout-btn">
+          <LogOut size={20} />
+          <span>Logout</span>
+        </button>
       </div>
     </aside>
   );

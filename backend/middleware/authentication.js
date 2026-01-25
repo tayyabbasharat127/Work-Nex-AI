@@ -11,11 +11,19 @@ module.exports = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const {userId, email, roleId, organizationId:organizationId} = decoded;
-    if (!userId || !roleId || !organizationId || !email) {
+    const {userId, email, roleId, organizationId} = decoded;
+    
+    // Validate required fields
+    if (!userId || roleId === undefined || !email) {
       return res.status(401).json({ message: 'Invalid token payload' });
     }
-    req.user = { userId, roleId, organizationId, email };
+    
+    // Super admin (roleId = 0) can have NULL organizationId
+    if (roleId !== 0 && !organizationId) {
+      return res.status(401).json({ message: 'Invalid token payload' });
+    }
+    
+    req.user = { userId, roleId, organizationId: organizationId || null, email };
     next();
   } catch (err) {
     return res.status(401).json({ message: 'Invalid token' });

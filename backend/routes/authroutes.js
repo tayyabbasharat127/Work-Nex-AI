@@ -10,6 +10,7 @@ const {
   forgotPassword,
   resetPassword,
   changePassword,
+  superAdminLogin,
 } = require("../controller/auth");
 
 router.post("/signup", signup);
@@ -17,5 +18,9 @@ router.post("/verify-otp", verifyOTP);
 router.post("/login", login);
 router.post("/refresh-token", refreshToken);
 router.post("/forgot-password", forgotPassword);
-router.post("/changePassword", authenticateToken,changePassword);
+router.post("/changePassword", authenticateToken, changePassword);
+
+// Super admin login route
+router.post("/superadmin/login", superAdminLogin);
+
 module.exports = router;

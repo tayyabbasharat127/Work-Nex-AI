@@ -31,6 +31,26 @@ type ApplyFormState = {
   reason: string;
 };
 
+type LeaveBalance = {
+  remaining_annual?: number;
+  used_annual?: number;
+  annual_balance?: number;
+  remaining_sick?: number;
+  used_sick?: number;
+  sick_balance?: number;
+  remaining_casual?: number;
+  used_casual?: number;
+  casual_balance?: number;
+  [key: string]: unknown;
+};
+
+type CreateLeavePayload = {
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  reason: string;
+};
+
 const EMPTY_FORM: ApplyFormState = {
   type: "Casual",
   startDate: "",
@@ -44,15 +64,16 @@ export default function EmployeeLeavesPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [leaveBalance, setLeaveBalance] = useState<any>(null);
+  const [leaveBalance, setLeaveBalance] = useState<LeaveBalance | null>(null);
 
   // Load leave balance
   const loadLeaveBalance = async () => {
     try {
       const res = await getLeaveBalanceApi();
       setLeaveBalance(res.data?.data || res.data);
-    } catch (e: any) {
-      console.error("Error loading leave balance:", e);
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      console.error("Error loading leave balance:", err.message || e);
     }
   };
 
@@ -66,14 +87,15 @@ export default function EmployeeLeavesPage() {
       console.log("Leaves API response:", res.data);
 
       // Support various response shapes
-      const rawList = Array.isArray(res.data) 
-        ? res.data 
+      const rawList = Array.isArray(res.data)
+        ? res.data
         : res.data?.leaves || res.data?.data || [];
-      
+
       setLeaves(normalizeLeaves(rawList));
-    } catch (e: any) {
-      console.error("Error loading leaves:", e);
-      setError(e?.response?.data?.message || e?.message || "Failed to load your leaves.");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string };
+      console.error("Error loading leaves:", err.message || e);
+      setError(err.response?.data?.message || err.message || "Failed to load your leaves.");
     } finally {
       setLoading(false);
     }
@@ -96,7 +118,7 @@ export default function EmployeeLeavesPage() {
   const kpi = useMemo(() => {
     const total = leaves.length;
     const approved = leaves.filter((l) => l.status.toLowerCase() === "approved").length;
-    const rejected = leaves.filter((l) => l.status.toLowerCase() === "rejected").length;
+
     const pending = leaves.filter((l) => l.status.toLowerCase() === "pending").length;
     const approvedPct = total > 0 ? Math.round((approved / total) * 100) : 0;
 
@@ -124,7 +146,7 @@ export default function EmployeeLeavesPage() {
     });
   }, [leaves]);
 
-  const handleCreateLeave = async (payload: any) => {
+  const handleCreateLeave = async (payload: CreateLeavePayload) => {
     try {
       setLoading(true);
       setError(null);
@@ -147,15 +169,16 @@ export default function EmployeeLeavesPage() {
       // Switch to history tab and refresh
       setActiveTab("history");
       setSuccessMsg("Leave request submitted successfully!");
-      
+
       // Refresh data from server
       await loadMyLeaves();
-    } catch (e: any) {
-      console.error("Error creating leave:", e);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string; error?: string } }; message?: string };
+      console.error("Error creating leave:", err.message || e);
       setError(
-        e?.response?.data?.message || 
-        e?.response?.data?.error ||
-        e?.message || 
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
         "Failed to submit leave request."
       );
     } finally {
@@ -174,18 +197,19 @@ export default function EmployeeLeavesPage() {
 
       console.log("Canceling leave:", leaveId);
       await deleteLeaveApi(leaveId);
-      
+
       setLeaves((prev) => prev.filter((l) => l.id !== leaveId));
       setSuccessMsg("Leave request cancelled successfully!");
-      
+
       // Refresh to ensure sync with server
       await loadMyLeaves();
-    } catch (e: any) {
-      console.error("Error canceling leave:", e);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string; error?: string } }; message?: string };
+      console.error("Error canceling leave:", err.message || e);
       setError(
-        e?.response?.data?.message || 
-        e?.response?.data?.error ||
-        e?.message || 
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
         "Failed to cancel leave."
       );
     } finally {
@@ -213,14 +237,14 @@ export default function EmployeeLeavesPage() {
             <button onClick={() => setError(null)} style={{ marginLeft: 10 }}>×</button>
           </div>
         )}
-        
+
         {successMsg && (
           <div className="banner banner-success">
             {successMsg}
             <button onClick={() => setSuccessMsg(null)} style={{ marginLeft: 10 }}>×</button>
           </div>
         )}
-        
+
         {loading && <div className="banner banner-loading">Working...</div>}
 
         {/* Leave Balance Cards */}
@@ -294,34 +318,35 @@ export default function EmployeeLeavesPage() {
 // -----------------------------
 // Helpers
 // -----------------------------
-function normalizeLeaves(list: any[]): LeaveRow[] {
+function normalizeLeaves(list: unknown[]): LeaveRow[] {
   if (!Array.isArray(list)) {
     console.warn("normalizeLeaves received non-array:", list);
     return [];
   }
 
   return list
-    .map((l: any) => {
-      const id = l.leave_id || l.id || l._id;
+    .map((l: unknown) => {
+      const item = l as Record<string, unknown>;
+      const id = item.leave_id || item.id || item._id;
       if (!id) {
         console.warn("Leave item missing ID:", l);
         return null;
       }
 
-      const start = l.start_date || l.from || l.startDate;
-      const end = l.end_date || l.to || l.endDate;
-      
-      const type = l.type || l.leave_type || "Casual";
+      const start = item.start_date || item.from || item.startDate;
+      const end = item.end_date || item.to || item.endDate;
+
+      const type = item.type || item.leave_type || "Casual";
 
       return {
         id: String(id),
-        type: type,
-        startDate: start,
-        endDate: end,
-        status: l.status || "Pending",
-        comments: l.comments || l.admin_comment || "",
-        reason: l.reason || "",
-        createdAt: l.createdAt || l.created_at,
+        type: type as string,
+        startDate: start as string,
+        endDate: end as string,
+        status: (item.status || "Pending") as string,
+        comments: (item.comments || item.admin_comment || "") as string,
+        reason: (item.reason || "") as string,
+        createdAt: (item.createdAt || item.created_at) as string,
       } as LeaveRow;
     })
     .filter(Boolean) as LeaveRow[];
@@ -331,10 +356,10 @@ function formatShort(iso: string) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", { 
-    month: "short", 
-    day: "numeric", 
-    year: "numeric" 
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
   });
 }
 
@@ -344,7 +369,7 @@ function ApplyLeaveForm({
   onCreate,
 }: {
   loading: boolean;
-  onCreate: (payload: any) => Promise<void>;
+  onCreate: (payload: CreateLeavePayload) => Promise<void>;
 }) {
   const [form, setForm] = useState<ApplyFormState>(EMPTY_FORM);
   const [fileName, setFileName] = useState("");
@@ -373,7 +398,7 @@ function ApplyLeaveForm({
 
     try {
       setSubmitting(true);
-      
+
       // Submit to backend
       await onCreate({
         leave_type: form.type,
@@ -462,9 +487,9 @@ function ApplyLeaveForm({
           </small>
         </div>
 
-        <button 
-          type="submit" 
-          className="submit-btn" 
+        <button
+          type="submit"
+          className="submit-btn"
           disabled={loading || submitting}
         >
           {submitting ? "Submitting..." : "Submit Leave Request"}
@@ -512,7 +537,7 @@ function LeaveHistory({
               <tr>
                 <td colSpan={7} style={{ padding: 40, textAlign: "center" }}>
                   <p style={{ opacity: 0.6 }}>No leave requests found.</p>
-                  <small>Click "Apply Leave" to create your first request.</small>
+                  <small>Click &quot;Apply Leave&quot; to create your first request.</small>
                 </td>
               </tr>
             ) : (
@@ -533,8 +558,8 @@ function LeaveHistory({
                     <td style={{ maxWidth: 200 }}>
                       {h.reason ? (
                         <span title={h.reason}>
-                          {h.reason.length > 50 
-                            ? h.reason.substring(0, 50) + "..." 
+                          {h.reason.length > 50
+                            ? h.reason.substring(0, 50) + "..."
                             : h.reason}
                         </span>
                       ) : (

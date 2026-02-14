@@ -4,7 +4,7 @@
 import React, { useState } from "react";
 import "./page.scss";
 import { useRouter } from "next/navigation";
-import { loginApi,getDeviceId } from "@/src/api/api";
+import { loginApi, getDeviceId } from "@/src/api/api";
 
 // Material UI Icons (SVG)
 const EmailIcon = () => (
@@ -82,15 +82,27 @@ export default function Login() {
       // Optional: store user payload if backend returns it
       if (res.data?.user) localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      router.push("/dashboard/employee/main");
-    } catch (err: any) {
+      // Redirect based on role_id
+      const roleId = res.data?.user?.role_id;
+      if (roleId === 0) {
+        // Super admin - redirect to admin dashboard for now
+        router.push("/dashboard/admin/main");
+      } else if (roleId === 1) {
+        router.push("/dashboard/admin/main");
+      } else if (roleId === 2) {
+        router.push("/dashboard/manager/main");
+      } else {
+        router.push("/dashboard/employee/main");
+      }
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string, error?: string } }, message?: string };
       const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
+        e.response?.data?.message ||
+        e.response?.data?.error ||
+        e.message ||
         "Login failed";
       setError(msg);
-      console.log("Error", err);
+      console.log("Error", e);
     } finally {
       setIsLoading(false);
     }
@@ -219,7 +231,7 @@ export default function Login() {
 
         {/* Sign Up Link */}
         <div className="signup-link">
-          Don't have an account? <a href="/register">Sign up</a>
+          Don&apos;t have an account? <a href="/register">Sign up</a>
         </div>
       </div>
     </div>

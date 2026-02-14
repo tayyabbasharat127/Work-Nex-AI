@@ -1,24 +1,13 @@
 import React from "react";
 import { useAuth } from "@/src/app/providers/AuthProvider";
+import Link from "next/link";
 import {
   Home,
   User,
-  MessageCircle,
-  Star,
-  Settings,
-  Menu,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  Shield,
   CalendarClock,
   FileCheck2,
   LineChart,
   BarChart2,
-  Database,
-  Bell,
-  ListOrdered,
-  Users,
   Bot,
   TrendingUp,
   LogOut
@@ -43,44 +32,44 @@ const SidebarEmployee: React.FC = () => {
       {/* Navigation */}
       <nav className="sidebar-nav">
         {/* Dashboard */}
-        <a href="/dashboard/employee/main" className="nav-item active">
+        <Link href="/dashboard/employee/main" className="nav-item active">
           <Home size={20} />
           <span>Dashboard</span>
-        </a>
+        </Link>
 
         {/* Attendance */}
-        <a href="/dashboard/employee/attendance" className="nav-item">
+        <Link href="/dashboard/employee/attendance" className="nav-item">
           <CalendarClock size={20} />
           <span>Attendance</span>
-        </a>
+        </Link>
 
         {/* Leaves */}
-        <a href="/dashboard/employee/leaves" className="nav-item">
+        <Link href="/dashboard/employee/leaves" className="nav-item">
           <FileCheck2 size={20} />
           <span>Leaves</span>
-        </a>
+        </Link>
 
         {/* Performance */}
-        <a href="/dashboard/employee/performance" className="nav-item">
+        <Link href="/dashboard/employee/performance" className="nav-item">
           <LineChart size={20} />
           <span>Performance</span>
-        </a>
+        </Link>
 
         {/* Analytics */}
-        <a href="/dashboard/employee/analytics" className="nav-item">
+        <Link href="/dashboard/employee/analytics" className="nav-item">
           <BarChart2 size={20} />
           <span>Analytics</span>
-        </a>
+        </Link>
         {/* Assistant */}
-        <a href="/dashboard/employee/assistant" className="nav-item">
+        <Link href="/dashboard/employee/assistant" className="nav-item">
           <Bot size={20} />
           <span>Assistant</span>
-        </a>
+        </Link>
         {/* Forecast */}
-        <a href="/dashboard/employee/forecast" className="nav-item">
-  <TrendingUp size={20} />
-  <span>Forecast</span>
-</a>
+        <Link href="/dashboard/employee/forecast" className="nav-item">
+          <TrendingUp size={20} />
+          <span>Forecast</span>
+        </Link>
 
       </nav>
 

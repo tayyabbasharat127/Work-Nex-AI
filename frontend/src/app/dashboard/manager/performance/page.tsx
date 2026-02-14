@@ -4,21 +4,31 @@ import React, { useState } from "react";
 import SidebarManager from "@/src/app/components/sideBar/manager/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import {
-  LineChart,
-  BarChart2,
   Search,
   Building2,
   TrendingUp,
   Star,
-  User,
   Users
 } from "lucide-react";
+import Image from "next/image";
 import "./page.scss";
+
+type EmployeePerformance = {
+  id: number;
+  name: string;
+  email: string;
+  department: string;
+  score: number;
+  consistency: number;
+  efficiency: number;
+  quality: number;
+  avatar: string;
+};
 
 const ManagerPerformancePage: React.FC = () => {
   const [search, setSearch] = useState("");
   const [dept, setDept] = useState("All");
-  const [selectedEmployee, setSelectedEmployee] = useState<any | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeePerformance | null>(null);
 
   // FAKE PERFORMANCE DATA
   const team = [
@@ -167,7 +177,7 @@ const ManagerPerformancePage: React.FC = () => {
 
                   <td>
                     <div className="user-info">
-                      <img src={e.avatar} alt={e.name} />
+                      <Image src={e.avatar} alt={e.name} width={40} height={40} style={{ borderRadius: "50%" }} />
                       <div>
                         <p className="name">{e.name}</p>
                         <p className="email">{e.email}</p>

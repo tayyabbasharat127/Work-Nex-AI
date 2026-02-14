@@ -5,7 +5,6 @@ import SidebarEmployee from "@/src/app/components/sideBar/employee/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import {
   TrendingUp,
-  LineChart,
   BarChart3,
   Activity,
   Brain,
@@ -13,8 +12,7 @@ import {
 import "./page.scss";
 
 const EmployeeForecastPage: React.FC = () => {
-  const [loading, setLoading] = useState(true);
-  const [forecast, setForecast] = useState({
+  const [forecast] = useState({
     attendance: "94%",
     leaves: "2 days",
     performance: "8.7",
@@ -24,7 +22,6 @@ const EmployeeForecastPage: React.FC = () => {
 
   useEffect(() => {
     // Later: Fetch real forecast from /api/ai/forecast
-    setTimeout(() => setLoading(false), 900);
   }, []);
 
   const kpis = [

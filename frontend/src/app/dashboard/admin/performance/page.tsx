@@ -1,13 +1,8 @@
 "use client";
 
 import React from "react";
-import Sidebar from "@/src/app/components/sideBar/admin/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import {
-  TrendingUp,
-  Award,
-  Target,
-  Activity,
   ChevronRight,
 } from "lucide-react";
 import "./page.scss";
@@ -99,7 +94,7 @@ export default function PerformancePage() {
                     <div
                       className="bar-fill"
                       style={{
-                        width: `${60 + Math.random() * 40}%`,
+                        width: `${75 + (i * 5) % 25}%`,
                         background: "#6C5CE7",
                       }}
                     ></div>

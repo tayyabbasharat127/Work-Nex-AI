@@ -73,14 +73,9 @@ export default function Register() {
       router.push(
         `/verify-otp?email=${encodeURIComponent(adminEmail)}`
       );
-    } catch (err: any) {
-        console.log("error",err);
-      setError(
-      
-        err?.response?.data?.message ||
-          err?.message ||
-          "Signup failed"
-      );
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string, error?: string } }, message?: string };
+      setError(e.response?.data?.message || e.message || "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -89,7 +84,7 @@ export default function Register() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-200 px-4">
       <div className="w-full max-w-xl bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200 p-8 md:p-10">
-        
+
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">

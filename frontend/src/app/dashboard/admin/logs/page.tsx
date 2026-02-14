@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Sidebar from "@/src/app/components/sideBar/admin/sidebar";
+
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import {
   AlertTriangle,

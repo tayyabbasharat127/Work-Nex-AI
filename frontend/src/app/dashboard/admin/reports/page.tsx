@@ -7,7 +7,7 @@ import { generateReportApi, getReportsApi } from "@/src/api/api";
 import "./page.scss";
 
 export default function ReportsPage() {
-  const [reports, setReports] = useState<any[]>([]);
+  const [reports, setReports] = useState<{ report_id: string; name: string; type: string; status: string; generated_by_name?: string; created_at: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -26,7 +26,7 @@ export default function ReportsPage() {
     try {
       const res = await getReportsApi();
       setReports(res.data?.data || res.data);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Error loading reports:", e);
     }
   };
@@ -38,7 +38,7 @@ export default function ReportsPage() {
   // Generate report
   const handleGenerateReport = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       setLoading(true);
       setError(null);
@@ -46,19 +46,20 @@ export default function ReportsPage() {
 
       const res = await generateReportApi(formData);
       setSuccessMsg(`Report generated successfully: ${res.data?.data?.filename}`);
-      
+
       // Refresh reports list
       await loadReports();
-      
+
       // Reset form
       setFormData({
         ...formData,
         startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0]
       });
-      
-    } catch (e: any) {
-      setError(e?.response?.data?.error || "Failed to generate report");
+
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { error?: string } } };
+      setError(err.response?.data?.error || "Failed to generate report");
     } finally {
       setLoading(false);
     }
@@ -84,14 +85,14 @@ export default function ReportsPage() {
             <button onClick={() => setError(null)} style={{ marginLeft: 10 }}>×</button>
           </div>
         )}
-        
+
         {successMsg && (
           <div className="banner banner-success">
             {successMsg}
             <button onClick={() => setSuccessMsg(null)} style={{ marginLeft: 10 }}>×</button>
           </div>
         )}
-        
+
         {loading && <div className="banner banner-loading">Generating report...</div>}
 
         {/* Report Generation Form */}
@@ -103,7 +104,7 @@ export default function ReportsPage() {
                 <label>Report Type</label>
                 <select
                   value={formData.type}
-                  onChange={(e) => setFormData({...formData, type: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   disabled={loading}
                 >
                   <option value="attendance">Attendance Report</option>
@@ -115,7 +116,7 @@ export default function ReportsPage() {
                 <label>Format</label>
                 <select
                   value={formData.format}
-                  onChange={(e) => setFormData({...formData, format: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, format: e.target.value })}
                   disabled={loading}
                 >
                   <option value="csv">CSV</option>
@@ -131,7 +132,7 @@ export default function ReportsPage() {
                 <input
                   type="date"
                   value={formData.startDate}
-                  onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                   disabled={loading}
                   required
                 />
@@ -142,7 +143,7 @@ export default function ReportsPage() {
                 <input
                   type="date"
                   value={formData.endDate}
-                  onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                   disabled={loading}
                   required
                 />
@@ -154,7 +155,7 @@ export default function ReportsPage() {
               <input
                 type="text"
                 value={formData.departmentId}
-                onChange={(e) => setFormData({...formData, departmentId: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
                 placeholder="Enter department ID"
                 disabled={loading}
               />

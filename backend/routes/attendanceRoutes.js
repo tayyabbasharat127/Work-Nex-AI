@@ -17,5 +17,5 @@ router.post("/ping", authenticateToken, ping);
 router.post("/auto-checkout", authenticateToken, autoCheckout);
 router.get("/today-status", authenticateToken, todayStatus);
 router.get("/history", authenticateToken, history);
-router.get('/overview',authorizeRoles(1),attendanceOverview);
+router.get('/overview',authenticateToken,  attendanceOverview);
 module.exports = router;

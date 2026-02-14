@@ -5,12 +5,9 @@ import SidebarEmployee from "@/src/app/components/sideBar/employee/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import {
   CalendarCheck,
-  Clock,
-  TrendingUp,
   Bell,
   LogIn,
   LogOut,
-  Activity,
 } from "lucide-react";
 
 import "./page.scss";
@@ -106,7 +103,7 @@ export default function EmployeeDashboard() {
             </div>
 
             <div className="card-box summary-card">
-              <h3>Today's Summary</h3>
+              <h3>Today&apos;s Summary</h3>
               <div className="summary-grid">
                 <div>
                   <h4>Check In</h4>

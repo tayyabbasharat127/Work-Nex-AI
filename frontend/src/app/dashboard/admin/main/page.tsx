@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import "./page.scss";
-import Sidebar from "@/src/app/components/sideBar/admin/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import { StatsCard } from "@/src/app/components/card/statsCard";
 import SidebarAdmin from "@/src/app/components/sideBar/admin/sidebar";
@@ -12,36 +11,21 @@ interface CalenderDays {
   day: string;
 }
 
-const monthMap = {
-  January: 1,
-  February: 2,
-  March: 3,
-  April: 4,
-  May: 5,
-  June: 6,
-  July: 7,
-  August: 8,
-  September: 9,
-  October: 10,
-  November: 11,
-  December: 12,
-};
+type MonthKeys = "October" | "November" | "December"; // simplified for unused map
 
-type MonthKeys = keyof typeof monthMap;
-
-export const AdminDashboard: React.FC = (): React.ReactNode => {
-  const [currentMonth, setCurrentMonth] = useState<MonthKeys>("October");
+export default function AdminDashboard() {
+  const [currentMonth] = useState<MonthKeys>("October");
 
   const stats = [
     {
       value: "Points",
-      label: "Attendence updates this week",
-      trend: "down",
+      label: "Attendance updates this week",
+      trend: "down" as const,
     },
     {
       value: "Last week",
-      label: "Attendence updates last month",
-      trend: "down",
+      label: "Attendance updates last month",
+      trend: "down" as const,
       change: "-12.5%",
     },
   ];
@@ -212,9 +196,8 @@ export const AdminDashboard: React.FC = (): React.ReactNode => {
                 {[null, null, null, null, ...calendarDays].map((day, idx) => (
                   <div
                     key={idx}
-                    className={`calendar-day ${
-                      day === 14 ? "today" : day === 25 ? "selected" : ""
-                    }`}
+                    className={`calendar-day ${day === 14 ? "today" : day === 25 ? "selected" : ""
+                      }`}
                   >
                     {day}
                   </div>
@@ -254,7 +237,7 @@ export const AdminDashboard: React.FC = (): React.ReactNode => {
                       <div
                         className="bar-fill"
                         style={{
-                          width: `${50 + Math.random() * 40}%`,
+                          width: `${50 + (idx * 8) % 40}%`,
                           background: "#FF8C42",
                         }}
                       ></div>

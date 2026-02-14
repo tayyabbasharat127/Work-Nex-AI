@@ -5,18 +5,16 @@ import Sidebar from "@/src/app/components/sideBar/admin/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import {
   TrendingUp,
-  Users,
   Activity,
-  LineChart,
   BarChart3,
   Brain,
 } from "lucide-react";
 import "./page.scss";
 
 const AdminForecastPage: React.FC = () => {
-  const [loading, setLoading] = useState(true);
+  // const [loading] = useState(true);
 
-  const [forecast, setForecast] = useState({
+  const [forecast] = useState({
     attendance: "91%",
     leaves: "12%",
     performance: "8.2",
@@ -25,7 +23,7 @@ const AdminForecastPage: React.FC = () => {
   });
 
   useEffect(() => {
-    setTimeout(() => setLoading(false), 900);
+    // Later: Fetch real forecast from /api/ai/forecast
   }, []);
 
   const kpis = [

@@ -5,20 +5,34 @@ import SidebarManager from "@/src/app/components/sideBar/manager/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import {
   FileCheck2,
-  FileX,
   Users,
   Building2,
   Search,
   X,
   Check,
 } from "lucide-react";
+import Image from "next/image";
 import "./page.scss";
+
+type Leave = {
+  id: number;
+  name: string;
+  email: string;
+  department: string;
+  type: string;
+  from: string;
+  to: string;
+  days: number;
+  status: string;
+  reason: string;
+  avatar: string;
+};
 
 const ManagerLeavesPage: React.FC = () => {
   const [search, setSearch] = useState("");
   const [dept, setDept] = useState("All");
   const [status, setStatus] = useState("Pending");
-  const [selectedLeave, setSelectedLeave] = useState<any | null>(null);
+  const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
 
   // FAKE DATA
   const leaves = [
@@ -184,7 +198,7 @@ const ManagerLeavesPage: React.FC = () => {
                 <tr key={l.id}>
                   <td>
                     <div className="user-info">
-                      <img src={l.avatar} alt={l.name} />
+                      <Image src={l.avatar} alt={l.name} width={40} height={40} style={{ borderRadius: "50%" }} />
                       <div>
                         <p className="name">{l.name}</p>
                         <p className="email">{l.email}</p>

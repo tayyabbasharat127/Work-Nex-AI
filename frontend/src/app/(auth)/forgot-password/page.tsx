@@ -43,13 +43,9 @@ export default function ForgotPassword() {
 
       // ✅ Redirect to OTP page (include email so OTP page can use it)
       router.push(`/reset-password?email=${encodeURIComponent(email)}`);
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
-        "Failed to send reset OTP";
-      setError(msg);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string, error?: string } }, message?: string };
+      setError(e.response?.data?.message || e.message || "Failed to send reset link");
     } finally {
       setLoading(false);
     }

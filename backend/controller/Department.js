@@ -23,7 +23,7 @@ exports.createDepartment = async (req, res) => {
 
     if (manager_id) {
       const managerCheck = await pool.query(
-        `SELECT 1 FROM users WHERE user_id = $1 AND organization_id = $2`,
+        `SELECT 1 FROM "Users" WHERE id = $1 AND organization_id = $2`,
         [manager_id, organizationId]
       );
       if (!managerCheck.rowCount) {
@@ -52,7 +52,7 @@ exports.updateDepartment = async (req, res) => {
 
     if (manager_id) {
       const managerCheck = await pool.query(
-        `SELECT 1 FROM users WHERE user_id = $1 AND organization_id = $2`,
+        `SELECT 1 FROM "Users" WHERE id = $1 AND organization_id = $2`,
         [manager_id, organizationId]
       );
       if (!managerCheck.rowCount) {

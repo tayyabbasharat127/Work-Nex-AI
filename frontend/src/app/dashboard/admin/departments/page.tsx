@@ -3,11 +3,11 @@
 import React, { useEffect, useState } from "react";
 import SidebarAdmin from "@/src/app/components/sideBar/admin/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
-import { 
-  getAllDepartmentsApi, 
-  createDepartmentApi, 
-  updateDepartmentApi, 
-  deleteDepartmentApi 
+import {
+  getAllDepartmentsApi,
+  createDepartmentApi,
+  updateDepartmentApi,
+  deleteDepartmentApi
 } from "@/src/api/api";
 import "./page.scss";
 
@@ -40,8 +40,9 @@ export default function DepartmentsPage() {
       setLoading(true);
       const res = await getAllDepartmentsApi();
       setDepartments(res.data?.data || res.data);
-    } catch (e: any) {
-      setError(e?.response?.data?.error || "Failed to load departments");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { error?: string } } };
+      setError(err.response?.data?.error || "Failed to load departments");
     } finally {
       setLoading(false);
     }
@@ -54,7 +55,7 @@ export default function DepartmentsPage() {
   // Create or update department
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       setLoading(true);
       setError(null);
@@ -69,14 +70,15 @@ export default function DepartmentsPage() {
         await createDepartmentApi(formData);
         setSuccessMsg("Department created successfully!");
       }
-      
+
       // Reset form and reload
       setFormData({ name: '', manager_id: '', description: '' });
       setEditingDept(null);
       await loadDepartments();
-      
-    } catch (e: any) {
-      setError(e?.response?.data?.error || "Failed to save department");
+
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { error?: string } } };
+      setError(err.response?.data?.error || "Failed to save department");
     } finally {
       setLoading(false);
     }
@@ -95,14 +97,15 @@ export default function DepartmentsPage() {
   // Delete department
   const handleDelete = async (deptId: number) => {
     if (!confirm("Are you sure you want to delete this department?")) return;
-    
+
     try {
       setLoading(true);
       await deleteDepartmentApi(String(deptId));
       setSuccessMsg("Department deleted successfully!");
       await loadDepartments();
-    } catch (e: any) {
-      setError(e?.response?.data?.error || "Failed to delete department");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { error?: string } } };
+      setError(err.response?.data?.error || "Failed to delete department");
     } finally {
       setLoading(false);
     }
@@ -134,14 +137,14 @@ export default function DepartmentsPage() {
             <button onClick={() => setError(null)} style={{ marginLeft: 10 }}>×</button>
           </div>
         )}
-        
+
         {successMsg && (
           <div className="banner banner-success">
             {successMsg}
             <button onClick={() => setSuccessMsg(null)} style={{ marginLeft: 10 }}>×</button>
           </div>
         )}
-        
+
         {loading && <div className="banner banner-loading">Processing...</div>}
 
         {/* Department Form */}
@@ -154,7 +157,7 @@ export default function DepartmentsPage() {
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Enter department name"
                   disabled={loading}
                   required
@@ -166,7 +169,7 @@ export default function DepartmentsPage() {
                 <input
                   type="text"
                   value={formData.manager_id}
-                  onChange={(e) => setFormData({...formData, manager_id: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, manager_id: e.target.value })}
                   placeholder="Enter manager ID"
                   disabled={loading}
                 />
@@ -177,7 +180,7 @@ export default function DepartmentsPage() {
               <label>Description</label>
               <textarea
                 value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Enter department description"
                 disabled={loading}
                 rows={3}
@@ -229,8 +232,8 @@ export default function DepartmentsPage() {
                       <td style={{ maxWidth: 300 }}>
                         {dept.description ? (
                           <span title={dept.description}>
-                            {dept.description.length > 50 
-                              ? dept.description.substring(0, 50) + "..." 
+                            {dept.description.length > 50
+                              ? dept.description.substring(0, 50) + "..."
                               : dept.description}
                           </span>
                         ) : (
@@ -240,14 +243,14 @@ export default function DepartmentsPage() {
                       <td>{new Date(dept.created_at).toLocaleDateString()}</td>
                       <td>
                         <div className="action-buttons">
-                          <button 
+                          <button
                             className="edit-btn"
                             onClick={() => handleEdit(dept)}
                             disabled={loading}
                           >
                             ✏️ Edit
                           </button>
-                          <button 
+                          <button
                             className="delete-btn"
                             onClick={() => handleDelete(dept.department_id)}
                             disabled={loading}

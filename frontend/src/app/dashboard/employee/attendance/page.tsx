@@ -15,36 +15,57 @@ import {
 import "./page.scss";
 
 export default function EmployeeAttendancePage() {
-  const [today, setToday] = useState<any>(null);
-  const [history, setHistory] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [today, setToday] = useState<{ status: string; check_in?: string; check_out?: string } | null>(null);
+  const [history, setHistory] = useState<{ check_in: string; check_out?: string; status: string }[]>([]);
+  // loading removed if unused
+
+  /* ------------------ FETCH TODAY STATUS ------------------ */
+  const fetchTodayStatus = async () => {
+    try {
+      const res = await todayStatusApi();
+      setToday(res.data.attendance || { status: "absent" });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  /* ------------------ FETCH HISTORY ------------------ */
+  const fetchHistory = async () => {
+    try {
+      const res = await historyApi();
+      setHistory(res.data.history || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   /* ------------------ AUTO PING + WIFI DISCONNECT LOGIC ------------------ */
   useEffect(() => {
     let isOnline = navigator.onLine;
     let lastSuccessfulPing = Date.now();
-    let checkoutTimeout: NodeJS.Timeout | null = null;
+    const checkoutTimeout: NodeJS.Timeout | null = null;
 
     const pingOffice = async () => {
       try {
         await pingApi();
         lastSuccessfulPing = Date.now();
         console.log("✅ Office ping successful - Attendance marked automatically");
-        
+
         // Clear any pending checkout timeout
         if (checkoutTimeout) {
           clearTimeout(checkoutTimeout);
         }
-        
-      } catch (err: any) {
-        console.log("❌ Network error or not in office:", err.message);
-        
+
+      } catch (err: unknown) {
+        const error = err as { message?: string; code?: string };
+        console.log("❌ Network error or not in office:", error.message);
+
         // Check if it's a network error (WiFi disconnected)
-        if (err.code === 'NETWORK_ERROR' || 
-            err.code === 'ECONNREFUSED' || 
-            err.message?.includes('Network Error') ||
-            err.message?.includes('fetch') ||
-            !navigator.onLine) {
+        if (error.code === 'NETWORK_ERROR' ||
+          error.code === 'ECONNREFUSED' ||
+          error.message?.includes('Network Error') ||
+          error.message?.includes('fetch') ||
+          !navigator.onLine) {
           console.log("📶 Network disconnected - Immediate checkout");
           handleImmediateCheckout();
         }
@@ -54,15 +75,15 @@ export default function EmployeeAttendancePage() {
     const handleImmediateCheckout = async () => {
       try {
         console.log("🚪 WiFi disconnected - Immediate checkout triggered");
-        
+
         // Call checkout API immediately
         await api.post("/api/attendance/auto-checkout");
         console.log("🚪 Immediate checkout successful");
-        
+
         // Refresh status
         fetchTodayStatus();
         fetchHistory();
-        
+
       } catch (err) {
         console.log("Immediate checkout failed:", err);
       }
@@ -88,7 +109,7 @@ export default function EmployeeAttendancePage() {
     // Add event listeners for WiFi connect/disconnect
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
+
     // Listen for custom network disconnect event from API interceptor
     const handleNetworkDisconnect = () => {
       console.log("📶 Network disconnect detected from API");
@@ -109,7 +130,7 @@ export default function EmployeeAttendancePage() {
 
     // Ping every 5 minutes to maintain presence
     const interval = setInterval(pingOffice, 5 * 60 * 1000);
-    
+
     return () => {
       clearInterval(interval);
       if (checkoutTimeout) {
@@ -122,30 +143,15 @@ export default function EmployeeAttendancePage() {
     };
   }, []);
 
-  /* ------------------ FETCH TODAY STATUS ------------------ */
-  const fetchTodayStatus = async () => {
-    try {
-      const res = await todayStatusApi();
-      setToday(res.data.attendance || { status: "absent" });
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
-  /* ------------------ FETCH HISTORY ------------------ */
-  const fetchHistory = async () => {
-    try {
-      const res = await historyApi();
-      setHistory(res.data.history || []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   /* ------------------ INIT LOAD ------------------ */
   useEffect(() => {
-    fetchTodayStatus();
-    fetchHistory();
+    const load = async () => {
+      await fetchTodayStatus();
+      await fetchHistory();
+    };
+    load();
   }, []);
 
   const getStatusIcon = (status: string) => {
@@ -189,25 +195,25 @@ export default function EmployeeAttendancePage() {
 
         <div className="page-heading">
           <h1>Attendance</h1>
-          <p>Your attendance is marked automatically when you're in office.</p>
+          <p>Your attendance is marked automatically when you&apos;re in office.</p>
         </div>
 
         {/* TODAY'S STATUS CARD */}
         <div className="attendance-grid">
           <div className="column">
             <div className="card-box status-card">
-              <h3>Today's Status</h3>
-              
+              <h3>Today&apos;s Status</h3>
+
               <div className="status-display">
-                <div className="status-icon" style={{ color: getStatusColor(today?.status) }}>
-                  {getStatusIcon(today?.status)}
+                <div className="status-icon" style={{ color: getStatusColor(today?.status || "absent") }}>
+                  {getStatusIcon(today?.status || "absent")}
                 </div>
-                
+
                 <div className="status-details">
                   <h4>{today?.status || "Absent"}</h4>
                   <p>
-                    {today?.status?.toLowerCase() === "absent" 
-                      ? "No attendance recorded today" 
+                    {today?.status?.toLowerCase() === "absent"
+                      ? "No attendance recorded today"
                       : "Attendance marked automatically"}
                   </p>
                 </div>
@@ -230,7 +236,7 @@ export default function EmployeeAttendancePage() {
 
               <div className="info-box">
                 <p>
-                  <strong>📍 Automatic Attendance</strong><br/>
+                  <strong>📍 Automatic Attendance</strong><br />
                   Your attendance is marked automatically when you connect to office Wi-Fi.
                   No manual check-in required.
                 </p>

@@ -6,7 +6,6 @@ import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import {
   CalendarDays,
   Users,
-  TrendingUp,
   FileDown,
   Filter,
   Building2,
@@ -63,7 +62,7 @@ const ManagerAttendancePage: React.FC = () => {
         setError(null);
         const res = await getAttendanceOverviewApi();
         const list: AttendanceRecord[] = (res.data?.data ?? res.data ?? []).map(
-          (row: any) => ({
+          (row: Record<string, unknown>) => ({
             user_id: String(row.user_id),
             name: row.name ?? "—",
             email: row.email ?? "",
@@ -74,7 +73,7 @@ const ManagerAttendancePage: React.FC = () => {
           })
         );
         setRecords(list);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error(err);
         setError(err?.response?.data?.message || "Failed to load attendance");
       } finally {
@@ -284,9 +283,9 @@ const ManagerAttendancePage: React.FC = () => {
                     <td>
                       {emp.check_in && emp.check_out
                         ? `${(
-                            (new Date(emp.check_out).getTime() - new Date(emp.check_in).getTime()) /
-                            (1000 * 60 * 60)
-                          ).toFixed(1)}h`
+                          (new Date(emp.check_out).getTime() - new Date(emp.check_in).getTime()) /
+                          (1000 * 60 * 60)
+                        ).toFixed(1)}h`
                         : "—"}
                     </td>
                   </tr>

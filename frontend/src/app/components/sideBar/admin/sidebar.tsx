@@ -1,15 +1,10 @@
 import React from "react";
 import { useAuth } from "@/src/app/providers/AuthProvider";
+import Link from "next/link";
 import {
   Home,
   User,
-  MessageCircle,
-  Star,
   Settings,
-  Menu,
-  ChevronLeft,
-  ChevronRight,
-  Search,
   Shield,
   CalendarClock,
   FileCheck2,
@@ -43,63 +38,63 @@ const SidebarAdmin: React.FC = () => {
 
       {/* Navigation */}
       <nav className="sidebar-nav">
-        <a href="/" className="nav-item active">
+        <Link href="/" className="nav-item active">
           <Home size={20} />
           <span>Dashboard</span>
-        </a>
-        <a href="/dashboard/admin/users" className="nav-item">
+        </Link>
+        <Link href="/dashboard/admin/users" className="nav-item">
           <Users size={20} />
           <span>Users</span>
-        </a>
-        <a href="/dashboard/admin/departments" className="nav-item">
+        </Link>
+        <Link href="/dashboard/admin/departments" className="nav-item">
           <Building size={20} />
           <span>Departments</span>
-        </a>
-        <a href="/dashboard/admin/roles" className="nav-item">
+        </Link>
+        <Link href="/dashboard/admin/roles" className="nav-item">
           <Shield size={20} />
           <span>Roles</span>
-        </a>
-        <a href="/dashboard/admin/attendance" className="nav-item">
+        </Link>
+        <Link href="/dashboard/admin/attendance" className="nav-item">
           <CalendarClock size={20} />
           <span>Attendance</span>
-        </a>
-        <a href="/dashboard/admin/leaves" className="nav-item">
+        </Link>
+        <Link href="/dashboard/admin/leaves" className="nav-item">
           <FileCheck2 size={20} />
           <span>Leaves</span>
-        </a>
-        <a href="/dashboard/admin/performance" className="nav-item">
+        </Link>
+        <Link href="/dashboard/admin/performance" className="nav-item">
           <LineChart size={20} />
           <span>Performance</span>
-        </a>
-        <a href="/dashboard/admin/analytics" className="nav-item">
+        </Link>
+        <Link href="/dashboard/admin/analytics" className="nav-item">
           <BarChart2 size={20} />
           <span>Analytics</span>
-        </a>
-        <a href="/dashboard/admin/etl" className="nav-item">
+        </Link>
+        <Link href="/dashboard/admin/etl" className="nav-item">
           <Database size={20} />
           <span>ETL</span>
-        </a>
-        <a href="/dashboard/admin/notification" className="nav-item">
+        </Link>
+        <Link href="/dashboard/admin/notification" className="nav-item">
           <Bell size={20} />
           <span>Notifications</span>
-        </a>
-        <a href="/dashboard/admin/settings" className="nav-item">
+        </Link>
+        <Link href="/dashboard/admin/settings" className="nav-item">
           <Settings size={20} />
           <span>Settings</span>
-        </a>
-        <a href="/dashboard/admin/logs" className="nav-item">
+        </Link>
+        <Link href="/dashboard/admin/logs" className="nav-item">
           <ListOrdered size={20} />
           <span>Logs</span>
-        </a>
-        <a href="/dashboard/admin/assistant" className="nav-item">
-  <Bot size={20} />
-  <span>Assistant</span>
-</a>
+        </Link>
+        <Link href="/dashboard/admin/assistant" className="nav-item">
+          <Bot size={20} />
+          <span>Assistant</span>
+        </Link>
 
-<a href="/dashboard/admin/forecast" className="nav-item">
-  <TrendingUp size={20} />
-  <span>Forecast</span>
-</a>
+        <Link href="/dashboard/admin/forecast" className="nav-item">
+          <TrendingUp size={20} />
+          <span>Forecast</span>
+        </Link>
 
       </nav>
 

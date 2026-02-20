@@ -221,29 +221,6 @@ export default function Login() {
           {error && <p className="error-text">{error}</p>}
         </div>
 
-        {/* Divider */}
-        <div className="divider">
-          <span>Or continue with</span>
-        </div>
-
-        {/* Social Login */}
-        <div className="social-login">
-          <button
-            type="button"
-            className="social-button google"
-            onClick={() => handleSocialLogin("Google")}
-          >
-            <GoogleIcon />
-          </button>
-          <button
-            type="button"
-            className="social-button github"
-            onClick={() => handleSocialLogin("GitHub")}
-          >
-            <GitHubIcon />
-          </button>
-        </div>
-
         {/* Sign Up Link */}
         <div className="signup-link">
           Don&apos;t have an account? <a href="/auth/register">Sign up</a>

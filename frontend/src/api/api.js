@@ -141,3 +141,12 @@ export const generateReportApi = (payload) => api.post("/api/reports/generate", 
 export const getReportsApi = () => api.get("/api/reports");
 
 export default api;
+
+
+// Organization Settings APIs
+export const getOrganizationSettingsApi = () => api.get("/api/settings/organization");
+export const updateOrganizationSettingsApi = (payload) => api.put("/api/settings/organization", payload);
+
+// Manual Attendance APIs
+export const manualMarkAttendanceApi = (payload) => api.post("/api/attendance/manual-mark", payload);
+export const adjustAttendanceApi = (payload) => api.put("/api/attendance/adjust", payload);

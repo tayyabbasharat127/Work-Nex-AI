@@ -82,22 +82,30 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-200 px-4">
-      <div className="w-full max-w-xl bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200 p-8 md:p-10">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#05080f] via-[#0a0f1a] to-[#0f1419] px-4">
+      <div className="w-full max-w-xl bg-[rgba(15,20,30,0.95)] backdrop-blur-xl rounded-2xl shadow-2xl border border-[rgba(0,255,255,0.15)] p-8 md:p-10">
 
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-black font-black text-xl shadow-lg shadow-cyan-500/30">
+              W
+            </div>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+              WorkNex AI
+            </h2>
+          </div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
             Create Organization
           </h1>
-          <p className="text-gray-600 mt-2 text-sm">
+          <p className="text-gray-400 mt-2 text-sm">
             Register your organization and admin account
           </p>
         </div>
 
         {/* Organization Section */}
         <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
             Organization Details
           </p>
 
@@ -119,7 +127,7 @@ export default function Register() {
 
         {/* Admin Section */}
         <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
             Admin Account
           </p>
 
@@ -145,7 +153,7 @@ export default function Register() {
             name="subscriptionPlan"
             value={form.subscriptionPlan}
             onChange={handleChange}
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-cyan-200 focus:border-cyan-400"
+            className="w-full rounded-lg border border-[rgba(0,255,255,0.2)] bg-[rgba(20,25,35,0.8)] text-white px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-400"
           >
             <option value="basic">Basic Plan</option>
             <option value="pro">Pro Plan</option>
@@ -172,7 +180,7 @@ export default function Register() {
 
         {/* Error */}
         {error && (
-          <p className="mt-4 text-sm text-red-600 text-center font-medium">
+          <p className="mt-4 text-sm text-red-400 text-center font-medium bg-red-500/10 border border-red-500/20 rounded-lg py-2">
             {error}
           </p>
         )}
@@ -182,14 +190,14 @@ export default function Register() {
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-semibold shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/40 hover:-translate-y-0.5 transition disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {loading ? "Creating account..." : "Create Account"}
           </button>
 
           <button
             onClick={() => router.push("/auth/login")}
-            className="w-full py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition"
+            className="w-full py-3 rounded-xl border border-[rgba(0,255,255,0.2)] text-gray-300 font-semibold hover:bg-[rgba(0,255,255,0.1)] hover:border-cyan-400 transition"
           >
             ← Back to Login
           </button>
@@ -207,7 +215,7 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className="w-full mb-4 rounded-lg border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-cyan-200 focus:border-cyan-400"
+      className="w-full mb-4 rounded-lg border border-[rgba(0,255,255,0.2)] bg-[rgba(20,25,35,0.8)] text-white placeholder-gray-400 px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-400"
     />
   );
 }

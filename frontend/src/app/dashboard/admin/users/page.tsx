@@ -183,7 +183,7 @@ export default function UsersPage() {
   // -----------------------------
   const stats = useMemo(() => {
     const total = users.length;
-    const active = users.filter((u) => u.status === "Active").length;
+    const active = users.filter((u) => u.status.toLowerCase() === "active").length;
     const inactive = total - active;
 
     const now = new Date();

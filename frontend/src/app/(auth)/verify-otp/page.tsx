@@ -72,13 +72,13 @@ export default function VerifyOTP() {
       const res = await verifyOtpApi({ email, otp: otpValue });
       setMessage(res.data?.message || "OTP Verified Successfully ✅");
 
-      // ✅ Decide where to go next
-      // - If next=reset-password => go to reset page with email
-      // - If next=login => go to login page
+      // ✅ Redirect based on next parameter
+      // - If next=login => go to login page (for signup flow)
+      // - If next=reset-password => go to reset-password with email and OTP
       if (nextFromQuery === "login") {
-        router.push("/login");
-      } else {
-        router.push(`/reset-password?email=${encodeURIComponent(email)}`);
+        setTimeout(() => router.push("/login"), 1000);
+      } else if (nextFromQuery === "reset-password") {
+        setTimeout(() => router.push(`/reset-password?email=${encodeURIComponent(email)}&otp=${otpValue}`), 1000);
       }
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string, error?: string } }, message?: string };
@@ -170,7 +170,7 @@ export default function VerifyOTP() {
           )}
         </div>
 
-        <a href="/login" className="back-link">
+        <a href="/auth/login" className="back-link">
           ← Back to Login
         </a>
       </div>

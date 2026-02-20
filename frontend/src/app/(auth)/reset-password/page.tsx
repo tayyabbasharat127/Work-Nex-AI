@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import "./page.scss";
-import { changePasswordApi } from "@/src/api/api";
+import { resetPasswordApi } from "@/src/api/api";
 
 // Eye icon toggle
 const EyeIcon = ({ open }: { open: boolean }) => (
@@ -31,13 +32,15 @@ const EyeIcon = ({ open }: { open: boolean }) => (
 );
 
 export default function ResetPassword() {
+  const searchParams = useSearchParams();
+  
+  // Get email and OTP from URL params (passed from verify-otp page)
+  const emailFromQuery = useMemo(() => searchParams.get("email") || "", [searchParams]);
+  const otpFromQuery = useMemo(() => searchParams.get("otp") || "", [searchParams]);
 
-
-  const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
 
-  const [showOldPass, setShowOldPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -51,7 +54,11 @@ export default function ResetPassword() {
     setError("");
     setMessage("");
 
-    if (!oldPassword || !newPassword || !confirm)
+    if (!emailFromQuery || !otpFromQuery) {
+      return setError("Missing email or OTP. Please restart the password reset process.");
+    }
+
+    if (!newPassword || !confirm)
       return setError("Please fill all password fields.");
 
     if (newPassword !== confirm) return setError("Passwords do not match!");
@@ -60,16 +67,17 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
-      const res = await changePasswordApi({
-        oldPassword,
-        newPassword,
+      const res = await resetPasswordApi({
+        email: emailFromQuery,
+        otp: otpFromQuery,
+        new_password: newPassword,
       });
 
-      setMessage(res.data?.message || "Password updated successfully.");
+      setMessage(res.data?.message || "Password reset successfully.");
       setSuccess(true);
 
-      // Optional auto-redirect after success
-      // setTimeout(() => router.push("/login"), 1200);
+      // Auto-redirect to login after success
+      setTimeout(() => window.location.href = "/login", 2000);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string, error?: string } }, message?: string };
       setError(e.response?.data?.message || e.message || "Failed to reset password");
@@ -94,30 +102,6 @@ export default function ResetPassword() {
 
         {!success ? (
           <div className="reset-form">
-            {/* Old Password */}
-            <div className="input-group">
-              <label htmlFor="oldPassword" className="input-label">
-                Current Password
-              </label>
-              <div className="input-wrapper">
-                <input
-                  id="oldPassword"
-                  type={showOldPass ? "text" : "password"}
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
-                  placeholder="Enter current password"
-                  className="input-field"
-                />
-                <button
-                  type="button"
-                  className="toggle-password"
-                  onClick={() => setShowOldPass(!showOldPass)}
-                >
-                  <EyeIcon open={showOldPass} />
-                </button>
-              </div>
-            </div>
-
             {/* New Password */}
             <div className="input-group">
               <label htmlFor="newPassword" className="input-label">

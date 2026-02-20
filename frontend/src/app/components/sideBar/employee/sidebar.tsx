@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/src/app/providers/AuthProvider";
 import Link from "next/link";
 import {
@@ -10,12 +10,15 @@ import {
   BarChart2,
   Bot,
   TrendingUp,
-  LogOut
+  LogOut,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import "./sidebar.scss";
 
 const SidebarEmployee: React.FC = () => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const [showEmail, setShowEmail] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -24,10 +27,18 @@ const SidebarEmployee: React.FC = () => {
   return (
     <aside className="sidebar">
       {/* Logo Section */}
-      <div className="sidebar-logo">
+      <div className="sidebar-logo" onClick={() => setShowEmail(!showEmail)}>
         <User size={24} />
         <span className="logo-text">Employee</span>
+        {showEmail ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
       </div>
+      
+      {/* Email Display */}
+      {showEmail && user?.email && (
+        <div className="sidebar-email">
+          <span className="email-text">{user.email}</span>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="sidebar-nav">
@@ -71,15 +82,12 @@ const SidebarEmployee: React.FC = () => {
           <span>Forecast</span>
         </Link>
 
-      </nav>
-
-      {/* Footer */}
-      <div className="sidebar-footer">
-        <button onClick={handleLogout} className="logout-btn">
+        {/* Logout - Moved here after Forecast */}
+        <button onClick={handleLogout} className="nav-item logout-btn">
           <LogOut size={20} />
           <span>Logout</span>
         </button>
-      </div>
+      </nav>
     </aside>
   );
 };

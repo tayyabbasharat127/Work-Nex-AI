@@ -158,7 +158,8 @@ exports.login = async (req, res) => {
   } else {
     // Users table has role as string
     console.log('Using capitalized table role:', user.role);
-    if (user.role === 'Admin') roleId = 1;
+    if (user.role === 'SuperAdmin') roleId = 0;
+    else if (user.role === 'Admin') roleId = 1;
     else if (user.role === 'Manager') roleId = 2;
     else if (user.role === 'Employee') roleId = 3;
     console.log('Mapped to role_id:', roleId);
@@ -216,36 +217,82 @@ exports.refreshToken = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
 
-  const user = await pool.query(`SELECT * FROM users WHERE email=$1`, [email]);
-  if (!user.rows.length) return res.json({ message: "If exists, email sent" });
+  try {
+    // Check both users tables
+    let user = await pool.query(`SELECT * FROM users WHERE email=$1`, [email]);
+    if (!user.rows.length) {
+      user = await pool.query(`SELECT * FROM "Users" WHERE email=$1`, [email]);
+    }
+    
+    if (!user.rows.length) {
+      return res.json({ success: true, message: "If the email exists, an OTP has been sent." });
+    }
 
-  const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: "10m" });
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    
+    // Delete any existing OTP for this email first
+    await pool.query(`DELETE FROM "TempOtps" WHERE email=$1`, [email]);
+    
+    // Store new OTP in TempOtps table
+    await pool.query(
+      `INSERT INTO "TempOtps" (email, otp, expires_at, "createdAt", "updatedAt")
+       VALUES ($1, $2, NOW() + interval '10 minutes', NOW(), NOW())`,
+      [email, otp]
+    );
 
-  await sendEmail(email, "Reset Password", `Token: ${token}`);
+    // Send OTP via email
+    await sendEmail(email, "Reset Password OTP", `Your password reset OTP is: ${otp}. Valid for 10 minutes.`);
 
-  res.json({ success: true });
+    res.json({ success: true, message: "OTP sent to your email" });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ message: "Failed to send OTP" });
+  }
 };
 
 exports.resetPassword = async (req, res) => {
-  const { token, new_password } = req.body;
+  const { email, otp, new_password } = req.body;
 
-  if (!token || !new_password) {
-    return res.status(400).json({ message: "Token and new password required" });
+  if (!email || !otp || !new_password) {
+    return res.status(400).json({ message: "Email, OTP, and new password required" });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const hash = await bcrypt.hash(new_password, 10);
-
-    await pool.query(
-      `UPDATE users SET password_hash=$1 WHERE email=$2`,
-      [hash, decoded.email]
+    // Verify OTP
+    const otpRecord = await pool.query(
+      `SELECT * FROM "TempOtps" WHERE email=$1 AND otp=$2 AND expires_at > NOW()`,
+      [email, otp]
     );
 
-    res.json({ success: true, message: "Password updated successfully" });
+    if (!otpRecord.rows.length) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    // Hash new password
+    const hash = await bcrypt.hash(new_password, 10);
+
+    // Update password in both possible tables
+    let updated = await pool.query(
+      `UPDATE users SET password_hash=$1 WHERE email=$2`,
+      [hash, email]
+    );
+
+    if (updated.rowCount === 0) {
+      await pool.query(
+        `UPDATE "Users" SET password=$1 WHERE email=$2`,
+        [hash, email]
+      );
+    }
+
+    // Delete used OTP
+    await pool.query(`DELETE FROM "TempOtps" WHERE email=$1`, [email]);
+
+    res.json({ success: true, message: "Password reset successfully" });
 
   } catch (err) {
-    return res.status(400).json({ message: "Invalid or expired token" });
+    console.error('Reset password error:', err);
+    return res.status(500).json({ message: "Failed to reset password" });
   }
 };
 exports.changePassword = async (req, res) => {

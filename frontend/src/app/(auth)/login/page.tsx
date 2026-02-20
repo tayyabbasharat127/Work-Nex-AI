@@ -117,6 +117,10 @@ export default function Login() {
       {/* Login Card */}
       <div className="login-card">
         <div className="login-header">
+          <div className="logo-section">
+            <div className="logo-circle">W</div>
+            <h2 className="brand-name">WorkNex AI</h2>
+          </div>
           <h1 className="title">Welcome Back</h1>
           <p className="subtitle">Sign in to continue your journey</p>
         </div>
@@ -204,29 +208,6 @@ export default function Login() {
 
           {/* Error Message */}
           {error && <p className="error-text">{error}</p>}
-        </div>
-
-        {/* Divider */}
-        <div className="divider">
-          <span>Or continue with</span>
-        </div>
-
-        {/* Social Login */}
-        <div className="social-login">
-          <button
-            type="button"
-            className="social-button google"
-            onClick={() => handleSocialLogin("Google")}
-          >
-            <GoogleIcon />
-          </button>
-          <button
-            type="button"
-            className="social-button github"
-            onClick={() => handleSocialLogin("GitHub")}
-          >
-            <GitHubIcon />
-          </button>
         </div>
 
         {/* Sign Up Link */}

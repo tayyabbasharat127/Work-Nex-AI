@@ -1,4 +1,6 @@
-const pool = require('../config/db'); // PostgreSQL pool
+const pool = require('../config/db');
+const { validateIP, getShiftTimings } = require('./organizationSettings');
+const sendEmail = require('../utils/sendEmail');
 
 // Helper to get client IP
 const getClientIP = (req) => {
@@ -12,9 +14,24 @@ const getClientIP = (req) => {
 
 exports.checkIn = async (req, res) => {
   try {
-    const userId = req.user.userId; // from JWT
+    const userId = req.user.userId;
+    const organizationId = req.user.organizationId;
     const clientIP = getClientIP(req);
+    const deviceId = req.body.deviceId || null;
+    
+    console.log('=== Check-In Request ===');
+    console.log('User ID:', userId);
+    console.log('Organization ID:', organizationId);
     console.log('Client IP:', clientIP);
+
+    // Validate IP against organization settings
+    const isValidIP = await validateIP(organizationId, clientIP);
+    if (!isValidIP) {
+      return res.status(403).json({
+        success: false,
+        message: 'You must be connected to office WiFi to mark attendance'
+      });
+    }
 
     // Check if already checked in today
     const already = await pool.query(
@@ -31,20 +48,33 @@ exports.checkIn = async (req, res) => {
       });
     }
 
-    // Shift timing (example: 10:00 AM)
+    // Get shift timings from organization settings
+    const shiftSettings = await getShiftTimings(organizationId);
+    
     const now = new Date();
     const shiftStart = new Date();
-    shiftStart.setHours(10, 0, 0, 0);
+    const [hours, minutes, seconds] = shiftSettings.shift_start_time.split(':');
+    shiftStart.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds || 0), 0);
+
+    // Add grace period
+    shiftStart.setMinutes(shiftStart.getMinutes() + (shiftSettings.grace_period_minutes || 0));
 
     const status = now > shiftStart ? 'Late' : 'Present';
 
     // Insert attendance record
     const result = await pool.query(
       `INSERT INTO "Attendances"
-       (employee_id, check_in_time, status, ip_address, "createdAt", "updatedAt")
-       VALUES ($1, NOW(), $2, $3, NOW(), NOW())
+       (employee_id, check_in_time, status, ip_address, device_id, "createdAt", "updatedAt")
+       VALUES ($1, NOW(), $2, $3, $4, NOW(), NOW())
        RETURNING *`,
-      [userId, status, clientIP]
+      [userId, status, clientIP, deviceId]
+    );
+
+    console.log('✓ Check-in successful:', status);
+
+    // Send notifications (async, don't wait)
+    sendCheckInNotifications(userId, status, organizationId).catch(err => 
+      console.error('Notification error:', err)
     );
 
     res.json({
@@ -156,39 +186,26 @@ exports.autoCheckout = async (req, res) => {
 exports.ping = async (req, res) => {
   try {
     const userId = req.user.userId;
+    const organizationId = req.user.organizationId;
     const { deviceId } = req.body;
     const clientIP = getClientIP(req);
 
     console.log('=== Ping Request ===');
     console.log('User ID:', userId);
+    console.log('Organization ID:', organizationId);
     console.log('Client IP:', clientIP);
-    console.log('Device ID:', deviceId);
 
-    // 1. Office Wi-Fi check (192.168.100.x or localhost for testing)
-    const isOfficeNetwork = clientIP.startsWith("192.168.100.") || 
-                           clientIP === "::1" || 
-                           clientIP === "127.0.0.1" ||
-                           clientIP.startsWith("::ffff:127.0.0.1");
+    // Validate IP against organization settings
+    const isValidIP = await validateIP(organizationId, clientIP);
     
-    if (!isOfficeNetwork) {
+    if (!isValidIP) {
       console.log('❌ Not on office network');
       return res.status(403).json({ success: false, message: 'Not on office network' });
     }
 
     console.log('✓ On office network');
 
-    // 2. Device validation (skip for now as device_id column check needed in Users)
-    /*
-    const user = await pool.query(
-      "SELECT device_id FROM \"Users\" WHERE id = $1",
-      [userId]
-    );
-    if (!user.rows[0] || user.rows[0].device_id !== deviceId) {
-      return res.status(403).json({ success: false });
-    }
-    */
-
-    // 3. Auto check-in
+    // Auto check-in if not already checked in
     const today = await pool.query(
       `SELECT * FROM "Attendances" WHERE employee_id = $1 AND DATE(check_in_time) = CURRENT_DATE`,
       [userId]
@@ -196,12 +213,29 @@ exports.ping = async (req, res) => {
 
     if (today.rows.length === 0) {
       console.log('✓ Auto check-in - No attendance record for today');
+      
+      // Get shift timings
+      const shiftSettings = await getShiftTimings(organizationId);
+      const now = new Date();
+      const shiftStart = new Date();
+      const [hours, minutes] = shiftSettings.shift_start_time.split(':');
+      shiftStart.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      
+      const status = now > shiftStart ? 'Late' : 'Present';
+      
       await pool.query(
-        `INSERT INTO "Attendances" (employee_id, check_in_time, status, ip_address, "createdAt", "updatedAt")
-         VALUES ($1, NOW(), 'Present', $2, NOW(), NOW())`,
-        [userId, clientIP]
+        `INSERT INTO "Attendances" 
+         (employee_id, check_in_time, status, ip_address, device_id, "createdAt", "updatedAt")
+         VALUES ($1, NOW(), $2, $3, $4, NOW(), NOW())`,
+        [userId, status, clientIP, deviceId]
       );
+      
       console.log('✓ Auto check-in successful');
+      
+      // Send notifications (async)
+      sendCheckInNotifications(userId, status, organizationId).catch(err => 
+        console.error('Notification error:', err)
+      );
     } else {
       console.log('✓ Already checked in today');
     }
@@ -300,34 +334,202 @@ exports.attendanceOverview = async (req, res) => {
     console.log('Fetching attendance for organization:', organizationId);
 
     // Get all users from both Users and users tables for this organization
+    // Exclude admins (role_id = 1 or role = 'Admin')
+    // Join with departments to get department names
     const result = await pool.query(
       `SELECT
          COALESCE(u1.id, u2.user_id) as user_id,
          COALESCE(u1.name, u2.name) as name,
          COALESCE(u1.email, u2.email) as email,
-         COALESCE(u1.department, u2.department_id::text, '—') as department,
+         u2.role_id as role_id,
+         COALESCE(u1.role, 'Employee') as role,
+         COALESCE(d.name, u1.department, u2.department_id::text, '—') as department,
          COALESCE(a.status, 'Absent') AS attendance_status,
          a.check_in_time,
          a.check_out_time
        FROM (
-         SELECT id, name, email, department, organization_id FROM "Users" WHERE organization_id = $1
+         SELECT id, name, email, role, department, organization_id FROM "Users" WHERE organization_id = $1
          UNION
-         SELECT user_id as id, name, email, department_id::text as department, organization_id FROM users WHERE organization_id = $1
+         SELECT user_id as id, name, email, NULL as role, department_id::text as department, organization_id FROM users WHERE organization_id = $1
        ) AS combined
        LEFT JOIN "Users" u1 ON u1.id = combined.id AND u1.organization_id = $1
        LEFT JOIN users u2 ON u2.user_id = combined.id AND u2.organization_id = $1
+       LEFT JOIN departments d ON d.department_id = COALESCE(u2.department_id, CAST(u1.department AS INTEGER))
        LEFT JOIN "Attendances" a
          ON a.employee_id = combined.id
          AND DATE(a.check_in_time) = CURRENT_DATE
+       WHERE (u2.role_id IS NULL OR u2.role_id != 1) AND (u1.role IS NULL OR u1.role != 'Admin')
        ORDER BY combined.department NULLS LAST, combined.name`,
       [organizationId]
     );
 
-    console.log('✓ Found', result.rows.length, 'employees');
+    console.log('✓ Found', result.rows.length, 'employees (excluding admins)');
 
     return res.json({ success: true, data: result.rows });
   } catch (err) {
     console.error('Attendance overview error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
+/**
+ * Send notifications on check-in
+ */
+async function sendCheckInNotifications(userId, status, organizationId) {
+  try {
+    // Get user details
+    const userResult = await pool.query(
+      `SELECT name, email, manager_id, department_id FROM users WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) return;
+
+    const user = userResult.rows[0];
+
+    // Send to manager if exists
+    if (user.manager_id) {
+      const managerResult = await pool.query(
+        `SELECT email FROM users WHERE user_id = $1`,
+        [user.manager_id]
+      );
+
+      if (managerResult.rows.length > 0) {
+        const managerEmail = managerResult.rows[0].email;
+        await sendEmail(
+          managerEmail,
+          `Employee Check-In: ${user.name}`,
+          `${user.name} has checked in at ${new Date().toLocaleTimeString()} with status: ${status}`
+        );
+      }
+    }
+
+    // Send to admin if late
+    if (status === 'Late') {
+      const adminResult = await pool.query(
+        `SELECT email FROM users WHERE organization_id = $1 AND role_id = 1 LIMIT 1`,
+        [organizationId]
+      );
+
+      if (adminResult.rows.length > 0) {
+        const adminEmail = adminResult.rows[0].email;
+        await sendEmail(
+          adminEmail,
+          `Late Arrival Alert: ${user.name}`,
+          `${user.name} arrived late at ${new Date().toLocaleTimeString()}`
+        );
+      }
+    }
+  } catch (err) {
+    console.error('Notification error:', err);
+  }
+}
+
+/**
+ * Manual mark attendance (Admin only)
+ */
+exports.manualMarkAttendance = async (req, res) => {
+  try {
+    const { roleId, userId: adminId } = req.user;
+
+    // Only admin can manually mark
+    if (roleId !== 1 && roleId !== 0) {
+      return res.status(403).json({ success: false, message: 'Admin only' });
+    }
+
+    const { employee_id, date, check_in_time, check_out_time, status, reason } = req.body;
+
+    // Validate required fields
+    if (!employee_id || !date || !check_in_time || !status) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'employee_id, date, check_in_time, and status are required' 
+      });
+    }
+
+    // Check if attendance already exists for this date
+    const existing = await pool.query(
+      `SELECT id FROM "Attendances" 
+       WHERE employee_id = $1 AND DATE(check_in_time) = $2`,
+      [employee_id, date]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Attendance already exists for this date'
+      });
+    }
+
+    // Insert manual attendance
+    const result = await pool.query(
+      `INSERT INTO "Attendances"
+       (employee_id, check_in_time, check_out_time, status, ip_address, 
+        manual_entry, manual_reason, marked_by, "createdAt", "updatedAt")
+       VALUES ($1, $2::timestamp, $3::timestamp, $4, 'MANUAL', true, $5, $6, NOW(), NOW())
+       RETURNING *`,
+      [employee_id, `${date} ${check_in_time}`, check_out_time ? `${date} ${check_out_time}` : null, status, reason, adminId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Attendance marked manually',
+      attendance: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Manual mark error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * Adjust attendance (Manager/Admin only)
+ */
+exports.adjustAttendance = async (req, res) => {
+  try {
+    const { roleId, userId: managerId } = req.user;
+
+    // Only manager or admin
+    if (roleId !== 1 && roleId !== 2 && roleId !== 0) {
+      return res.status(403).json({ success: false, message: 'Manager/Admin only' });
+    }
+
+    const { attendance_id, check_out_time, reason } = req.body;
+
+    if (!attendance_id || !check_out_time) {
+      return res.status(400).json({
+        success: false,
+        message: 'attendance_id and check_out_time are required'
+      });
+    }
+
+    // Update attendance
+    const result = await pool.query(
+      `UPDATE "Attendances"
+       SET check_out_time = $1::timestamp,
+           adjusted_by = $2,
+           adjustment_reason = $3,
+           "updatedAt" = NOW()
+       WHERE id = $4
+       RETURNING *`,
+      [check_out_time, managerId, reason, attendance_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Attendance record not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Attendance adjusted successfully',
+      attendance: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Adjust attendance error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

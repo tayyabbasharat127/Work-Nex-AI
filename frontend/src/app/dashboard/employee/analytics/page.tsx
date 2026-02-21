@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import Sidebar from "@/src/app/components/sideBar/admin/sidebar";
+
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
-import { Activity, BarChart3, LineChart, Cpu, Send } from "lucide-react";
+import { Activity, BarChart3, Cpu, Send } from "lucide-react";
 import "./page.scss";
 import SidebarEmployee from "@/src/app/components/sideBar/employee/sidebar";
 
 const EmployeeAnalyticsPage: React.FC = () => {
   const [query, setQuery] = useState("");
-  const [messages, setMessages] = useState< { role: "user" | "assistant"; text: string }[]>([{ role: "assistant", text: "Hi! I’m the WorkNex Assistant. Ask me about your attendance, leaves, or performance.",},]);
+  const [messages, setMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([{ role: "assistant", text: "Hi! I’m the WorkNex Assistant. Ask me about your attendance, leaves, or performance.", },]);
 
   const handleAsk = (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,9 +165,8 @@ const EmployeeAnalyticsPage: React.FC = () => {
                 {messages.map((m, idx) => (
                   <div
                     key={idx}
-                    className={`ai-message ${
-                      m.role === "user" ? "user" : "assistant"
-                    }`}
+                    className={`ai-message ${m.role === "user" ? "user" : "assistant"
+                      }`}
                   >
                     <p>{m.text}</p>
                   </div>

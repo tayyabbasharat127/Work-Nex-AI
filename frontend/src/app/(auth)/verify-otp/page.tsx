@@ -72,21 +72,17 @@ export default function VerifyOTP() {
       const res = await verifyOtpApi({ email, otp: otpValue });
       setMessage(res.data?.message || "OTP Verified Successfully ✅");
 
-      // ✅ Decide where to go next
-      // - If next=reset-password => go to reset page with email
-      // - If next=login => go to login page
+      // ✅ Redirect based on next parameter
+      // - If next=login => go to login page (for signup flow)
+      // - If next=reset-password => go to reset-password with email and OTP
       if (nextFromQuery === "login") {
-        router.push("/login");
-      } else {
-        router.push(`/reset-password?email=${encodeURIComponent(email)}`);
+        setTimeout(() => router.push("/login"), 1000);
+      } else if (nextFromQuery === "reset-password") {
+        setTimeout(() => router.push(`/reset-password?email=${encodeURIComponent(email)}&otp=${otpValue}`), 1000);
       }
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
-        "OTP verification failed";
-      setError(msg);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string, error?: string } }, message?: string };
+      setError(e.response?.data?.message || e.message || "OTP verification failed");
     } finally {
       setLoading(false);
     }
@@ -107,13 +103,9 @@ export default function VerifyOTP() {
       await forgotPasswordApi({ email });
       setTimer(60);
       setMessage("OTP resent successfully.");
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
-        "Failed to resend OTP";
-      setError(msg);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string, error?: string } }, message?: string };
+      setError(e.response?.data?.message || e.message || "Failed to resend OTP");
     } finally {
       setLoading(false);
     }
@@ -178,7 +170,7 @@ export default function VerifyOTP() {
           )}
         </div>
 
-        <a href="/login" className="back-link">
+        <a href="/auth/login" className="back-link">
           ← Back to Login
         </a>
       </div>

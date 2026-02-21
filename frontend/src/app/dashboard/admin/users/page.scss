@@ -258,7 +258,7 @@ $mobile: 768px;
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 999;
+  z-index: 9999;
 }
 
 .modal {
@@ -269,6 +269,8 @@ $mobile: 768px;
   padding: 1.5rem;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   animation: fadeIn 0.25s ease-in-out;
+  position: relative;
+  z-index: 10000;
 
   .modal-header {
     display: flex;

@@ -7,9 +7,9 @@ import { getKPIsApi, getTrendsApi, getDepartmentAnalyticsApi } from "@/src/api/a
 import "./page.scss";
 
 export default function AnalyticsPage() {
-  const [kpiData, setKpiData] = useState<any>(null);
-  const [trendsData, setTrendsData] = useState<any[]>([]);
-  const [departmentData, setDepartmentData] = useState<any[]>([]);
+  const [kpiData, setKpiData] = useState<{ totalEmployees?: number; presentToday?: number; absentToday?: number; onLeaveToday?: number; attendanceRate?: number } | null>(null);
+  const [trendsData, setTrendsData] = useState<{ date: string; total: number; present: number; absent: number; late: number }[]>([]);
+  const [departmentData, setDepartmentData] = useState<{ department: string; total_employees: number; present_today: number; on_leave_today: number }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,7 +18,7 @@ export default function AnalyticsPage() {
     try {
       const res = await getKPIsApi();
       setKpiData(res.data?.data || res.data);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Error loading KPIs:", e);
       setError("Failed to load KPIs");
     }
@@ -29,10 +29,10 @@ export default function AnalyticsPage() {
     try {
       const endDate = new Date().toISOString().split('T')[0];
       const startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      
+
       const res = await getTrendsApi({ startDate, endDate });
       setTrendsData(res.data?.data || res.data);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Error loading trends:", e);
     }
   };
@@ -42,15 +42,18 @@ export default function AnalyticsPage() {
     try {
       const res = await getDepartmentAnalyticsApi();
       setDepartmentData(res.data?.data || res.data);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Error loading department analytics:", e);
     }
   };
 
   useEffect(() => {
-    setLoading(true);
-    Promise.all([loadKPIs(), loadTrends(), loadDepartmentAnalytics()])
-      .finally(() => setLoading(false));
+    const init = async () => {
+      setLoading(true);
+      await Promise.all([loadKPIs(), loadTrends(), loadDepartmentAnalytics()]);
+      setLoading(false);
+    };
+    init();
   }, []);
 
   return (
@@ -73,7 +76,7 @@ export default function AnalyticsPage() {
             <button onClick={() => setError(null)} style={{ marginLeft: 10 }}>×</button>
           </div>
         )}
-        
+
         {loading && <div className="banner banner-loading">Loading analytics...</div>}
 
         {/* KPI Cards */}

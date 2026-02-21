@@ -38,18 +38,16 @@ export default function ForgotPassword() {
     try {
       const res = await forgotPasswordApi({ email });
 
-      // backend might return message like "OTP sent"
+      // backend returns message like "OTP sent"
       setMessage(res.data?.message || "If the email exists, an OTP has been sent.");
 
-      // ✅ Redirect to OTP page (include email so OTP page can use it)
-      router.push(`/reset-password?email=${encodeURIComponent(email)}`);
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
-        "Failed to send reset OTP";
-      setError(msg);
+      // ✅ Redirect to verify-otp page with email and next=reset-password
+      setTimeout(() => {
+        router.push(`/verify-otp?email=${encodeURIComponent(email)}&next=reset-password`);
+      }, 1500);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string, error?: string } }, message?: string };
+      setError(e.response?.data?.message || e.message || "Failed to send reset link");
     } finally {
       setLoading(false);
     }

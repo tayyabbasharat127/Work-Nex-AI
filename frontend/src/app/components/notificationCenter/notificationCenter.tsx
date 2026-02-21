@@ -27,8 +27,8 @@ export default function NotificationCenter() {
       const res = await getNotificationsApi();
       setNotifications(res.data?.data || []);
       setUnreadCount(res.data?.unreadCount || 0);
-    } catch (e: any) {
-      console.error("Error loading notifications:", e);
+    } catch (err: unknown) {
+      console.error("Failed to fetch notifications:", err);
     } finally {
       setLoading(false);
     }
@@ -38,18 +38,18 @@ export default function NotificationCenter() {
   const markAsRead = async (notificationId: string) => {
     try {
       await markNotificationReadApi(notificationId);
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => n.notification_id === notificationId ? { ...n, read: true } : n)
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (e: any) {
-      console.error("Error marking notification as read:", e);
+    } catch (err: unknown) {
+      console.error("Failed to mark as read:", err);
     }
   };
 
   useEffect(() => {
     loadNotifications();
-    
+
     // Refresh notifications every 30 seconds
     const interval = setInterval(loadNotifications, 30000);
     return () => clearInterval(interval);

@@ -17,7 +17,7 @@ type AuthUser = {
   name?: string;
   is_super_admin?: boolean;
   subscription_tier?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 type AuthContextValue = {
@@ -133,14 +133,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
-      roleId: user?.roleId ?? user?.role_id ?? null,
-      organizationId: user?.organizationId ?? user?.organization_id ?? null,
+      roleId: user?.roleId ?? (user?.role_id as number) ?? null,
+      organizationId: user?.organizationId ?? (user?.organization_id as number) ?? null,
       token,
       loading,
       setUserData,
       logout: handleLogout,
     }),
-    [user, token, loading, handleLogout]
+    [user, token, loading, handleLogout, setUserData]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

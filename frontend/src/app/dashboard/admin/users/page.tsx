@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import SidebarAdmin from "@/src/app/components/sideBar/admin/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import { UserPlus, Edit2, Trash2, Download, X } from "lucide-react";
+import Image from "next/image";
 import "./page.scss";
 
 import {
@@ -84,29 +85,30 @@ export default function UsersPage() {
   // -----------------------------
   // Helpers
   // -----------------------------
-  const normalizeUsers = (list: any[]): UserRow[] => {
+  const normalizeUsers = (list: unknown[]): UserRow[] => {
     return (list || [])
-      .map((u: any) => {
-        const id = u.user_id ?? u.id ?? u.userId;
+      .map((u: unknown) => {
+        const item = u as Record<string, unknown>;
+        const id = item.user_id ?? item.id ?? item.userId;
         if (!id) return null;
 
-        const email = u.email ?? "";
-        const departmentId = u.department_id ? String(u.department_id) : "";
-        const roleId = u.role_id ? String(u.role_id) : "";
+        const email = (item.email ?? "") as string;
+        const departmentId = item.department_id ? String(item.department_id) : "";
+        const roleId = item.role_id ? String(item.role_id) : "";
         return {
           id: String(id),
-          name: u.name ?? "",
+          name: (item.name ?? "") as string,
           email,
           roleId,
           roleLabel: roleLabel(roleId),
           departmentId,
           departmentName:
-            u.department_name ?? departmentMap[departmentId] ?? "—",
-          status: (u.status ?? "active").toString(),
-          managerId: u.manager_id ? String(u.manager_id) : "",
-          createdAt: u.created_at || u.createdAt,
+            (item.department_name ?? departmentMap[departmentId] ?? "—") as string,
+          status: (item.status ?? "active").toString(),
+          managerId: item.manager_id ? String(item.manager_id) : "",
+          createdAt: (item.created_at || item.createdAt) as string,
           avatar:
-            u.avatar ||
+            (item.avatar as string) ||
             `https://i.pravatar.cc/40?u=${encodeURIComponent(email || String(id))}`,
         } as UserRow;
       })
@@ -161,9 +163,10 @@ export default function UsersPage() {
 
       const rawList = userRes.data?.data ?? userRes.data ?? [];
       setUsers(normalizeUsers(rawList));
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string };
       setError(
-        e?.response?.data?.message || e?.message || "Failed to load users."
+        err.response?.data?.message || err.message || "Failed to load users."
       );
     } finally {
       setLoading(false);
@@ -180,7 +183,7 @@ export default function UsersPage() {
   // -----------------------------
   const stats = useMemo(() => {
     const total = users.length;
-    const active = users.filter((u) => u.status === "Active").length;
+    const active = users.filter((u) => u.status.toLowerCase() === "active").length;
     const inactive = total - active;
 
     const now = new Date();
@@ -268,7 +271,17 @@ export default function UsersPage() {
       setError(null);
 
       if (mode === "create") {
-        const res = await createUserApi(form);
+        // Map frontend field names to backend field names
+        const payload = {
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          role_id: form.roleId ? Number(form.roleId) : null,
+          department_id: form.departmentId ? Number(form.departmentId) : null,
+          manager_id: form.managerId ? Number(form.managerId) : null,
+        };
+        
+        const res = await createUserApi(payload);
         const created = res.data?.user || res.data;
 
         const normalized = normalizeUsers([created])[0];
@@ -287,7 +300,7 @@ export default function UsersPage() {
         return;
       }
 
-      const payload: Record<string, any> = {
+      const payload: Record<string, unknown> = {
         name: form.name,
         email: form.email,
         role_id: form.roleId ? Number(form.roleId) : null,
@@ -314,8 +327,9 @@ export default function UsersPage() {
       }
 
       closeModal();
-    } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || "Save failed.");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string };
+      setError(err.response?.data?.message || err.message || "Save failed.");
     } finally {
       setLoading(false);
     }
@@ -334,8 +348,9 @@ export default function UsersPage() {
 
       await deleteUserApi(id);
       await loadData();
-    } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || "Delete failed.");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string };
+      setError(err.response?.data?.message || err.message || "Delete failed.");
     } finally {
       setLoading(false);
     }
@@ -415,7 +430,7 @@ export default function UsersPage() {
                   <tr key={user.id}>
                     <td>
                       <div className="user-cell">
-                        <img src={user.avatar} alt={user.name} />
+                        <Image src={user.avatar || "/placeholder.png"} alt={user.name} width={40} height={40} style={{ borderRadius: "50%" }} />
                         <p className="name">{user.name}</p>
                       </div>
                     </td>
@@ -455,8 +470,15 @@ export default function UsersPage() {
         </section>
 
         {showModal && (
-          <div className="modal-backdrop" onClick={closeModal}>
-            <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div 
+            className="modal-backdrop" 
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) {
+                closeModal();
+              }
+            }}
+          >
+            <div className="modal">
               <div className="modal-header">
                 <h3>{mode === "create" ? "Add New User" : "Edit User"}</h3>
                 <button

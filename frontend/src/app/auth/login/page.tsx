@@ -4,7 +4,7 @@
 import React, { useState } from "react";
 import "./page.scss";
 import { useRouter } from "next/navigation";
-import { loginApi,getDeviceId } from "@/src/api/api";
+import { loginApi, getDeviceId } from "@/src/api/api";
 
 // Material UI Icons (SVG)
 const EmailIcon = () => (
@@ -86,34 +86,38 @@ export default function Login() {
       const user = res.data?.user;
       if (user) {
         const roleId = String(user.roleId || user.role_id);
-        
+
         switch (roleId) {
+          case "0": // Super Admin - redirect to admin dashboard for now
+            router.push("/dashboard/admin/main");
+            break;
           case "1": // Admin
-            router.push("/dashboard/admin");
+            router.push("/dashboard/admin/main");
             break;
           case "2": // Manager
-            router.push("/dashboard/manager");
+            router.push("/dashboard/manager/main");
             break;
           case "3": // Employee
-            router.push("/dashboard/employee");
+            router.push("/dashboard/employee/main");
             break;
           default:
             // Default to employee dashboard if role is unknown
-            router.push("/dashboard/employee");
+            router.push("/dashboard/employee/main");
             break;
         }
       } else {
         // Fallback to main dashboard redirect
         router.push("/dashboard");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string, error?: string } }, message?: string };
       const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
+        e.response?.data?.message ||
+        e.response?.data?.error ||
+        e.message ||
         "Login failed";
       setError(msg);
-      console.log("Error", err);
+      console.log("Error", e);
     } finally {
       setIsLoading(false);
     }
@@ -217,32 +221,9 @@ export default function Login() {
           {error && <p className="error-text">{error}</p>}
         </div>
 
-        {/* Divider */}
-        <div className="divider">
-          <span>Or continue with</span>
-        </div>
-
-        {/* Social Login */}
-        <div className="social-login">
-          <button
-            type="button"
-            className="social-button google"
-            onClick={() => handleSocialLogin("Google")}
-          >
-            <GoogleIcon />
-          </button>
-          <button
-            type="button"
-            className="social-button github"
-            onClick={() => handleSocialLogin("GitHub")}
-          >
-            <GitHubIcon />
-          </button>
-        </div>
-
         {/* Sign Up Link */}
         <div className="signup-link">
-          Don't have an account? <a href="/auth/register">Sign up</a>
+          Don&apos;t have an account? <a href="/auth/register">Sign up</a>
         </div>
       </div>
     </div>

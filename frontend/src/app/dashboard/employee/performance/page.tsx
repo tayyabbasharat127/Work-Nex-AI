@@ -3,7 +3,7 @@
 import React from "react";
 import Sidebar from "@/src/app/components/sideBar/employee/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
-import { TrendingUp, BarChart2, LineChart, Brain } from "lucide-react";
+import { Brain } from "lucide-react";
 import "./page.scss";
 
 export default function EmployeePerformancePage() {

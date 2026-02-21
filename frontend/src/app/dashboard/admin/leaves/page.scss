@@ -1,40 +1,31 @@
 $primary-color: #6c5ce7;
 $secondary-color: #ff8c42;
-$light-purple: #e8eaff;
-$light-orange: #ffe4d1;
 $gray-light: #f5f6fa;
 $gray-text: #8b92a9;
 $white: #ffffff;
-$sidebar-bg: #5b4db5;
 $border-light: #e8eaf6;
 
 $mobile: 768px;
 $tablet: 1024px;
 
-.banner { margin: 12px 0; padding: 10px 12px; border-radius: 10px; font-size: 14px; }
-.banner-error { background: #ffe8e8; border: 1px solid #ffb5b5; color: #7a0b0b; }
-.banner-loading { background: #eef6ff; border: 1px solid #cfe4ff; color: #0b3a7a; }
-
-.rejected-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin: 0 8px 0 16px; background: #ef4444; }
-.pending-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin: 0 8px 0 16px; background: #f59e0b; }
-.approved-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin: 0 8px 0 16px; background: #22c55e; }
-
-.btn-refresh, .btn-approve, .btn-reject, .btn-delete {
-  padding: 8px 10px;
+.banner {
+  margin: 12px 0;
+  padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  background: white;
-  cursor: pointer;
+  font-size: 14px;
 }
 
-.btn-approve { border-color: #86efac; }
-.btn-reject { border-color: #fca5a5; }
-.btn-delete { border-color: #d1d5db; }
+.banner-error {
+  background: #ffe8e8;
+  border: 1px solid #ffb5b5;
+  color: #7a0b0b;
+}
 
-td.approved { color: #16a34a; font-weight: 600; }
-td.pending { color: #d97706; font-weight: 600; }
-td.rejected { color: #dc2626; font-weight: 600; }
-
+.banner-loading {
+  background: #eef6ff;
+  border: 1px solid #cfe4ff;
+  color: #0b3a7a;
+}
 
 .leave-dashboard {
   display: flex;
@@ -102,15 +93,16 @@ td.rejected { color: #dc2626; font-weight: 600; }
     /* Layout Grid */
     .leave-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1.5fr;
       gap: 2rem;
+      margin-bottom: 2rem;
 
       @media (max-width: $tablet) {
         grid-template-columns: 1fr;
       }
     }
 
-    /* Calendar */
+    /* Calendar Card */
     .calendar-card {
       background: $white;
       padding: 1.5rem;
@@ -118,10 +110,7 @@ td.rejected { color: #dc2626; font-weight: 600; }
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 
       .calendar-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
 
         h3 {
           font-size: 16px;
@@ -134,13 +123,14 @@ td.rejected { color: #dc2626; font-weight: 600; }
         display: grid;
         grid-template-columns: repeat(7, 1fr);
         gap: 8px;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
         text-align: center;
 
         span {
           font-size: 12px;
           font-weight: 600;
           color: $gray-text;
+          padding: 4px;
         }
       }
 
@@ -148,6 +138,7 @@ td.rejected { color: #dc2626; font-weight: 600; }
         display: grid;
         grid-template-columns: repeat(7, 1fr);
         gap: 8px;
+        margin-bottom: 1.5rem;
 
         .calendar-day {
           aspect-ratio: 1;
@@ -157,40 +148,55 @@ td.rejected { color: #dc2626; font-weight: 600; }
           border-radius: 8px;
           background: $gray-light;
           color: $gray-text;
-          font-size: 12px;
+          font-size: 13px;
           cursor: pointer;
           transition: all 0.2s;
+          font-weight: 500;
 
           &.approved {
             background: #22c55e;
             color: $white;
+            font-weight: 600;
           }
 
           &.pending {
-            background: #ff8c42;
+            background: #f59e0b;
             color: $white;
+            font-weight: 600;
           }
 
-          &:hover:not(.approved):not(.pending) {
-            background: #eaeaea;
+          &.rejected {
+            background: #ef4444;
+            color: $white;
+            font-weight: 600;
+          }
+
+          &:hover:not(.approved):not(.pending):not(.rejected) {
+            background: #e5e7eb;
           }
         }
       }
 
       .legend {
-        margin-top: 1rem;
+        display: flex;
+        gap: 16px;
         font-size: 12px;
         color: $gray-text;
-        display: flex;
-        align-items: center;
-        gap: 12px;
+        padding-top: 1rem;
+        border-top: 1px solid $border-light;
+
+        .legend-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
 
         .approved-dot,
-        .pending-dot {
-          width: 10px;
-          height: 10px;
+        .pending-dot,
+        .rejected-dot {
+          width: 12px;
+          height: 12px;
           border-radius: 50%;
-          display: inline-block;
         }
 
         .approved-dot {
@@ -198,23 +204,58 @@ td.rejected { color: #dc2626; font-weight: 600; }
         }
 
         .pending-dot {
-          background: #ff8c42;
+          background: #f59e0b;
+        }
+
+        .rejected-dot {
+          background: #ef4444;
         }
       }
     }
 
-    /* Table */
+    /* Table Section */
     .table-section {
       background: $white;
       padding: 1.5rem;
       border-radius: 12px;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 
-      h3 {
-        font-size: 16px;
-        font-weight: 600;
-        color: #2d3436;
+      .table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         margin-bottom: 1rem;
+
+        h3 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #2d3436;
+        }
+
+        .btn-refresh {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          border: none;
+          padding: 8px 14px;
+          border-radius: 8px;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.3s;
+          font-weight: 500;
+          background: $gray-light;
+          color: $gray-text;
+
+          &:hover {
+            background: lighten($gray-light, 3%);
+            color: #2d3436;
+          }
+
+          &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+        }
       }
 
       table {
@@ -224,7 +265,7 @@ td.rejected { color: #dc2626; font-weight: 600; }
         th,
         td {
           text-align: left;
-          padding: 10px 12px;
+          padding: 12px;
           font-size: 13px;
           border-bottom: 1px solid $border-light;
         }
@@ -232,23 +273,111 @@ td.rejected { color: #dc2626; font-weight: 600; }
         th {
           background: $gray-light;
           color: $gray-text;
-        }
-
-        td.approved {
-          color: #22c55e;
           font-weight: 600;
         }
 
-        td.pending {
-          color: #ff8c42;
-          font-weight: 600;
+        tbody tr {
+          transition: background 0.2s;
+
+          &:hover {
+            background: #fafbfc;
+          }
         }
 
-        td.rejected {
-          color: #ef4444;
+        td strong {
           font-weight: 600;
+          color: #2d3436;
+        }
+
+        .status-badge {
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+          text-transform: capitalize;
+
+          &.approved {
+            background: #dcfce7;
+            color: #16a34a;
+          }
+
+          &.pending {
+            background: #fef3c7;
+            color: #d97706;
+          }
+
+          &.rejected {
+            background: #fee2e2;
+            color: #dc2626;
+          }
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+
+          button {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            &:disabled {
+              opacity: 0.5;
+              cursor: not-allowed;
+            }
+          }
+
+          .btn-approve {
+            background: #dcfce7;
+            color: #16a34a;
+
+            &:hover:not(:disabled) {
+              background: #bbf7d0;
+            }
+          }
+
+          .btn-reject {
+            background: #fee2e2;
+            color: #dc2626;
+
+            &:hover:not(:disabled) {
+              background: #fecaca;
+            }
+          }
+
+          .btn-delete {
+            background: $gray-light;
+            color: $gray-text;
+
+            &:hover:not(:disabled) {
+              background: #e5e7eb;
+            }
+          }
+
+          .status-text {
+            font-size: 13px;
+            color: $gray-text;
+            font-weight: 500;
+          }
         }
       }
+    }
+  }
+}
+
+// Responsive
+@media (max-width: $tablet) {
+  .leave-dashboard {
+    .main-content {
+      padding: 1rem;
     }
   }
 }

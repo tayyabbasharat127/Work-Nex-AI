@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Sidebar from "@/src/app/components/sideBar/admin/sidebar";
+
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import "./page.scss";
 import SidebarAdmin from "@/src/app/components/sideBar/admin/sidebar";
@@ -71,7 +71,7 @@ export default function ETLPage() {
                       <div
                         className="bar-fill"
                         style={{
-                          width: `${60 + Math.random() * 30}%`,
+                          width: `${60 + (i * 7) % 30}%`,
                           background: "#6C5CE7",
                         }}
                       ></div>

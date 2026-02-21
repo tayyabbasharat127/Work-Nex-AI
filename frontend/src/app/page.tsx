@@ -1,16 +1,4 @@
-import Image from "next/image";
-import Login from "./login/page";
-import Register from "./register/page";
-import ResetPassword from "./reset-password/page";
-import VerifyOTP from "./verify-otp/page";
-import ForgotPassword from "./forgot-password/page";
-import { AdminDashboard } from "./dashboard/admin/main/page";
-import EmployeeDashboard from "./dashboard/employee/main/page";
-import EmployeeAnalyticsPage from "./dashboard/employee/analytics/page";
-import EmployeeAttendancePage from "./dashboard/employee/attendance/page";
-import EmployeeLeavesPage from "./dashboard/employee/leaves/page";
 import HomePage from "./homepage/page";
-import ManagerDashboardPage from "./dashboard/manager/main/page";
 
 export const metadata = {
   title: "WorkNext AI - The Future is here!",
@@ -20,7 +8,7 @@ export const metadata = {
 export default function Home() {
   return (
     <>
-      < HomePage />
+      <HomePage />
     </>
   );
 }

@@ -11,6 +11,7 @@ import {
   Filter,
   Building2,
 } from "lucide-react";
+import Image from "next/image";
 import "./page.scss";
 
 const ManagerTeamPage: React.FC = () => {
@@ -174,7 +175,7 @@ const ManagerTeamPage: React.FC = () => {
                 <tr key={i}>
                   <td>
                     <div className="user-info">
-                      <img src={emp.avatar} alt={emp.name} />
+                      <Image src={emp.avatar} alt={emp.name} width={40} height={40} style={{ borderRadius: "50%" }} />
                       <div>
                         <p className="name">{emp.name}</p>
                         <p className="email">{emp.email}</p>

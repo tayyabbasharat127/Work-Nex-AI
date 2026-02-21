@@ -6,8 +6,7 @@ import SidebarAdmin from "@/src/app/components/sideBar/admin/sidebar";
 import "./page.scss";
 
 // ✅ import from your existing api.js (adjust path if needed)
-import { todayStatusApi, historyApi } from "@/src/api/api"; 
-// If your file is at src/api/api.js, then use: "@/src/api/api"
+import { getAttendanceOverviewApi } from "@/src/api/api";
 
 const monthMap = {
   January: 1,
@@ -39,8 +38,8 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [todayData, setTodayData] = useState<any>(null);
-  const [historyData, setHistoryData] = useState<any>(null);
+  const [todayData, setTodayData] = useState<Record<string, unknown> | null>(null);
+  const [historyData, setHistoryData] = useState<Record<string, unknown> | null>(null);
 
   const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -63,19 +62,29 @@ export default function AttendancePage() {
     setLoading(true);
     setError("");
     try {
-      const [todayRes, historyRes] = await Promise.all([
-        todayStatusApi(),
-        historyApi({
-          // optional params if your backend supports them:
-          month: monthMap[selectedMonth],
-          year: new Date().getFullYear(),
-        }),
-      ]);
-
-      setTodayData(todayRes.data);
-      setHistoryData(historyRes.data);
-    } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || "Failed to load attendance");
+      const res = await getAttendanceOverviewApi();
+      
+      // Backend returns: { success: true, data: [{ user_id, name, email, department, attendance_status, check_in_time, check_out_time }] }
+      const employees = res.data?.data || [];
+      
+      // Calculate stats
+      const total = employees.length;
+      const present = employees.filter((e: { attendance_status: string }) => 
+        e.attendance_status === 'Present' || e.attendance_status === 'Late'
+      ).length;
+      const absent = total - present;
+      const avgAttendance = total > 0 ? Math.round((present / total) * 100) : 0;
+      
+      setTodayData({
+        totalEmployees: total,
+        averageAttendance: `${avgAttendance}%`,
+        absentToday: absent,
+        employees: employees
+      });
+      
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string };
+      setError(err.response?.data?.message || err.message || "Failed to load attendance");
     } finally {
       setLoading(false);
     }
@@ -83,13 +92,19 @@ export default function AttendancePage() {
 
   // load on first render
   useEffect(() => {
-    loadAttendance();
+    const init = async () => {
+      await loadAttendance();
+    };
+    init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // reload when month changes (only if you want month-based history)
   useEffect(() => {
-    loadAttendance();
+    const init = async () => {
+      await loadAttendance();
+    };
+    init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMonth]);
 
@@ -107,23 +122,16 @@ export default function AttendancePage() {
   const absentToday = todayData?.absentToday ?? todayData?.absent ?? 0;
 
   const employees: EmployeeRow[] = useMemo(() => {
-    // try multiple possible keys
-    const list =
-      todayData?.employees ||
-      historyData?.employees ||
-      historyData?.data ||
-      historyData ||
-      [];
-
-    // normalize minimal fields
+    const list = todayData?.employees || [];
+    
     return Array.isArray(list)
-      ? list.map((x: any) => ({
-          name: x?.name || x?.employeeName || "—",
-          department: x?.department || x?.dept || "—",
-          status: x?.status || x?.todayStatus || "—",
+      ? list.map((item: { name?: string; department?: string; attendance_status?: string }) => ({
+          name: item?.name || "—",
+          department: item?.department || "—",
+          status: item?.attendance_status || "Absent",
         }))
       : [];
-  }, [todayData, historyData]);
+  }, [todayData]);
 
   // Calendar status map (day -> className)
   const calendarStatusByDay: Record<number, string> = useMemo(() => {
@@ -175,7 +183,7 @@ export default function AttendancePage() {
           {attendanceStats.map((stat, i) => (
             <div key={i} className="stat-card">
               <h4>{stat.title}</h4>
-              <p className="stat-value">{stat.value}</p>
+              <p className="stat-value">{String(stat.value)}</p>
 
               {/* optional trend UI if you want */}
               {stat.change ? (

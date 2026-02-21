@@ -40,23 +40,24 @@ export default function LeavePage() {
   // -----------------------------
   // Normalize backend response
   // -----------------------------
-  const normalizeLeaves = (list: any[]): LeaveRow[] => {
+  const normalizeLeaves = (list: unknown[]): LeaveRow[] => {
     return (list || [])
-      .map((l: any) => {
-        const id = l.leave_id || l.id || l._id;
+      .map((l: unknown) => {
+        const item = l as Record<string, unknown>;
+        const id = item.leave_id || item.id || item._id;
         if (!id) return null;
 
-        const start = l.start_date || l.from || l.startDate;
-        const end = l.end_date || l.to || l.endDate;
+        const start = (item.start_date || item.from || item.startDate) as string;
+        const end = (item.end_date || item.to || item.endDate) as string;
 
         return {
           id: String(id),
-          employee: l.user_name || l.employee_name || l.employee || l.name || "—",
-          type: l.leave_type || l.type || "—",
+          employee: (item.user_name || item.employee_name || item.employee || item.name || "—") as string,
+          type: (item.leave_type || item.type || "—") as string,
           startDate: start,
           endDate: end,
-          status: l.status || "Pending",
-          createdAt: l.created_at || l.createdAt,
+          status: (item.status || "Pending") as string,
+          createdAt: (item.created_at || item.createdAt) as string,
         } as LeaveRow;
       })
       .filter(Boolean) as LeaveRow[];
@@ -73,8 +74,9 @@ export default function LeavePage() {
       const res = await getAllLeavesApi();
       const rawList = Array.isArray(res.data?.leaves) ? res.data.leaves : res.data?.data || [];
       setLeaves(normalizeLeaves(rawList));
-    } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || "Failed to load leaves.");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string };
+      setError(err.response?.data?.message || err.message || "Failed to load leaves.");
     } finally {
       setLoading(false);
     }
@@ -172,8 +174,9 @@ export default function LeavePage() {
       setLeaves((prev) =>
         prev.map((l) => (l.id === leaveId ? { ...l, status } : l))
       );
-    } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || "Failed to update status.");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string };
+      setError(err.response?.data?.message || err.message || "Failed to update status.");
     } finally {
       setLoading(false);
     }
@@ -189,8 +192,9 @@ export default function LeavePage() {
 
       await deleteLeaveApi(leaveId);
       setLeaves((prev) => prev.filter((l) => l.id !== leaveId));
-    } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || "Failed to delete leave.");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string };
+      setError(err.response?.data?.message || err.message || "Failed to delete leave.");
     } finally {
       setLoading(false);
     }
@@ -238,13 +242,12 @@ export default function LeavePage() {
           ))}
         </section>
 
-        {/* Leave Calendar + Table */}
+        {/* Leave Calendar + Table Grid */}
         <section className="leave-grid">
+          {/* Calendar Card */}
           <div className="calendar-card">
             <div className="calendar-header">
-              <h3>
-                Leave Calendar — {monthLabel} {year}
-              </h3>
+              <h3>Leave Calendar — {monthLabel} {year}</h3>
             </div>
 
             <div className="calendar-weekdays">
@@ -265,15 +268,22 @@ export default function LeavePage() {
             </div>
 
             <div className="legend">
-              <span className="approved-dot"></span> Approved
-              <span className="pending-dot"></span> Pending
-              <span className="rejected-dot"></span> Rejected
+              <div className="legend-item">
+                <span className="approved-dot"></span> Approved
+              </div>
+              <div className="legend-item">
+                <span className="pending-dot"></span> Pending
+              </div>
+              <div className="legend-item">
+                <span className="rejected-dot"></span> Rejected
+              </div>
             </div>
           </div>
 
+          {/* Leave Requests Table */}
           <div className="table-section">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <h3>Recent Leave Requests</h3>
+            <div className="table-header">
+              <h3>Leave Requests</h3>
               <button className="btn-refresh" onClick={loadLeaves} disabled={loading}>
                 Refresh
               </button>
@@ -287,7 +297,7 @@ export default function LeavePage() {
                   <th>From</th>
                   <th>To</th>
                   <th>Status</th>
-                  <th style={{ width: 260 }}>Actions</th>
+                  <th style={{ width: 140 }}>Actions</th>
                 </tr>
               </thead>
 
@@ -303,42 +313,50 @@ export default function LeavePage() {
                     const statusLower = String(l.status).toLowerCase();
                     return (
                       <tr key={l.id}>
-                        <td>{l.employee}</td>
+                        <td><strong>{l.employee}</strong></td>
                         <td>{l.type}</td>
                         <td>{formatShort(l.startDate)}</td>
                         <td>{formatShort(l.endDate)}</td>
-                        <td className={statusLower}>{l.status}</td>
+                        <td>
+                          <span className={`status-badge ${statusLower}`}>
+                            {l.status}
+                          </span>
+                        </td>
 
                         <td>
-                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <div className="action-buttons">
                             {statusLower === "pending" ? (
                               <>
                                 <button
                                   className="btn-approve"
                                   disabled={loading}
                                   onClick={() => handleStatusChange(l.id, "Approved")}
+                                  title="Approve"
                                 >
-                                  Approve
+                                  ✓
                                 </button>
                                 <button
                                   className="btn-reject"
                                   disabled={loading}
                                   onClick={() => handleStatusChange(l.id, "Rejected")}
+                                  title="Reject"
                                 >
-                                  Reject
+                                  ✗
+                                </button>
+                                <button
+                                  className="btn-delete"
+                                  disabled={loading}
+                                  onClick={() => handleDelete(l.id)}
+                                  title="Delete"
+                                >
+                                  🗑
                                 </button>
                               </>
                             ) : (
-                              <span style={{ opacity: 0.7, padding: "6px 0" }}>—</span>
+                              <span className="status-text">
+                                {statusLower === "approved" ? "✓ Approved" : "✗ Rejected"}
+                              </span>
                             )}
-
-                            <button
-                              className="btn-delete"
-                              disabled={loading}
-                              onClick={() => handleDelete(l.id)}
-                            >
-                              Delete
-                            </button>
                           </div>
                         </td>
                       </tr>

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import "./page.scss";
 import { changePasswordApi } from "@/src/api/api";
 
@@ -32,7 +31,7 @@ const EyeIcon = ({ open }: { open: boolean }) => (
 );
 
 export default function ResetPassword() {
-  const router = useRouter();
+
 
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -71,13 +70,9 @@ export default function ResetPassword() {
 
       // Optional auto-redirect after success
       // setTimeout(() => router.push("/auth/login"), 1200);
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
-        "Reset password failed";
-      setError(msg);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string, error?: string } }, message?: string };
+      setError(e.response?.data?.message || e.message || "Failed to reset password");
     } finally {
       setLoading(false);
     }

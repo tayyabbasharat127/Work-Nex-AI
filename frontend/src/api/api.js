@@ -25,23 +25,22 @@ api.interceptors.response.use(
     console.log('Code:', error.code);
     console.log('Status:', error.response?.status);
     console.log('Network Error:', error.code === 'NETWORK_ERROR' || error.code === 'ECONNREFUSED');
-    
+
     // Check for network errors (WiFi disconnect)
-    if (error.code === 'NETWORK_ERROR' || 
-        error.code === 'ECONNREFUSED' ||
-        error.message?.includes('Network Error') ||
-        !window.navigator.onLine) {
+    if (error.code === 'NETWORK_ERROR' ||
+      error.code === 'ECONNREFUSED' ||
+      error.message?.includes('Network Error') ||
+      !window.navigator.onLine) {
       console.log('📶 Network disconnected detected in API interceptor');
-      
+
       // Trigger custom event for network disconnect
       window.dispatchEvent(new CustomEvent('network-disconnect'));
     }
-    
+
     return Promise.reject(error);
   }
 );
 
-const API_PREFIX = "/api";
 
 // Authentication
 export const signupApi = (payload) =>
@@ -104,7 +103,10 @@ export const todayStatusApi = () =>
 export const historyApi = (params = {}) =>
   api.get("/api/attendance/history", { params });
 
-export const getAllLeavesApi = () => api.get("/api/leaves"); 
+export const getAttendanceOverviewApi = (params = {}) =>
+  api.get("/api/attendance/overview", { params });
+
+export const getAllLeavesApi = () => api.get("/api/leaves");
 // OR if your backend route is different, match it exactly (examples below)
 
 // 2) PUT update leave status
@@ -139,3 +141,12 @@ export const generateReportApi = (payload) => api.post("/api/reports/generate", 
 export const getReportsApi = () => api.get("/api/reports");
 
 export default api;
+
+
+// Organization Settings APIs
+export const getOrganizationSettingsApi = () => api.get("/api/settings/organization");
+export const updateOrganizationSettingsApi = (payload) => api.put("/api/settings/organization", payload);
+
+// Manual Attendance APIs
+export const manualMarkAttendanceApi = (payload) => api.post("/api/attendance/manual-mark", payload);
+export const adjustAttendanceApi = (payload) => api.put("/api/attendance/adjust", payload);

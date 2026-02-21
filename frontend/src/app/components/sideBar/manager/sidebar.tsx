@@ -1,26 +1,13 @@
 import React from "react";
 import { useAuth } from "@/src/app/providers/AuthProvider";
+import Link from "next/link";
 import {
-  Home,
   User,
-  MessageCircle,
-  Star,
-  Settings,
-  Menu,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  Shield,
   CalendarClock,
   FileCheck2,
   LineChart,
-  BarChart2,
-  Database,
-  Bell,
-  ListOrdered,
   Users,
   Bot,
-  TrendingUp,
   LayoutDashboard,
   LogOut,
 } from "lucide-react";
@@ -45,40 +32,40 @@ const SidebarManager: React.FC = () => {
       <nav className="sidebar-nav">
         {/* Dashboard */}
         {/* Overview */}
-        <a href="/dashboard/manager/main" className="nav-item">
+        <Link href="/dashboard/manager/main" className="nav-item">
           <LayoutDashboard size={20} />
           <span>Overview</span>
-        </a>
+        </Link>
 
         {/* Team */}
-        <a href="/dashboard/manager/team" className="nav-item">
+        <Link href="/dashboard/manager/team" className="nav-item">
           <Users size={20} />
           <span>Team</span>
-        </a>
+        </Link>
 
         {/* Attendance */}
-        <a href="/dashboard/manager/attendance" className="nav-item">
+        <Link href="/dashboard/manager/attendance" className="nav-item">
           <CalendarClock size={20} />
           <span>Attendance</span>
-        </a>
+        </Link>
 
         {/* Leaves */}
-        <a href="/dashboard/manager/leaves" className="nav-item">
+        <Link href="/dashboard/manager/leaves" className="nav-item">
           <FileCheck2 size={20} />
           <span>Leaves</span>
-        </a>
+        </Link>
 
         {/* Performance */}
-        <a href="/dashboard/manager/performance" className="nav-item">
+        <Link href="/dashboard/manager/performance" className="nav-item">
           <LineChart size={20} />
           <span>Performance</span>
-        </a>
+        </Link>
 
         {/* AI Assistant */}
-        <a href="/dashboard/manager/assistant" className="nav-item">
+        <Link href="/dashboard/manager/assistant" className="nav-item">
           <Bot size={20} />
           <span>Assistant</span>
-        </a>
+        </Link>
       </nav>
 
       {/* Footer */}

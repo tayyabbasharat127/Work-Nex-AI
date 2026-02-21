@@ -47,6 +47,14 @@ const modules = [
 
 export default function HomePage() {
   const router = useRouter();
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <div className="wnx-landing">
       {/* ---------- NAVBAR ---------- */}
@@ -60,10 +68,18 @@ export default function HomePage() {
         </div>
 
         <nav className="nav-links">
-          <a href="#">Platform</a>
-          <a href="#">Features</a>
-          <a href="#">Integrations</a>
-          <a href="#">Pricing</a>
+          <button onClick={() => scrollToSection('solutions')}>
+            Solutions
+          </button>
+          <button onClick={() => scrollToSection('features')}>
+            Features
+          </button>
+          <button onClick={() => scrollToSection('about')}>
+            About
+          </button>
+          <button onClick={() => scrollToSection('pricing')}>
+            Pricing
+          </button>
         </nav>
 
         <div className="nav-actions">
@@ -71,10 +87,13 @@ export default function HomePage() {
             className="btn-outline"
             onClick={() => router.push("/register")}
           >
-            Sign In
+            Sign Up
           </button>
-          <button className="btn-primary">
-            Book Demo <ArrowRight size={16} />
+          <button 
+            className="btn-primary"
+            onClick={() => router.push("/login")}
+          >
+            Sign In <ArrowRight size={16} />
           </button>
         </div>
       </header>
@@ -95,10 +114,18 @@ export default function HomePage() {
           </p>
 
           <div className="hero-buttons">
-            <button className="btn-primary big">
+            <button 
+              className="btn-primary big"
+              onClick={() => router.push("/register")}
+            >
               Start Free Trial <ArrowRight size={16} />
             </button>
-            <button className="btn-outline big">Live Dashboard</button>
+            <button 
+              className="btn-outline big"
+              onClick={() => router.push("/login")}
+            >
+              Live Dashboard
+            </button>
           </div>
         </div>
 
@@ -115,8 +142,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ---------- MODULE GRID ---------- */}
-      <section className="wnx-modules">
+      {/* ---------- MODULE GRID / SOLUTIONS ---------- */}
+      <section id="solutions" className="wnx-modules">
         <h2>Everything your workforce runs on — in one platform</h2>
         <p className="sub">
           WorkNex AI merges data from devices, HR, attendance, payroll & BI
@@ -139,20 +166,190 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ---------- INTEGRATIONS ---------- */}
+      {/* ---------- FEATURES ---------- */}
+      <section id="features" className="wnx-features">
+        <h2>Powerful Features Built for Modern Workforces</h2>
+        <p className="sub">Automate, analyze, and optimize every aspect of workforce management</p>
+        
+        <div className="features-grid">
+          <div className="feature-card">
+            <div className="feature-icon">🔐</div>
+            <h3>Role-Based Access Control</h3>
+            <p>Secure multi-level access with JWT tokens and 2FA. Every action is logged for compliance.</p>
+          </div>
+          
+          <div className="feature-card">
+            <div className="feature-icon">📊</div>
+            <h3>Real-Time Analytics</h3>
+            <p>Live dashboards for managers and admins. Track attendance health, leave patterns, and productivity metrics.</p>
+          </div>
+          
+          <div className="feature-card">
+            <div className="feature-icon">🤖</div>
+            <h3>AI-Powered Insights</h3>
+            <p>Predictive models identify trends, optimize scheduling, and forecast workforce needs.</p>
+          </div>
+          
+          <div className="feature-card">
+            <div className="feature-icon">⚡</div>
+            <h3>Automated Workflows</h3>
+            <p>Leave requests, approvals, and notifications happen automatically with rule-based engines.</p>
+          </div>
+          
+          <div className="feature-card">
+            <div className="feature-icon">🌍</div>
+            <h3>Location Verification</h3>
+            <p>WiFi-based attendance with IP verification ensures employees are on-site.</p>
+          </div>
+          
+          <div className="feature-card">
+            <div className="feature-icon">📈</div>
+            <h3>Advanced Reporting & ETL</h3>
+            <p>Enterprise data pipeline consolidates operational data into analytics-ready formats for BI and insights.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- ABOUT ---------- */}
+      <section id="about" className="wnx-about">
+        <div className="about-content">
+          <div className="about-text">
+            <span className="badge">About WorkNex AI</span>
+            <h2>Intelligent Workforce Management for Modern Organizations</h2>
+            <p>
+              WorkNex AI is an intelligent workforce management and analytics platform designed to streamline 
+              attendance, leave tracking, and employee insights within organizations. It securely integrates 
+              multiple data sources, automates approvals, and provides real-time dashboards for managers, 
+              employees, and administrators.
+            </p>
+            <p>
+              The system leverages data-driven rules and optional predictive models to identify trends and 
+              optimize workforce efficiency. With built-in role-based access and embedded analytics, WorkNex AI 
+              ensures transparency and accountability across all operations.
+            </p>
+            <div className="about-stats">
+              <div className="stat">
+                <h3>99.1%</h3>
+                <p>Policy Compliance</p>
+              </div>
+              <div className="stat">
+                <h3>96.4%</h3>
+                <p>Attendance Health</p>
+              </div>
+              <div className="stat">
+                <h3>50%</h3>
+                <p>Time Saved on HR Tasks</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="about-visual">
+            <div className="about-card">
+              <h4>🎯 Our Mission</h4>
+              <p>Deliver a reliable, scalable foundation for smart workforce decision-making in modern institutions.</p>
+            </div>
+            <div className="about-card">
+              <h4>🚀 Our Vision</h4>
+              <p>Transform workforce management through AI-powered intelligence and automation.</p>
+            </div>
+            <div className="about-card">
+              <h4>💡 Our Values</h4>
+              <p>Transparency, accountability, and data-driven insights for every organization.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- PRICING ---------- */}
+      <section id="pricing" className="wnx-pricing">
+        <h2>Simple, Transparent Pricing</h2>
+        <p className="sub">Choose the plan that fits your organization's needs</p>
+        
+        <div className="pricing-grid">
+          <div className="pricing-card">
+            <h3>Starter</h3>
+            <div className="price">
+              <span className="amount">$49</span>
+              <span className="period">/month</span>
+            </div>
+            <p className="desc">Perfect for small teams</p>
+            <ul className="features-list">
+              <li>✓ Up to 50 employees</li>
+              <li>✓ Basic attendance tracking</li>
+              <li>✓ Leave management</li>
+              <li>✓ Email support</li>
+              <li>✓ Mobile app access</li>
+            </ul>
+            <button 
+              className="btn-outline"
+              onClick={() => router.push("/register")}
+            >
+              Start Free Trial
+            </button>
+          </div>
+          
+          <div className="pricing-card featured">
+            <div className="popular-badge">Most Popular</div>
+            <h3>Professional</h3>
+            <div className="price">
+              <span className="amount">$149</span>
+              <span className="period">/month</span>
+            </div>
+            <p className="desc">For growing organizations</p>
+            <ul className="features-list">
+              <li>✓ Up to 200 employees</li>
+              <li>✓ Advanced analytics</li>
+              <li>✓ AI-powered insights</li>
+              <li>✓ Priority support</li>
+              <li>✓ Custom integrations</li>
+              <li>✓ Role-based access</li>
+            </ul>
+            <button 
+              className="btn-primary"
+              onClick={() => router.push("/register")}
+            >
+              Get Started
+            </button>
+          </div>
+          
+          <div className="pricing-card">
+            <h3>Enterprise</h3>
+            <div className="price">
+              <span className="amount">Custom</span>
+            </div>
+            <p className="desc">For large enterprises</p>
+            <ul className="features-list">
+              <li>✓ Unlimited employees</li>
+              <li>✓ Full platform access</li>
+              <li>✓ Dedicated support</li>
+              <li>✓ Custom workflows</li>
+              <li>✓ On-premise deployment</li>
+              <li>✓ SLA guarantee</li>
+            </ul>
+            <button 
+              className="btn-outline"
+              onClick={() => router.push("/register")}
+            >
+              Contact Sales
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- CORE CAPABILITIES ---------- */}
       <section className="wnx-integrations">
-        <h2>Integrates with your entire ecosystem</h2>
+        <h2>Enterprise-Grade Workforce Management</h2>
 
         <div className="integ-grid">
           {[
-            "HRMS",
-            "Payroll",
-            "Face ID Devices",
-            "ERP",
-            "Power BI",
-            "Teams",
-            "Slack",
-            "Google",
+            "Identity & Access Governance (IAG)",
+            "Leave Management Engine",
+            "Attendance Intelligence & Sync (AISE)",
+            "Enterprise Data Pipeline & ETL",
+            "Power BI Analytics & DAX",
+            "AI & Predictive Analytics",
+            "Notification & Communication",
+            "Performance & Productivity Analytics",
           ].map((x) => (
             <span key={x} className="integ-item">
               {x}
@@ -163,11 +360,14 @@ export default function HomePage() {
 
       {/* ---------- FINAL CTA ---------- */}
       <section className="wnx-cta">
-        <h2>Ready to upgrade your attendance & HR efficiency?</h2>
-        <p>Book a 30-minute tailored demo for your organization.</p>
+        <h2>Transform Your Workforce Management Today</h2>
+        <p>Experience enterprise-grade attendance tracking, intelligent leave management, and real-time analytics in one unified platform.</p>
 
-        <button className="btn-primary big">
-          Book Demo <ArrowRight size={18} />
+        <button 
+          className="btn-primary big"
+          onClick={() => router.push("/register")}
+        >
+          Get Started <ArrowRight size={18} />
         </button>
       </section>
 
@@ -176,10 +376,14 @@ export default function HomePage() {
         <p>© 2025 WorkNex AI — All Rights Reserved.</p>
 
         <div className="footer-links">
-          <a href="#">Privacy</a>
-          <a href="#">Security</a>
-          <a href="#">Docs</a>
-          <a href="#">Careers</a>
+          <button onClick={() => router.push("/register")}>Get Started</button>
+          <button onClick={() => router.push("/login")}>Sign In</button>
+          <button onClick={() => scrollToSection('about')}>
+            About
+          </button>
+          <button onClick={() => scrollToSection('pricing')}>
+            Pricing
+          </button>
         </div>
       </footer>
     </div>

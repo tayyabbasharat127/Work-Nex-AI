@@ -1,7 +1,7 @@
 
 const bcrypt = require('bcrypt');
 const transporter = require("../config/nodemailer");
-const FREE_EMAIL_DOMAINS = [ "yahoo.com", "hotmail.com", "outlook.com"];
+const FREE_EMAIL_DOMAINS = ["yahoo.com", "hotmail.com", "outlook.com"];
 const pool = require("../config/db");
 const sendEmail = require("../utils/sendEmail");
 const jwt = require("jsonwebtoken");
@@ -9,7 +9,7 @@ const jwt = require("jsonwebtoken");
 exports.signup = async (req, res) => {
   const {
     organization_name,
-    organization_email,
+    organization_email, // Treating this as admin email/contact email since DB doesn't have org_email
     admin_name,
     admin_email,
     password,
@@ -17,39 +17,43 @@ exports.signup = async (req, res) => {
   } = req.body;
 
   try {
-    // 1. Check org exists
+    // 1. Check org exists (using admin_email as unique identifier for now, or check organization name)
     const orgCheck = await pool.query(
-      `SELECT * FROM organization WHERE organization_email=$1`,
-      [organization_email]
+      `SELECT * FROM "Organizations" WHERE admin_email=$1`,
+      [admin_email]
     );
     if (orgCheck.rows.length)
       return res.status(400).json({ message: "Organization already exists" });
 
     // 2. Create organization
+    // Map subscription_plan to package column
     const org = await pool.query(
-      `INSERT INTO organization
-      (organization_name, organization_email, admin_email, subscription_plan, is_verified)
-      VALUES ($1,$2,$3,$4,false)
-      RETURNING organization_id`,
-      [organization_name, organization_email, admin_email, subscription_plan]
+      `INSERT INTO "Organizations"
+      (organization_name, admin_email, package, status, "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, 'Inactive', NOW(), NOW())
+      RETURNING id`,
+      [organization_name, admin_email, subscription_plan]
     );
+
+    const orgId = org.rows[0].id;
 
     // 3. Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
     // 4. Create admin user
+    // Role 'Admin' mapped to role_id 1 logic later
     await pool.query(
-      `INSERT INTO users
-      (name, email, password_hash, role_id, organization_id, status)
-      VALUES ($1,$2,$3,1,$4,'inactive')`,
-      [admin_name, admin_email, passwordHash, org.rows[0].organization_id]
+      `INSERT INTO "Users"
+      (name, email, password, role, organization_id, status, "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, 'Admin', $4, 'Inactive', NOW(), NOW())`,
+      [admin_name, admin_email, passwordHash, orgId]
     );
 
     // 5. Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000);
     await pool.query(
-      `INSERT INTO otps (email, otp, expires_at)
-       VALUES ($1,$2,NOW() + interval '10 minutes')`,
+      `INSERT INTO "TempOtps" (email, otp, expires_at, "createdAt", "updatedAt")
+       VALUES ($1, $2, NOW() + interval '10 minutes', NOW(), NOW())`,
       [admin_email, otp]
     );
 
@@ -60,7 +64,7 @@ exports.signup = async (req, res) => {
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Signup failed" });
+    res.status(500).json({ message: "Signup failed: " + err.message });
   }
 };
 
@@ -69,7 +73,7 @@ exports.verifyOTP = async (req, res) => {
   const { email, otp } = req.body;
 
   const record = await pool.query(
-    `SELECT * FROM otps
+    `SELECT * FROM "TempOtps"
      WHERE email=$1 AND otp=$2 AND expires_at > NOW()`,
     [email, otp]
   );
@@ -79,16 +83,16 @@ exports.verifyOTP = async (req, res) => {
 
   // Activate org & admin
   await pool.query(
-    `UPDATE organization SET is_verified=true WHERE admin_email=$1`,
+    `UPDATE "Organizations" SET status='Active' WHERE admin_email=$1`,
     [email]
   );
 
   await pool.query(
-    `UPDATE users SET status='active' WHERE email=$1`,
+    `UPDATE "Users" SET status='Active' WHERE email=$1`,
     [email]
   );
 
-  await pool.query(`DELETE FROM otps WHERE email=$1`, [email]);
+  await pool.query(`DELETE FROM "TempOtps" WHERE email=$1`, [email]);
 
   res.json({ success: true, message: "Email verified successfully" });
 };
@@ -96,46 +100,104 @@ exports.verifyOTP = async (req, res) => {
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
-  const user = await pool.query(
-    `SELECT * FROM users WHERE email=$1 AND status='active'`,
+  console.log('=== Login Attempt ===');
+  console.log('Email:', email);
+  console.log('Password length:', password?.length);
+
+  // First check lowercase users table (where admin creates users)
+  let userResult = await pool.query(
+    `SELECT user_id as id, name, email, password_hash as password, role_id, organization_id, status FROM users WHERE email=$1`,
     [email]
   );
 
-  if (!user.rows.length)
-    return res.status(401).json({ message: "Invalid credentials" });
+  let isLowercaseTable = true;
 
-  const match = await bcrypt.compare(password, user.rows[0].password_hash);
+  // If not found, check capitalized Users table (for signup flow)
+  if (!userResult.rows.length) {
+    console.log('Not found in lowercase users table, checking Users table...');
+    userResult = await pool.query(
+      `SELECT * FROM "Users" WHERE email=$1`,
+      [email]
+    );
+    isLowercaseTable = false;
+  } else {
+    console.log('Found in lowercase users table');
+  }
+
+  if (!userResult.rows.length) {
+    console.log('User not found in any table');
+    return res.status(401).json({ message: "Invalid credentials" });
+  }
+
+  const user = userResult.rows[0];
+  console.log('User found:', { id: user.id, email: user.email, status: user.status });
+  console.log('Password hash exists:', !!user.password);
+  console.log('Password hash preview:', user.password ? user.password.substring(0, 20) + '...' : 'NULL');
+
+  // Check active status (both tables use different case)
+  const userStatus = user.status.toLowerCase();
+  if (userStatus !== 'active') {
+    console.log('User status is not active:', user.status);
+    return res.status(401).json({ message: "Account is not active" });
+  }
+
+  // Check password
+  console.log('Comparing password...');
+  const match = await bcrypt.compare(password, user.password);
+  console.log('Password match:', match);
+  
   if (!match)
     return res.status(401).json({ message: "Invalid credentials" });
 
+  // Map roles to IDs for frontend compatibility
+  let roleId = 3; // Default Employee
+  if (isLowercaseTable) {
+    // users table has role_id directly
+    roleId = user.role_id || 3;
+    console.log('Using lowercase table role_id:', roleId);
+  } else {
+    // Users table has role as string
+    console.log('Using capitalized table role:', user.role);
+    if (user.role === 'SuperAdmin') roleId = 0;
+    else if (user.role === 'Admin') roleId = 1;
+    else if (user.role === 'Manager') roleId = 2;
+    else if (user.role === 'Employee') roleId = 3;
+    console.log('Mapped to role_id:', roleId);
+  }
+
   const token = jwt.sign(
     {
-    userId: user.rows[0].user_id,
-    email: user.rows[0].email,
-    roleId: user.rows[0].role_id,
-    organizationId: user.rows[0].organization_id
+      userId: user.id,
+      email: user.email,
+      roleId: roleId,
+      organizationId: user.organization_id
     },
     process.env.JWT_SECRET,
     { expiresIn: "15m" }
   );
 
-  res.json({ 
+  console.log('Login successful! Returning role_id:', roleId);
+
+  res.json({
     token,
     user: {
-      user_id: user.rows[0].user_id,
-      email: user.rows[0].email,
-      name: user.rows[0].name,
-      role_id: user.rows[0].role_id,
-      organization_id: user.rows[0].organization_id
+      user_id: user.id,
+      email: user.email,
+      name: user.name,
+      role_id: roleId,
+      organization_id: user.organization_id
     }
   });
-  const { deviceId } = req.body; // Frontend se milega
-if (deviceId) {
-  await pool.query(
-    `UPDATE users SET device_id = $1 WHERE user_id = $2 AND device_id IS NULL`,
-    [deviceId, user.rows[0].user_id]
-  );
-}
+  // Device ID logic commented out as it requires schema columns not confirmed
+  /*
+    const { deviceId } = req.body; 
+  if (deviceId) {
+    await pool.query(
+      `UPDATE "Users" SET device_id = $1 WHERE id = $2 AND device_id IS NULL`,
+      [deviceId, user.id]
+    );
+  }
+  */
 };
 exports.refreshToken = async (req, res) => {
   const { refreshToken } = req.body;
@@ -155,42 +217,87 @@ exports.refreshToken = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
 
-  const user = await pool.query(`SELECT * FROM users WHERE email=$1`, [email]);
-  if (!user.rows.length) return res.json({ message: "If exists, email sent" });
+  try {
+    // Check both users tables
+    let user = await pool.query(`SELECT * FROM users WHERE email=$1`, [email]);
+    if (!user.rows.length) {
+      user = await pool.query(`SELECT * FROM "Users" WHERE email=$1`, [email]);
+    }
+    
+    if (!user.rows.length) {
+      return res.json({ success: true, message: "If the email exists, an OTP has been sent." });
+    }
 
-  const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: "10m" });
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    
+    // Delete any existing OTP for this email first
+    await pool.query(`DELETE FROM "TempOtps" WHERE email=$1`, [email]);
+    
+    // Store new OTP in TempOtps table
+    await pool.query(
+      `INSERT INTO "TempOtps" (email, otp, expires_at, "createdAt", "updatedAt")
+       VALUES ($1, $2, NOW() + interval '10 minutes', NOW(), NOW())`,
+      [email, otp]
+    );
 
-  await sendEmail(email, "Reset Password", `Token: ${token}`);
+    // Send OTP via email
+    await sendEmail(email, "Reset Password OTP", `Your password reset OTP is: ${otp}. Valid for 10 minutes.`);
 
-  res.json({ success: true });
+    res.json({ success: true, message: "OTP sent to your email" });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ message: "Failed to send OTP" });
+  }
 };
 
 exports.resetPassword = async (req, res) => {
-  const { token, new_password } = req.body;
+  const { email, otp, new_password } = req.body;
 
-  if (!token || !new_password) {
-    return res.status(400).json({ message: "Token and new password required" });
+  if (!email || !otp || !new_password) {
+    return res.status(400).json({ message: "Email, OTP, and new password required" });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const hash = await bcrypt.hash(new_password, 10);
-
-    await pool.query(
-      `UPDATE users SET password_hash=$1 WHERE email=$2`,
-      [hash, decoded.email]
+    // Verify OTP
+    const otpRecord = await pool.query(
+      `SELECT * FROM "TempOtps" WHERE email=$1 AND otp=$2 AND expires_at > NOW()`,
+      [email, otp]
     );
 
-    res.json({ success: true, message: "Password updated successfully" });
+    if (!otpRecord.rows.length) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    // Hash new password
+    const hash = await bcrypt.hash(new_password, 10);
+
+    // Update password in both possible tables
+    let updated = await pool.query(
+      `UPDATE users SET password_hash=$1 WHERE email=$2`,
+      [hash, email]
+    );
+
+    if (updated.rowCount === 0) {
+      await pool.query(
+        `UPDATE "Users" SET password=$1 WHERE email=$2`,
+        [hash, email]
+      );
+    }
+
+    // Delete used OTP
+    await pool.query(`DELETE FROM "TempOtps" WHERE email=$1`, [email]);
+
+    res.json({ success: true, message: "Password reset successfully" });
 
   } catch (err) {
-    return res.status(400).json({ message: "Invalid or expired token" });
+    console.error('Reset password error:', err);
+    return res.status(500).json({ message: "Failed to reset password" });
   }
 };
 exports.changePassword = async (req, res) => {
   try {
-    // Assuming you have a middleware that sets req.user with the decoded JWT
-   // const userEmail = req.user?.email;
+    const userEmail = req.user?.email || req.body.email; // Fallback for safety
     if (!userEmail) return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const { oldPassword, newPassword } = req.body;
@@ -200,7 +307,7 @@ exports.changePassword = async (req, res) => {
     }
 
     // Fetch user from DB
-    const userResult = await pool.query(`SELECT * FROM users WHERE email=$1`, [userEmail]);
+    const userResult = await pool.query(`SELECT * FROM "Users" WHERE email=$1`, [userEmail]);
     if (!userResult.rows.length) {
       return res.status(404).json({ success: false, message: "User not found." });
     }
@@ -208,7 +315,7 @@ exports.changePassword = async (req, res) => {
     const user = userResult.rows[0];
 
     // Compare old password
-    const isMatch = await bcrypt.compare(oldPassword, user.password_hash);
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
       return res.status(400).json({ success: false, message: "Old password is incorrect." });
     }
@@ -218,7 +325,7 @@ exports.changePassword = async (req, res) => {
 
     // Update password
     await pool.query(
-      `UPDATE users SET password_hash=$1, must_change_password=false WHERE email=$2`,
+      `UPDATE "Users" SET password=$1 WHERE email=$2`,
       [hashedPassword, userEmail]
     );
 
@@ -227,5 +334,64 @@ exports.changePassword = async (req, res) => {
   } catch (error) {
     console.error("Change Password Error:", error);
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Super Admin Login
+ * Separate login endpoint for super admin with role_id = 0
+ */
+exports.superAdminLogin = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Validate email is admin@worknex
+    if (email !== 'admin@worknex') {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Query super admin user
+    const userResult = await pool.query(
+      `SELECT * FROM "Users" WHERE email=$1 AND role='SuperAdmin' AND status='Active'`,
+      [email]
+    );
+
+    if (!userResult.rows.length) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const user = userResult.rows[0];
+
+    // Verify password
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Generate JWT token with NULL organizationId
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+        roleId: 0,
+        organizationId: null
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    res.json({
+      token,
+      user: {
+        user_id: user.id,
+        email: user.email,
+        name: user.name,
+        role_id: 0
+      }
+    });
+
+  } catch (err) {
+    console.error('Super admin login error:', err);
+    res.status(500).json({ message: 'Login failed' });
   }
 };

@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import SidebarAdmin from "@/src/app/components/sideBar/admin/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
-import { Users, Shield, UserCog, UserPlus } from "lucide-react";
 import "./page.scss";
 import { getUserApi } from "@/src/api/api";
 
@@ -14,30 +13,29 @@ const SYSTEM_ROLES = [
 ];
 
 export default function RolesPage() {
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<{ role_id?: number | string }[]>([]);
 
   // Load users to count by role
   const loadUsers = async () => {
     try {
-      setLoading(true);
       const res = await getUserApi();
       const userList = res.data?.data || res.data || [];
       setUsers(userList);
     } catch (error) {
       console.error("Failed to load users:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadUsers();
+    const init = async () => {
+      await loadUsers();
+    };
+    init();
   }, []);
 
   // Count users by role
   const roleCounts = SYSTEM_ROLES.reduce((acc, role) => {
-    const count = users.filter((user: any) => String(user.role_id) === role.id).length;
+    const count = users.filter((user) => String(user.role_id) === role.id).length;
     acc[role.id] = count;
     return acc;
   }, {} as Record<string, number>);

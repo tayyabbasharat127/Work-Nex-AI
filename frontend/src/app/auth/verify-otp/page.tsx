@@ -80,13 +80,9 @@ export default function VerifyOTP() {
       } else {
         router.push(`/auth/reset-password?email=${encodeURIComponent(email)}`);
       }
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
-        "OTP verification failed";
-      setError(msg);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string, error?: string } }, message?: string };
+      setError(e.response?.data?.message || e.message || "OTP verification failed");
     } finally {
       setLoading(false);
     }
@@ -107,13 +103,9 @@ export default function VerifyOTP() {
       await forgotPasswordApi({ email });
       setTimer(60);
       setMessage("OTP resent successfully.");
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
-        "Failed to resend OTP";
-      setError(msg);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string, error?: string } }, message?: string };
+      setError(e.response?.data?.message || e.message || "Failed to resend OTP");
     } finally {
       setLoading(false);
     }

@@ -1,50 +1,85 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import "./page.scss";
-import Sidebar from "@/src/app/components/sideBar/admin/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import { StatsCard } from "@/src/app/components/card/statsCard";
 import SidebarAdmin from "@/src/app/components/sideBar/admin/sidebar";
+import { getAttendanceOverviewApi, getAllLeavesApi } from "@/src/api/api";
 
 interface CalenderDays {
   day: string;
 }
 
-const monthMap = {
-  January: 1,
-  February: 2,
-  March: 3,
-  April: 4,
-  May: 5,
-  June: 6,
-  July: 7,
-  August: 8,
-  September: 9,
-  October: 10,
-  November: 11,
-  December: 12,
-};
+type MonthKeys = "October" | "November" | "December";
 
-type MonthKeys = keyof typeof monthMap;
+export default function AdminDashboard() {
+  const [currentMonth] = useState<MonthKeys>("October");
+  const [attendanceData, setAttendanceData] = useState<any[]>([]);
+  const [leaveData, setLeaveData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export const AdminDashboard: React.FC = (): React.ReactNode => {
-  const [currentMonth, setCurrentMonth] = useState<MonthKeys>("October");
+  // Load attendance and leave data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [attendanceRes, leaveRes] = await Promise.all([
+          getAttendanceOverviewApi(),
+          getAllLeavesApi()
+        ]);
+        
+        setAttendanceData(attendanceRes.data?.data || []);
+        setLeaveData(leaveRes.data?.leaves || []);
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const stats = [
-    {
-      value: "Points",
-      label: "Attendence updates this week",
-      trend: "down",
-    },
-    {
-      value: "Last week",
-      label: "Attendence updates last month",
-      trend: "down",
-      change: "-12.5%",
-    },
-  ];
+    loadData();
+  }, []);
+
+  // Calculate KPI stats
+  const stats = useMemo(() => {
+    const totalEmployees = attendanceData.length;
+    const presentToday = attendanceData.filter(
+      (emp) => emp.attendance_status === "Present" || emp.attendance_status === "Late"
+    ).length;
+    const absentToday = totalEmployees - presentToday;
+    
+    // Pending leaves
+    const pendingLeaves = leaveData.filter(
+      (leave) => leave.status === "Pending"
+    ).length;
+
+    return [
+      {
+        value: String(totalEmployees),
+        label: "Total Employees",
+        trend: "up" as const,
+      },
+      {
+        value: String(presentToday),
+        label: "Present Today",
+        trend: "up" as const,
+        change: totalEmployees > 0 ? `${Math.round((presentToday / totalEmployees) * 100)}%` : "0%",
+      },
+      {
+        value: String(absentToday),
+        label: "Absent Today",
+        trend: "down" as const,
+        change: totalEmployees > 0 ? `${Math.round((absentToday / totalEmployees) * 100)}%` : "0%",
+      },
+      {
+        value: String(pendingLeaves),
+        label: "Pending Leave Requests",
+        trend: "down" as const,
+      },
+    ];
+  }, [attendanceData, leaveData]);
 
   const calenderdays: CalenderDays[] = [
     { day: "Mon" },
@@ -76,6 +111,8 @@ export const AdminDashboard: React.FC = (): React.ReactNode => {
             Overview of analytics, attendance, and performance
           </p>
         </div>
+
+        {loading && <div className="banner banner-loading">Loading dashboard data...</div>}
 
         <div className="dashboard-grid">
           {/* Left Column */}
@@ -212,9 +249,8 @@ export const AdminDashboard: React.FC = (): React.ReactNode => {
                 {[null, null, null, null, ...calendarDays].map((day, idx) => (
                   <div
                     key={idx}
-                    className={`calendar-day ${
-                      day === 14 ? "today" : day === 25 ? "selected" : ""
-                    }`}
+                    className={`calendar-day ${day === 14 ? "today" : day === 25 ? "selected" : ""
+                      }`}
                   >
                     {day}
                   </div>
@@ -224,8 +260,8 @@ export const AdminDashboard: React.FC = (): React.ReactNode => {
 
             {/* Progress Card */}
             <div className="progress-card">
-              <p className="progress-label">Total Attedence</p>
-              <p className="progress-sublabel">Detail </p>
+              <p className="progress-label">Total Attendance</p>
+              <p className="progress-sublabel">Today's Overview</p>
               <div className="circular-progress">
                 <svg viewBox="0 0 100 100" className="progress-circle">
                   <circle cx="50" cy="50" r="45" className="progress-bg" />
@@ -234,13 +270,21 @@ export const AdminDashboard: React.FC = (): React.ReactNode => {
                     cy="50"
                     r="45"
                     className="progress-fill"
-                    style={{ strokeDasharray: "212" }}
+                    style={{ 
+                      strokeDasharray: attendanceData.length > 0 
+                        ? `${(attendanceData.filter(e => e.attendance_status === "Present" || e.attendance_status === "Late").length / attendanceData.length) * 283} 283`
+                        : "0 283"
+                    }}
                   />
                 </svg>
-                <span className="progress-text">75%</span>
+                <span className="progress-text">
+                  {attendanceData.length > 0 
+                    ? `${Math.round((attendanceData.filter(e => e.attendance_status === "Present" || e.attendance_status === "Late").length / attendanceData.length) * 100)}%`
+                    : "0%"}
+                </span>
               </div>
-              <p className="progress-desc">Attendence Updates</p>
-              <button className="btn-primary">Suscipit</button>
+              <p className="progress-desc">Attendance Rate Today</p>
+              <button className="btn-primary">View Details</button>
             </div>
 
             {/* Bar Chart Horizontal */}
@@ -254,7 +298,7 @@ export const AdminDashboard: React.FC = (): React.ReactNode => {
                       <div
                         className="bar-fill"
                         style={{
-                          width: `${50 + Math.random() * 40}%`,
+                          width: `${50 + (idx * 8) % 40}%`,
                           background: "#FF8C42",
                         }}
                       ></div>
@@ -269,8 +313,10 @@ export const AdminDashboard: React.FC = (): React.ReactNode => {
           <div className="column right-column">
             {/* Info Cards */}
             <div className="info-card">
-              <h4>Updates</h4>
-              <p className="info-desc">Attendence updates</p>
+              <h4>Attendance Updates</h4>
+              <p className="info-desc">
+                {attendanceData.filter(e => e.attendance_status === "Present" || e.attendance_status === "Late").length} present out of {attendanceData.length} employees
+              </p>
               <div className="sparklines">
                 <svg viewBox="0 0 100 50" className="sparkline">
                   <polyline
@@ -289,20 +335,32 @@ export const AdminDashboard: React.FC = (): React.ReactNode => {
             </div>
 
             <div className="info-card">
-              <h4>Attendence Info</h4>
+              <h4>Leave Requests</h4>
+              <p className="info-desc">
+                {leaveData.filter(l => l.status === "Pending").length} pending, {leaveData.filter(l => l.status === "Approved").length} approved
+              </p>
               <div className="stacked-bars">
                 <div className="stacked-bar">
                   <div
                     className="segment"
-                    style={{ flex: "0.4", background: "#6C5CE7" }}
+                    style={{ 
+                      flex: leaveData.length > 0 ? String(leaveData.filter(l => l.status === "Approved").length / leaveData.length) : "0.33",
+                      background: "#6C5CE7" 
+                    }}
                   ></div>
                   <div
                     className="segment"
-                    style={{ flex: "0.3", background: "#B8C1FF" }}
+                    style={{ 
+                      flex: leaveData.length > 0 ? String(leaveData.filter(l => l.status === "Pending").length / leaveData.length) : "0.33",
+                      background: "#FF8C42" 
+                    }}
                   ></div>
                   <div
                     className="segment"
-                    style={{ flex: "0.3", background: "#FF8C42" }}
+                    style={{ 
+                      flex: leaveData.length > 0 ? String(leaveData.filter(l => l.status === "Rejected").length / leaveData.length) : "0.33",
+                      background: "#B8C1FF" 
+                    }}
                   ></div>
                 </div>
               </div>

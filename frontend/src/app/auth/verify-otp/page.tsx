@@ -73,12 +73,12 @@ export default function VerifyOTP() {
       setMessage(res.data?.message || "OTP Verified Successfully ✅");
 
       // ✅ Decide where to go next
-      // - If next=reset-password => go to reset page with email
+      // - If next=reset-password => go to reset page with email and OTP
       // - If next=login => go to login page
       if (nextFromQuery === "login") {
-        router.push("/auth/login");
-      } else {
-        router.push(`/auth/reset-password?email=${encodeURIComponent(email)}`);
+        setTimeout(() => router.push("/auth/login"), 1000);
+      } else if (nextFromQuery === "reset-password") {
+        setTimeout(() => router.push(`/auth/reset-password?email=${encodeURIComponent(email)}&otp=${otpValue}`), 1000);
       }
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string, error?: string } }, message?: string };

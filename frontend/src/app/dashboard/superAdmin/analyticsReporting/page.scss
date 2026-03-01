@@ -1,0 +1,132 @@
+$primary-color: #6c5ce7;
+$secondary-color: #ff8c42;
+$light-purple: #e8eaff;
+$light-orange: #ffe4d1;
+$gray-light: #f5f6fa;
+$gray-text: #8b92a9;
+$white: #ffffff;
+$sidebar-bg: #5b4db5;
+$border-light: #e8eaf6;
+
+$mobile: 768px;
+$tablet: 1024px;
+
+.banner { margin: 12px 0; padding: 10px 12px; border-radius: 10px; font-size: 14px; }
+.banner-error { background: #ffe8e8; border: 1px solid #ffb5b5; color: #7a0b0b; }
+.banner-loading { background: #eef6ff; border: 1px solid #cfe4ff; color: #0b3a7a; }
+
+.analytics-dashboard {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e8f0fe 0%, #f3e5f5 100%);
+
+  .main-content {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+
+    .header {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 2rem;
+    }
+
+    .kpi-summary {
+      margin-bottom: 2rem;
+
+      h3 {
+        font-size: 20px;
+        font-weight: 600;
+        color: #2d3436;
+        margin-bottom: 1rem;
+      }
+
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+
+        .kpi-card {
+          background: $white;
+          padding: 1.5rem;
+          border-radius: 12px;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+          text-align: center;
+          transition: all 0.3s ease;
+
+          &:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+          }
+
+          h4 {
+            font-size: 14px;
+            color: $gray-text;
+            margin-bottom: 0.5rem;
+          }
+
+          .kpi-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: $primary-color;
+          }
+        }
+      }
+    }
+
+    .analytics-section {
+      margin-bottom: 3rem;
+
+      h3 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #2d3436;
+        margin-bottom: 1rem;
+      }
+
+      .chart-container {
+        width: 100%;
+        height: 350px;
+      }
+
+      .table-section {
+        background: $white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+
+          th,
+          td {
+            text-align: left;
+            padding: 10px 12px;
+            font-size: 13px;
+            border-bottom: 1px solid $border-light;
+          }
+
+          th {
+            background: $gray-light;
+            color: $gray-text;
+          }
+        }
+
+        .btn-manage {
+          padding: 6px 12px;
+          background-color: $primary-color;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          font-size: 12px;
+
+          &:hover {
+            background-color: darken($primary-color, 10%);
+          }
+        }
+      }
+    }
+  }
+}

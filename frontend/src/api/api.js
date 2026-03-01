@@ -154,3 +154,51 @@ export const updateOrganizationSettingsApi = (payload) => api.put("/api/settings
 // Manual Attendance APIs
 export const manualMarkAttendanceApi = (payload) => api.post("/api/attendance/manual-mark", payload);
 export const adjustAttendanceApi = (payload) => api.put("/api/attendance/adjust", payload);
+
+
+// Super Admin APIs
+
+
+// Analytics API
+export const getOrganizationGrowthApi = () => api.get("/api/analytics/organization-growth");
+export const getRevenueByTierApi = () => api.get("/api/analytics/revenue-by-tier");
+export const getFeatureUsageStatsApi = () => api.get("/api/analytics/feature-usage");
+export const getLicenseUtilizationApi = () => api.get("/api/analytics/license-utilization");
+export const getExpiryTrackingApi = () => api.get("/api/analytics/expiry-tracking");
+
+
+
+// Subscription Management API
+export const getAllOrganizationsApi = () => api.get("/api/organizations"); // Added API for fetching all organizations
+export const updateOrganizationSubscriptionApi = (orgId, payload) =>
+  api.put(`/api/organizations/${orgId}/update-subscription`, payload);
+
+
+export const getOrganizationApi = (orgId) => api.get(`/api/organizations/${orgId}`);
+export const updateOrganizationStatusApi = (orgId, payload) =>
+  api.patch(`/api/organizations/${orgId}/status`, payload);
+export const renewSubscriptionApi = (orgId) =>
+  api.post(`/api/organizations/${orgId}/renew-subscription`);
+export const upgradeDowngradeTierApi = (orgId, payload) =>
+  api.patch(`/api/organizations/${orgId}/update-tier`, payload);
+export const manageLicensesApi = (orgId, payload) =>
+  api.patch(`/api/organizations/${orgId}/manage-licenses`, payload);
+export const suspendActivateOrganizationApi = (orgId, status) =>
+  api.patch(`/api/organizations/${orgId}/status`, { status });
+
+
+export const getAllUsersApi = (params = {}) =>
+  api.get("/api/users", { params });
+
+// ✅ Update user role (Admin / Super Admin)
+export const updateUserRoleApi = (userId, payload) =>
+  api.patch(`/api/users/${userId}/role`, payload);
+
+export {
+  getAllOrganizationsApi,
+  updateOrganizationStatusApi,
+  renewSubscriptionApi,
+  upgradeDowngradeTierApi,
+  // manageLicensesApi missing
+};
+

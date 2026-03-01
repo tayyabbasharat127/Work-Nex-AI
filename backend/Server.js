@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 dotenv.config();
+const cron = require('node-cron');
 const pool = require('./config/db');
 const authroutes = require("./routes/authroutes");
 const attendanceroutes = require('./routes/attendanceRoutes');
@@ -13,6 +14,7 @@ const reportsRoutes = require('./routes/reportsroutes');
 const userRoutes = require('./routes/userroutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const organizationSettingsRoutes = require('./routes/organizationSettingsRoutes');
+const runAutoCheckout = require('./cron/autoCheckoutJob');
 
 const app = express();
 app.use(cors());
@@ -53,6 +55,14 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 API available at http://localhost:${PORT}/api`);
+  
+  // Start auto-checkout cron job (runs every 5 minutes)
+  console.log('⏰ Starting auto-checkout cron job...');
+  cron.schedule('*/5 * * * *', async () => {
+    console.log('\n🔄 Running scheduled auto-checkout job...');
+    await runAutoCheckout();
+  });
+  console.log('✅ Auto-checkout cron job scheduled (every 5 minutes)');
 });
 
 module.exports = app;

@@ -1,16 +1,29 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import SidebarEmployee from "@/src/app/components/sideBar/employee/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import {
   CalendarCheck,
   Bell,
 } from "lucide-react";
+import { attendancePingService } from "@/src/services/attendancePingService";
 
 import "./page.scss";
 
 export default function EmployeeDashboard() {
+  // Start ping service when dashboard loads
+  useEffect(() => {
+    console.log('🚀 Employee dashboard mounted - starting ping service');
+    attendancePingService.start();
+
+    // Cleanup: stop ping service when component unmounts
+    return () => {
+      console.log('👋 Employee dashboard unmounting - stopping ping service');
+      attendancePingService.stop();
+    };
+  }, []);
+
   const kpis = [
     { label: "Attendance % (This Month)", value: "92%" },
     { label: "Leaves Remaining", value: "07" },

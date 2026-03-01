@@ -1,14 +1,26 @@
 const pool = require('../config/db');
-const { validateIP, getShiftTimings } = require('./organizationSettings');
+const { validateNetworkAccess, getShiftTimings } = require('./organizationSettings');
 const sendEmail = require('../utils/sendEmail');
 
 // Helper to get client IP
 const getClientIP = (req) => {
   const forwarded = req.headers['x-forwarded-for'];
   if (forwarded) {
-    return forwarded.split(',')[0].trim();
+    const ip = forwarded.split(',')[0].trim();
+    console.log('📍 Client IP (from x-forwarded-for):', ip);
+    return ip;
   }
-  return req.socket.remoteAddress;
+  const ip = req.socket.remoteAddress;
+  console.log('📍 Client IP (from socket):', ip);
+  
+  // Convert IPv6-mapped IPv4 to regular IPv4
+  if (ip && ip.startsWith('::ffff:')) {
+    const ipv4 = ip.replace('::ffff:', '');
+    console.log('📍 Converted to IPv4:', ipv4);
+    return ipv4;
+  }
+  
+  return ip;
 };
 
 
@@ -17,16 +29,17 @@ exports.checkIn = async (req, res) => {
     const userId = req.user.userId;
     const organizationId = req.user.organizationId;
     const clientIP = getClientIP(req);
-    const deviceId = req.body.deviceId || null;
+    const { deviceId, wifiMacAddress } = req.body;
     
     console.log('=== Check-In Request ===');
     console.log('User ID:', userId);
     console.log('Organization ID:', organizationId);
     console.log('Client IP:', clientIP);
+    console.log('WiFi MAC:', wifiMacAddress);
 
-    // Validate IP against organization settings
-    const isValidIP = await validateIP(organizationId, clientIP);
-    if (!isValidIP) {
+    // Validate network access (IP + optional WiFi MAC)
+    const isValidNetwork = await validateNetworkAccess(organizationId, clientIP, wifiMacAddress);
+    if (!isValidNetwork) {
       return res.status(403).json({
         success: false,
         message: 'You must be connected to office WiFi to mark attendance'
@@ -64,10 +77,10 @@ exports.checkIn = async (req, res) => {
     // Insert attendance record
     const result = await pool.query(
       `INSERT INTO "Attendances"
-       (employee_id, check_in_time, status, ip_address, device_id, "createdAt", "updatedAt")
-       VALUES ($1, NOW(), $2, $3, $4, NOW(), NOW())
+       (employee_id, check_in_time, status, ip_address, device_id, wifi_mac_address, last_ping_time, "createdAt", "updatedAt")
+       VALUES ($1, NOW(), $2, $3, $4, $5, NOW(), NOW(), NOW())
        RETURNING *`,
-      [userId, status, clientIP, deviceId]
+      [userId, status, clientIP, deviceId, wifiMacAddress]
     );
 
     console.log('✓ Check-in successful:', status);
@@ -187,31 +200,35 @@ exports.ping = async (req, res) => {
   try {
     const userId = req.user.userId;
     const organizationId = req.user.organizationId;
-    const { deviceId } = req.body;
+    const { deviceId, wifiMacAddress } = req.body;
     const clientIP = getClientIP(req);
 
     console.log('=== Ping Request ===');
     console.log('User ID:', userId);
     console.log('Organization ID:', organizationId);
     console.log('Client IP:', clientIP);
+    console.log('WiFi MAC:', wifiMacAddress);
 
-    // Validate IP against organization settings
-    const isValidIP = await validateIP(organizationId, clientIP);
+    // Validate network access (IP + optional WiFi MAC)
+    const isValidNetwork = await validateNetworkAccess(organizationId, clientIP, wifiMacAddress);
     
-    if (!isValidIP) {
+    if (!isValidNetwork) {
       console.log('❌ Not on office network');
       return res.status(403).json({ success: false, message: 'Not on office network' });
     }
 
     console.log('✓ On office network');
 
-    // Auto check-in if not already checked in
+    // Check if already checked in today
     const today = await pool.query(
-      `SELECT * FROM "Attendances" WHERE employee_id = $1 AND DATE(check_in_time) = CURRENT_DATE`,
+      `SELECT * FROM "Attendances" 
+       WHERE employee_id = $1 
+       AND DATE(check_in_time) = CURRENT_DATE`,
       [userId]
     );
 
     if (today.rows.length === 0) {
+      // Auto check-in
       console.log('✓ Auto check-in - No attendance record for today');
       
       // Get shift timings
@@ -221,13 +238,16 @@ exports.ping = async (req, res) => {
       const [hours, minutes] = shiftSettings.shift_start_time.split(':');
       shiftStart.setHours(parseInt(hours), parseInt(minutes), 0, 0);
       
+      // Add grace period
+      shiftStart.setMinutes(shiftStart.getMinutes() + (shiftSettings.grace_period_minutes || 0));
+      
       const status = now > shiftStart ? 'Late' : 'Present';
       
       await pool.query(
         `INSERT INTO "Attendances" 
-         (employee_id, check_in_time, status, ip_address, device_id, "createdAt", "updatedAt")
-         VALUES ($1, NOW(), $2, $3, $4, NOW(), NOW())`,
-        [userId, status, clientIP, deviceId]
+         (employee_id, check_in_time, status, ip_address, device_id, wifi_mac_address, last_ping_time, "createdAt", "updatedAt")
+         VALUES ($1, NOW(), $2, $3, $4, $5, NOW(), NOW(), NOW())`,
+        [userId, status, clientIP, deviceId, wifiMacAddress]
       );
       
       console.log('✓ Auto check-in successful');
@@ -237,10 +257,20 @@ exports.ping = async (req, res) => {
         console.error('Notification error:', err)
       );
     } else {
-      console.log('✓ Already checked in today');
+      // Update last ping time for existing attendance
+      await pool.query(
+        `UPDATE "Attendances"
+         SET last_ping_time = NOW(),
+             "updatedAt" = NOW()
+         WHERE employee_id = $1
+         AND DATE(check_in_time) = CURRENT_DATE
+         AND check_out_time IS NULL`,
+        [userId]
+      );
+      console.log('✓ Updated last ping time');
     }
 
-    res.json({ success: true });
+    res.json({ success: true, message: 'Ping received' });
   } catch (err) {
     console.error('Ping error:', err);
     res.status(500).json({ success: false, message: err.message });
@@ -530,6 +560,76 @@ exports.adjustAttendance = async (req, res) => {
     });
   } catch (err) {
     console.error('Adjust attendance error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
+/**
+ * Auto checkout employees who haven't pinged in X minutes
+ * This should be called by a cron job every 5 minutes
+ */
+exports.autoCheckoutStale = async () => {
+  try {
+    console.log('=== Running Auto Checkout for Stale Attendances ===');
+
+    // Get default timeout (5 minutes) or from settings
+    const staleAttendances = await pool.query(`
+      SELECT a.id, a.employee_id, a.last_ping_time, u.name, u.email,
+             COALESCE(os.auto_checkout_timeout_minutes, 5) as timeout_minutes
+      FROM "Attendances" a
+      JOIN users u ON u.user_id = a.employee_id
+      LEFT JOIN organization_settings os ON os.organization_id = u.organization_id
+      WHERE DATE(a.check_in_time) = CURRENT_DATE
+      AND a.check_out_time IS NULL
+      AND a.last_ping_time IS NOT NULL
+      AND a.last_ping_time < NOW() - (COALESCE(os.auto_checkout_timeout_minutes, 5) || ' minutes')::INTERVAL
+    `);
+
+    console.log(`Found ${staleAttendances.rows.length} stale attendances`);
+
+    for (const attendance of staleAttendances.rows) {
+      // Auto checkout with last ping time + 1 minute
+      await pool.query(`
+        UPDATE "Attendances"
+        SET check_out_time = last_ping_time + INTERVAL '1 minute',
+            auto_checkout = true,
+            "updatedAt" = NOW()
+        WHERE id = $1
+      `, [attendance.id]);
+
+      console.log(`✓ Auto checked out: ${attendance.name} (${attendance.email})`);
+
+      // Send notification (async)
+      sendEmail(
+        attendance.email,
+        'WorkNex AI - Auto Check-Out',
+        `You have been automatically checked out at ${new Date(attendance.last_ping_time).toLocaleTimeString()} due to WiFi disconnection.\n\nIf this was a mistake, please contact your manager.`
+      ).catch(err => console.error('Email error:', err));
+    }
+
+    return {
+      success: true,
+      count: staleAttendances.rows.length
+    };
+  } catch (err) {
+    console.error('Auto checkout stale error:', err);
+    return {
+      success: false,
+      error: err.message
+    };
+  }
+};
+
+/**
+ * Manual endpoint to trigger auto checkout (for testing)
+ */
+exports.triggerAutoCheckout = async (req, res) => {
+  try {
+    const result = await exports.autoCheckoutStale();
+    res.json(result);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

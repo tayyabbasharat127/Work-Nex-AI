@@ -58,7 +58,11 @@ exports.signup = async (req, res) => {
     );
 
     // 6. Send email
-    await sendEmail(admin_email, "Verify OTP", `Your OTP is ${otp}`);
+    await sendEmail(
+      admin_email, 
+      "WorkNex AI - Verify Your Account", 
+      `Welcome to WorkNex AI!\n\nYour verification OTP is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you didn't create an account, please ignore this email.\n\nBest regards,\nWorkNex AI Team`
+    );
 
     res.json({ success: true, message: "OTP sent to email" });
 
@@ -242,7 +246,11 @@ exports.forgotPassword = async (req, res) => {
     );
 
     // Send OTP via email
-    await sendEmail(email, "Reset Password OTP", `Your password reset OTP is: ${otp}. Valid for 10 minutes.`);
+    await sendEmail(
+      email, 
+      "WorkNex AI - Password Reset Request", 
+      `Hello,\n\nWe received a request to reset your password.\n\nYour password reset OTP is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you didn't request a password reset, please ignore this email and your password will remain unchanged.\n\nBest regards,\nWorkNex AI Team`
+    );
 
     res.json({ success: true, message: "OTP sent to your email" });
   } catch (err) {

@@ -71,7 +71,7 @@ export default function Register() {
       });
 
       router.push(
-        `/auth/verify-otp?email=${encodeURIComponent(adminEmail)}`
+        `/auth/verify-otp?email=${encodeURIComponent(adminEmail)}&next=login`
       );
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string, error?: string } }, message?: string };

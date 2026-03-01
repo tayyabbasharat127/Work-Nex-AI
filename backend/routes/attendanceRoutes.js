@@ -11,7 +11,8 @@ const {
   autoCheckout,
   attendanceOverview,
   manualMarkAttendance,
-  adjustAttendance
+  adjustAttendance,
+  triggerAutoCheckout
 } = require("../controller/attendance");
 
 router.post("/check-in", authenticateToken, checkIn);
@@ -25,5 +26,8 @@ router.get('/overview', authenticateToken, attendanceOverview);
 // New AISE endpoints
 router.post('/manual-mark', authenticateToken, manualMarkAttendance);
 router.put('/adjust', authenticateToken, adjustAttendance);
+
+// Trigger auto-checkout for stale attendances (admin/cron only)
+router.post('/trigger-auto-checkout', authenticateToken, authorizeRoles([0, 1]), triggerAutoCheckout);
 
 module.exports = router;

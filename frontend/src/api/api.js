@@ -91,10 +91,14 @@ export const getDeviceId = () => {
   }
   return id;
 };
-export const pingApi = () =>
-  api.post("/api/attendance/ping", {
-    deviceId: getDeviceId()
+
+export const pingApi = (payload = {}) => {
+  const deviceId = payload.deviceId || getDeviceId();
+  return api.post("/api/attendance/ping", {
+    deviceId,
+    wifiMacAddress: payload.wifiMacAddress || null
   });
+};
 // GET /api/attendance/today-status
 export const todayStatusApi = () =>
   api.get("/api/attendance/today-status");

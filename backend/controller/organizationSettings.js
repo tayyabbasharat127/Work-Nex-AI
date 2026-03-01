@@ -50,12 +50,15 @@ exports.updateSettings = async (req, res) => {
 
     const {
       wifi_ip_ranges,
+      allowed_wifi_mac_addresses,
+      require_wifi_mac_validation,
       shift_start_time,
       shift_end_time,
       late_threshold_minutes,
       early_departure_threshold_minutes,
       grace_period_minutes,
-      half_day_hours
+      half_day_hours,
+      auto_checkout_timeout_minutes
     } = req.body;
 
     // Check if settings exist
@@ -69,20 +72,23 @@ exports.updateSettings = async (req, res) => {
       // Insert new settings
       result = await pool.query(
         `INSERT INTO organization_settings 
-         (organization_id, wifi_ip_ranges, shift_start_time, shift_end_time, 
-          late_threshold_minutes, early_departure_threshold_minutes, 
-          grace_period_minutes, half_day_hours, "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+         (organization_id, wifi_ip_ranges, allowed_wifi_mac_addresses, require_wifi_mac_validation,
+          shift_start_time, shift_end_time, late_threshold_minutes, early_departure_threshold_minutes, 
+          grace_period_minutes, half_day_hours, auto_checkout_timeout_minutes, "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
          RETURNING *`,
         [
           organizationId,
           wifi_ip_ranges || ['192.168.100.0/24'],
+          allowed_wifi_mac_addresses || [],
+          require_wifi_mac_validation || false,
           shift_start_time || '10:00:00',
           shift_end_time || '19:00:00',
           late_threshold_minutes || 0,
           early_departure_threshold_minutes || 30,
           grace_period_minutes || 0,
-          half_day_hours || 4
+          half_day_hours || 4,
+          auto_checkout_timeout_minutes || 5
         ]
       );
     } else {
@@ -90,24 +96,30 @@ exports.updateSettings = async (req, res) => {
       result = await pool.query(
         `UPDATE organization_settings 
          SET wifi_ip_ranges = COALESCE($2, wifi_ip_ranges),
-             shift_start_time = COALESCE($3, shift_start_time),
-             shift_end_time = COALESCE($4, shift_end_time),
-             late_threshold_minutes = COALESCE($5, late_threshold_minutes),
-             early_departure_threshold_minutes = COALESCE($6, early_departure_threshold_minutes),
-             grace_period_minutes = COALESCE($7, grace_period_minutes),
-             half_day_hours = COALESCE($8, half_day_hours),
+             allowed_wifi_mac_addresses = COALESCE($3, allowed_wifi_mac_addresses),
+             require_wifi_mac_validation = COALESCE($4, require_wifi_mac_validation),
+             shift_start_time = COALESCE($5, shift_start_time),
+             shift_end_time = COALESCE($6, shift_end_time),
+             late_threshold_minutes = COALESCE($7, late_threshold_minutes),
+             early_departure_threshold_minutes = COALESCE($8, early_departure_threshold_minutes),
+             grace_period_minutes = COALESCE($9, grace_period_minutes),
+             half_day_hours = COALESCE($10, half_day_hours),
+             auto_checkout_timeout_minutes = COALESCE($11, auto_checkout_timeout_minutes),
              "updatedAt" = NOW()
          WHERE organization_id = $1
          RETURNING *`,
         [
           organizationId,
           wifi_ip_ranges,
+          allowed_wifi_mac_addresses,
+          require_wifi_mac_validation,
           shift_start_time,
           shift_end_time,
           late_threshold_minutes,
           early_departure_threshold_minutes,
           grace_period_minutes,
-          half_day_hours
+          half_day_hours,
+          auto_checkout_timeout_minutes
         ]
       );
     }
@@ -124,45 +136,87 @@ exports.updateSettings = async (req, res) => {
 };
 
 /**
- * Validate IP against organization settings
+ * Validate network access (IP + optional WiFi MAC)
  */
-exports.validateIP = async (organizationId, clientIP) => {
+exports.validateNetworkAccess = async (organizationId, clientIP, wifiMacAddress = null) => {
   try {
     const result = await pool.query(
-      `SELECT wifi_ip_ranges FROM organization_settings WHERE organization_id = $1`,
+      `SELECT wifi_ip_ranges, allowed_wifi_mac_addresses, require_wifi_mac_validation 
+       FROM organization_settings WHERE organization_id = $1`,
       [organizationId]
     );
 
     if (result.rows.length === 0) {
-      // No settings, use default
-      return clientIP.startsWith('192.168.100.') || 
-             clientIP === '127.0.0.1' || 
+      // No settings, use default (localhost only for testing)
+      return clientIP === '127.0.0.1' || 
              clientIP === '::1' ||
              clientIP.startsWith('::ffff:127.0.0.1');
     }
 
-    const ipRanges = result.rows[0].wifi_ip_ranges || [];
+    const settings = result.rows[0];
+    const ipRanges = settings.wifi_ip_ranges || [];
+    const allowedMacs = settings.allowed_wifi_mac_addresses || [];
+    const requireMacValidation = settings.require_wifi_mac_validation || false;
 
-    // Check if IP matches any configured range
+    // Step 1: Validate IP
+    let ipValid = false;
     for (const range of ipRanges) {
       if (range.includes('/')) {
         // CIDR notation (e.g., 192.168.100.0/24)
         if (isIPInCIDR(clientIP, range)) {
-          return true;
+          ipValid = true;
+          break;
         }
       } else {
         // Exact match or wildcard
         if (clientIP === range || clientIP.startsWith(range.replace('*', ''))) {
-          return true;
+          ipValid = true;
+          break;
         }
       }
     }
 
-    return false;
+    if (!ipValid) {
+      console.log('❌ IP validation failed:', clientIP);
+      return false;
+    }
+
+    // Step 2: Validate WiFi MAC (if required)
+    if (requireMacValidation && allowedMacs.length > 0) {
+      if (!wifiMacAddress) {
+        console.log('❌ WiFi MAC required but not provided');
+        return false;
+      }
+
+      // Normalize MAC address (remove colons, hyphens, make uppercase)
+      const normalizedMac = wifiMacAddress.replace(/[:-]/g, '').toUpperCase();
+      
+      const macValid = allowedMacs.some(allowedMac => {
+        const normalizedAllowed = allowedMac.replace(/[:-]/g, '').toUpperCase();
+        return normalizedMac === normalizedAllowed;
+      });
+
+      if (!macValid) {
+        console.log('❌ WiFi MAC validation failed:', wifiMacAddress);
+        return false;
+      }
+
+      console.log('✓ WiFi MAC validated:', wifiMacAddress);
+    }
+
+    console.log('✓ Network access validated');
+    return true;
   } catch (err) {
-    console.error('Validate IP error:', err);
+    console.error('Validate network access error:', err);
     return false;
   }
+};
+
+/**
+ * Legacy function for backward compatibility
+ */
+exports.validateIP = async (organizationId, clientIP) => {
+  return exports.validateNetworkAccess(organizationId, clientIP, null);
 };
 
 /**
@@ -226,4 +280,5 @@ exports.getShiftTimings = async (organizationId) => {
 };
 
 module.exports.validateIP = exports.validateIP;
+module.exports.validateNetworkAccess = exports.validateNetworkAccess;
 module.exports.getShiftTimings = exports.getShiftTimings;

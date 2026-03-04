@@ -66,15 +66,15 @@ const SidebarManager: React.FC = () => {
           <Bot size={20} />
           <span>Assistant</span>
         </Link>
-      </nav>
 
-      {/* Footer */}
-      <div className="sidebar-footer">
+        <div className="sidebar-logout">
         <button onClick={handleLogout} className="logout-btn">
           <LogOut size={20} />
           <span>Logout</span>
         </button>
       </div>
+      </nav>
+     
     </aside>
   );
 };

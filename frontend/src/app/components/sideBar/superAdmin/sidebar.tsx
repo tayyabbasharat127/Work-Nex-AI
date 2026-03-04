@@ -12,7 +12,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import "./page.scss";
+import "./sidebar.scss";
 
 const SidebarSuperAdmin: React.FC = () => {
   const { logout, user } = useAuth();
@@ -62,15 +62,16 @@ const SidebarSuperAdmin: React.FC = () => {
           <CreditCard size={20} />
           <span>Subscription Management</span>
         </Link>
-      </nav>
-
-      {/* Footer */}
-      <div className="sidebar-footer">
+        <div className="sidebar-footer">
         <button onClick={handleLogout} className="logout-btn">
           <LogOut size={20} />
           <span>Logout</span>
         </button>
       </div>
+      </nav>
+
+      {/* Footer */}
+      
     </aside>
   );
 };

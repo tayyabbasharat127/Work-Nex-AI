@@ -47,6 +47,8 @@ export const signupApi = (payload) =>
   api.post("/api/auth/signup", payload);
 export const loginApi = (payload) =>
   api.post("/api/auth/login", payload);
+export const superAdminLoginApi = (payload) =>
+  api.post("/api/auth/superadmin/login", payload);
 export const forgotPasswordApi = (payload) =>
   api.post("/api/auth/forgot-password", payload);
 export const verifyOtpApi = (payload) =>

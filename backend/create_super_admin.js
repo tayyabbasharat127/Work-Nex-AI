@@ -8,8 +8,8 @@ async function createSuperAdmin() {
     // Super admin credentials
     const superAdminData = {
       name: 'Super Admin',
-      email: 'superadmin@worknex.com',
-      password: 'SuperAdmin@123',  // Change this to a secure password!
+      email: 'admin@worknex.com',
+      password: 'Admin@123',  // Change this to a secure password!
       role: 'SuperAdmin',
       status: 'Active'
     };

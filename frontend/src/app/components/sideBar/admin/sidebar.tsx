@@ -107,15 +107,17 @@ const SidebarAdmin: React.FC = () => {
           <span>Forecast</span>
         </Link>
 
-      </nav>
-
-      {/* Footer */}
-      <div className="sidebar-footer">
+        <div className="sidebar-logout">
         <button onClick={handleLogout} className="logout-btn">
           <LogOut size={20} />
           <span>Logout</span>
         </button>
       </div>
+
+      </nav>
+
+      {/* Footer */}
+      
     </aside>
   );
 };

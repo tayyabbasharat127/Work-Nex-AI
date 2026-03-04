@@ -352,26 +352,28 @@ exports.changePassword = async (req, res) => {
 exports.superAdminLogin = async (req, res) => {
   const { email, password } = req.body;
 
-  try {
-    // Validate email is admin@worknex
-    if (email !== 'admin@worknex') {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
+  console.log('=== Super Admin Login Attempt ===');
+  console.log('Email:', email);
 
-    // Query super admin user
+  try {
+    // Query super admin user (no email validation, let DB query handle it)
     const userResult = await pool.query(
       `SELECT * FROM "Users" WHERE email=$1 AND role='SuperAdmin' AND status='Active'`,
       [email]
     );
 
     if (!userResult.rows.length) {
+      console.log('Super admin not found or not active');
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const user = userResult.rows[0];
+    console.log('Super admin found:', { id: user.id, email: user.email });
 
     // Verify password
     const match = await bcrypt.compare(password, user.password);
+    console.log('Password match:', match);
+    
     if (!match) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -387,6 +389,8 @@ exports.superAdminLogin = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "15m" }
     );
+
+    console.log('Super admin login successful!');
 
     res.json({
       token,

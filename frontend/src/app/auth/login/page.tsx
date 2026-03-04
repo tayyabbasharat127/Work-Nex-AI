@@ -4,7 +4,7 @@
 import React, { useState } from "react";
 import "./page.scss";
 import { useRouter } from "next/navigation";
-import { loginApi, getDeviceId } from "@/src/api/api";
+import { loginApi, superAdminLoginApi, getDeviceId } from "@/src/api/api";
 
 // Material UI Icons (SVG)
 const EmailIcon = () => (
@@ -72,7 +72,22 @@ export default function Login() {
     setError("");
 
     try {
-      const res = await loginApi({ email, password, deviceId: getDeviceId() });
+      // Check if this is a superadmin login
+      const isSuperAdmin = email.toLowerCase() === 'admin@worknex.com' ||
+                          email.toLowerCase() === 'admin@worknex';
+      
+      console.log('=== Login Debug ===');
+      console.log('Email:', email);
+      console.log('Is SuperAdmin:', isSuperAdmin);
+      
+      // Use appropriate login endpoint
+      const res = isSuperAdmin 
+        ? await superAdminLoginApi({ email, password })
+        : await loginApi({ email, password, deviceId: getDeviceId() });
+
+      console.log('Login Response:', res.data);
+      console.log('User:', res.data?.user);
+      console.log('Role ID:', res.data?.user?.role_id);
 
       // If backend returns tokens:
       if (res.data?.token) localStorage.setItem("token", res.data.token);
@@ -82,32 +97,22 @@ export default function Login() {
       // Optional: store user payload if backend returns it
       if (res.data?.user) localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      // Redirect based on user role
-      const user = res.data?.user;
-      if (user) {
-        const roleId = String(user.roleId || user.role_id);
-
-        switch (roleId) {
-          case "0": // Super Admin - redirect to admin dashboard for now
-            router.push("/dashboard/admin/main");
-            break;
-          case "1": // Admin
-            router.push("/dashboard/admin/main");
-            break;
-          case "2": // Manager
-            router.push("/dashboard/manager/main");
-            break;
-          case "3": // Employee
-            router.push("/dashboard/employee/main");
-            break;
-          default:
-            // Default to employee dashboard if role is unknown
-            router.push("/dashboard/employee/main");
-            break;
-        }
+      // Redirect based on role_id - use strict numeric equality
+      const roleId = res.data?.user?.role_id;
+      console.log('Routing decision for role_id:', roleId);
+      
+      if (roleId === 0) {
+        console.log('Redirecting to SuperAdmin dashboard');
+        router.push("/dashboard/superAdmin");
+      } else if (roleId === 1) {
+        console.log('Redirecting to Admin dashboard');
+        router.push("/dashboard/admin/main");
+      } else if (roleId === 2) {
+        console.log('Redirecting to Manager dashboard');
+        router.push("/dashboard/manager/main");
       } else {
-        // Fallback to main dashboard redirect
-        router.push("/dashboard");
+        console.log('Redirecting to Employee dashboard (default)');
+        router.push("/dashboard/employee/main");
       }
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string, error?: string } }, message?: string };

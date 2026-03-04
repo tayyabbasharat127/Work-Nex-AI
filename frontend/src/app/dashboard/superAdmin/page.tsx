@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import SidebarSuperAdmin from "../../components/sideBar/superAdmin/page";
+import SidebarSuperAdmin from "../../components/sideBar/superAdmin/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import "./page.scss";
 

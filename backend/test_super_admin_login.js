@@ -11,8 +11,8 @@ async function testSuperAdminLogin() {
     console.log('POST', `${BASE_URL}/auth/superadmin/login`);
     
     const superAdminLogin = await axios.post(`${BASE_URL}/auth/superadmin/login`, {
-      email: 'superadmin@worknex.com',
-      password: 'SuperAdmin@123'
+      email: 'admin@worknex.com',
+      password: 'Admin@123'
     });
 
     if (superAdminLogin.data.token && superAdminLogin.data.user.role_id === 0) {
@@ -30,8 +30,8 @@ async function testSuperAdminLogin() {
     console.log('POST', `${BASE_URL}/auth/login`);
     
     const regularLogin = await axios.post(`${BASE_URL}/auth/login`, {
-      email: 'superadmin@worknex.com',
-      password: 'SuperAdmin@123'
+      email: 'admin@worknex.com',
+      password: 'Admin@123'
     });
 
     if (regularLogin.data.token && regularLogin.data.user.role_id === 0) {
@@ -48,7 +48,7 @@ async function testSuperAdminLogin() {
     console.log('\nTest 3: Access Super Admin Route');
     const token = superAdminLogin.data.token;
     
-    const orgsResponse = await axios.get(`${BASE_URL}/superadmin/organizations`, {
+    const orgsResponse = await axios.get(`${BASE_URL}/superadmin`, {
       headers: { Authorization: `Bearer ${token}` }
     });
 

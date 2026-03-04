@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import SidebarSuperAdmin from "@/src/app/components/sideBar/superAdmin/page";
+import SidebarSuperAdmin from "@/src/app/components/sideBar/superAdmin/sidebar";
 import { SearchBox } from "@/src/app/components/searchBox/searchBox";
 import { getAllOrganizationsApi, updateOrganizationSubscriptionApi } from "@/src/api/api"; // Importing necessary APIs
 import "./page.scss";

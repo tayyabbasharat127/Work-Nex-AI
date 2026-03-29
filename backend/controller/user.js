@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 
 exports.createUser = async (req, res) => {
   try {
+<<<<<<< HEAD
     const { organizationId, roleId } = req.user || {};
     const { email, name, password, role_id, department_id, manager_id } = req.body;
 
@@ -33,6 +34,14 @@ exports.createUser = async (req, res) => {
       });
     }
 
+=======
+    const { organizationId } = req.user || {};
+    const { email, name, password, role_id, department_id, manager_id } = req.body;
+
+    if (!organizationId) {
+      return res.status(403).json({ success: false, message: 'Missing organization context' });
+    }
+>>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
     if (!password) {
       return res.status(400).json({ success: false, message: 'Password is required' });
     }
@@ -70,7 +79,10 @@ exports.createUser = async (req, res) => {
     const user = result.rows[0];
     res.status(201).json({ success: true, message: "User created", data: user });
   } catch (e) { 
+<<<<<<< HEAD
     console.error('Error creating user:', e);
+=======
+>>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
     res.status(500).json({ success: false, message: e.message }); 
   }
 };

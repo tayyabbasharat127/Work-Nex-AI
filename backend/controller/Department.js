@@ -18,6 +18,7 @@ exports.getAllDepartments = async (req, res) => {
 
 exports.createDepartment = async (req, res) => {
   try {
+<<<<<<< HEAD
     const { organizationId, roleId, userId } = req.user;
     const { name, manager_id, description } = req.body;
 
@@ -71,11 +72,25 @@ exports.createDepartment = async (req, res) => {
       );
       if (!managerCheck.rowCount) {
         console.log('❌ Invalid manager');
+=======
+    const { organizationId } = req.user;
+    const { name, manager_id, description } = req.body;
+
+    if (manager_id) {
+      const managerCheck = await pool.query(
+        `SELECT 1 FROM "Users" WHERE id = $1 AND organization_id = $2`,
+        [manager_id, organizationId]
+      );
+      if (!managerCheck.rowCount) {
+>>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
         return res.status(400).json({ success: false, message: 'Invalid manager for this organization' });
       }
     }
 
+<<<<<<< HEAD
     console.log('Inserting department...');
+=======
+>>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
     const result = await pool.query(
       `INSERT INTO departments (name, manager_id, description, organization_id, created_at)
        VALUES ($1, $2, $3, $4, NOW())
@@ -83,10 +98,15 @@ exports.createDepartment = async (req, res) => {
       [name, manager_id || null, description || null, organizationId]
     );
 
+<<<<<<< HEAD
     console.log('✓ Department created:', result.rows[0]);
     res.json({ success: true, data: result.rows[0] });
   } catch (err) {
     console.error('❌ Error creating department:', err);
+=======
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+>>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
     res.status(500).json({ success: false, error: err.message });
   }
 };

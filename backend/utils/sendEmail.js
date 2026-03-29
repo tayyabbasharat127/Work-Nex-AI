@@ -2,6 +2,7 @@ const transporter = require("../config/nodemailer");
 
 const sendEmail = async (to, subject, text) => {
   try {
+<<<<<<< HEAD
     // Validate input parameters
     if (!to || typeof to !== 'string' || to.trim() === '') {
       throw new Error('Recipient email address is required and must be a valid string');
@@ -29,6 +30,11 @@ const sendEmail = async (to, subject, text) => {
     const info = await transporter.sendMail({
       from: `"WorkNex AI" <${process.env.EMAIL_USER}>`,
       to: to.trim(),
+=======
+    const info = await transporter.sendMail({
+      from: `"WorkNex AI" <${process.env.EMAIL_USER}>`,
+      to,
+>>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
       subject,
       text,
       html: `
@@ -55,12 +61,15 @@ ${text}
     return info;
   } catch (error) {
     console.error("❌ Failed to send email:", error.message);
+<<<<<<< HEAD
     console.error("   Error details:", {
       to,
       subject,
       errorCode: error.code,
       errorCommand: error.command
     });
+=======
+>>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
     throw error;
   }
 };

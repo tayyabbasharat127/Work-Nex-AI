@@ -1,0 +1,229 @@
+$primary-color: #6c5ce7;
+$green: #16a34a;
+$red: #e11d48;
+$yellow: #fbbf24;
+$gray-text: #8b92a9;
+$gray-light: #f8f9fc;
+$white: #fff;
+$border-light: #e5e7eb;
+
+.manager-leaves {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+}
+
+/* PAGE HEADING */
+.page-heading {
+  margin-bottom: 1rem;
+
+  h1 {
+    font-size: 1.7rem;
+    font-weight: 700;
+  }
+
+  p {
+    font-size: 0.9rem;
+    color: $gray-text;
+  }
+}
+
+/* KPI GRID */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  .kpi-card {
+    background: $white;
+    padding: 1.2rem;
+    border-radius: 14px;
+    display: flex;
+    gap: 1rem;
+
+    .icon {
+      padding: 12px;
+      background: #ecebff;
+      border-radius: 12px;
+      color: $primary-color;
+    }
+
+    h4 {
+      font-size: 0.8rem;
+      color: #2d3436;
+    }
+
+    .value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: $primary-color;
+    }
+  }
+}
+
+/* FILTERS */
+.filters {
+  margin-bottom: 1.5rem;
+
+  .filters-row {
+    display: flex;
+    gap: 1rem;
+
+    .filter-input,
+    .filter-select {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: $white;
+      padding: 0.7rem 1rem;
+      border: 1px solid $border-light;
+      border-radius: 12px;
+      flex: 1;
+
+      input,
+      select {
+        flex: 1;
+        border: none;
+        outline: none;
+      }
+    }
+  }
+}
+
+/* TABLE */
+.leave-table {
+  table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th {
+      background: $gray-light;
+      padding: 0.75rem;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      color: $gray-text;
+    }
+
+    td {
+      padding: 0.75rem;
+      border-bottom: 1px solid $border-light;
+    }
+
+    .user-info {
+      display: flex;
+      gap: 0.8rem;
+      align-items: center;
+
+      img {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+      }
+
+      .name {
+        font-weight: 600;
+      }
+
+      .email {
+        font-size: 0.8rem;
+        color: $gray-text;
+      }
+    }
+
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+
+      &.pending {
+        background: #fff7db;
+        color: $yellow;
+      }
+
+      &.approved {
+        background: #e6f9ec;
+        color: $green;
+      }
+
+      &.rejected {
+        background: #ffe4e6;
+        color: $red;
+      }
+    }
+
+    .view-btn {
+      background: $primary-color;
+      color: $white;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+
+      &:hover {
+        opacity: 0.9;
+      }
+    }
+  }
+}
+
+/* MODAL */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal {
+  width: 420px;
+  background: $white;
+  padding: 1.5rem;
+  border-radius: 14px;
+
+  h2 {
+    margin-bottom: 1rem;
+  }
+
+  .modal-section {
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+
+    .approve-btn {
+      background: $green;
+      color: $white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+    }
+
+    .reject-btn {
+      background: $red;
+      color: $white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+    }
+  }
+
+  .close-btn {
+    width: 100%;
+    background: $primary-color;
+    color: $white;
+    padding: 8px;
+    border-radius: 10px;
+    border: none;
+  }
+}

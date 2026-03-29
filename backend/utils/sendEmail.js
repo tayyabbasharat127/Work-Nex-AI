@@ -2,39 +2,9 @@ const transporter = require("../config/nodemailer");
 
 const sendEmail = async (to, subject, text) => {
   try {
-<<<<<<< HEAD
-    // Validate input parameters
-    if (!to || typeof to !== 'string' || to.trim() === '') {
-      throw new Error('Recipient email address is required and must be a valid string');
-    }
-
-    if (!subject || typeof subject !== 'string') {
-      throw new Error('Email subject is required');
-    }
-
-    if (!text || typeof text !== 'string') {
-      throw new Error('Email text content is required');
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(to.trim())) {
-      throw new Error(`Invalid email format: ${to}`);
-    }
-
-    console.log('📧 Attempting to send email...');
-    console.log('   To:', to);
-    console.log('   Subject:', subject);
-    console.log('   From:', process.env.EMAIL_USER);
-
-    const info = await transporter.sendMail({
-      from: `"WorkNex AI" <${process.env.EMAIL_USER}>`,
-      to: to.trim(),
-=======
     const info = await transporter.sendMail({
       from: `"WorkNex AI" <${process.env.EMAIL_USER}>`,
       to,
->>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
       subject,
       text,
       html: `
@@ -61,15 +31,6 @@ ${text}
     return info;
   } catch (error) {
     console.error("❌ Failed to send email:", error.message);
-<<<<<<< HEAD
-    console.error("   Error details:", {
-      to,
-      subject,
-      errorCode: error.code,
-      errorCommand: error.command
-    });
-=======
->>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
     throw error;
   }
 };

@@ -1,15 +1,3 @@
-<<<<<<< HEAD
-# v0 runtime files
-__v0_runtime_loader.js
-__v0_devtools.tsx
-__v0_jsx-dev-runtime.ts
-
-# Common ignores
-node_modules/
-.next/
-.env*.local
-.DS_Store
-=======
 # Node modules
 node_modules/
 
@@ -33,4 +21,3 @@ build/
 
 # Mac system files
 .DS_Store
->>>>>>> 0544562a1075bdc98c91d928eccf30541806636d

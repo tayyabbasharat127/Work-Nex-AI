@@ -3,45 +3,12 @@ const bcrypt = require('bcrypt');
 
 exports.createUser = async (req, res) => {
   try {
-<<<<<<< HEAD
-    const { organizationId, roleId } = req.user || {};
-    const { email, name, password, role_id, department_id, manager_id } = req.body;
-
-    console.log('Creating user - organizationId:', organizationId, 'roleId:', roleId);
-
-    // Check if user is super admin (roleId 0) - they can't create users
-    if (roleId === 0) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Super admins cannot create users. Please log in as an organization admin.' 
-      });
-    }
-
-    if (!organizationId) {
-      return res.status(403).json({ success: false, message: 'Organization ID is required. Please log in as an organization admin.' });
-    }
-
-    // Check if organization exists
-    const orgCheck = await pool.query(
-      `SELECT id FROM "Organizations" WHERE id = $1`,
-      [organizationId]
-    );
-
-    if (!orgCheck.rowCount) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Organization with ID ${organizationId} does not exist. Please contact support.` 
-      });
-    }
-
-=======
     const { organizationId } = req.user || {};
     const { email, name, password, role_id, department_id, manager_id } = req.body;
 
     if (!organizationId) {
       return res.status(403).json({ success: false, message: 'Missing organization context' });
     }
->>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
     if (!password) {
       return res.status(400).json({ success: false, message: 'Password is required' });
     }
@@ -79,10 +46,6 @@ exports.createUser = async (req, res) => {
     const user = result.rows[0];
     res.status(201).json({ success: true, message: "User created", data: user });
   } catch (e) { 
-<<<<<<< HEAD
-    console.error('Error creating user:', e);
-=======
->>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
     res.status(500).json({ success: false, message: e.message }); 
   }
 };

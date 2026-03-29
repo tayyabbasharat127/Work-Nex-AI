@@ -17,37 +17,13 @@ exports.signup = async (req, res) => {
   } = req.body;
 
   try {
-<<<<<<< HEAD
-    // Validate required fields
-    if (!admin_email || !admin_name || !password || !organization_name) {
-      return res.status(400).json({ 
-        message: "Missing required fields: admin_email, admin_name, password, organization_name" 
-      });
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(admin_email)) {
-      return res.status(400).json({ message: "Invalid email format" });
-    }
-
-    console.log('📝 Signup attempt for:', admin_email);
-
-=======
->>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
     // 1. Check org exists (using admin_email as unique identifier for now, or check organization name)
     const orgCheck = await pool.query(
       `SELECT * FROM "Organizations" WHERE admin_email=$1`,
       [admin_email]
     );
-<<<<<<< HEAD
-    if (orgCheck.rows.length) {
-      return res.status(400).json({ message: "Organization already exists" });
-    }
-=======
     if (orgCheck.rows.length)
       return res.status(400).json({ message: "Organization already exists" });
->>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
 
     // 2. Create organization
     // Map subscription_plan to package column
@@ -56,18 +32,10 @@ exports.signup = async (req, res) => {
       (organization_name, admin_email, package, status, "createdAt", "updatedAt")
       VALUES ($1, $2, $3, 'Inactive', NOW(), NOW())
       RETURNING id`,
-<<<<<<< HEAD
-      [organization_name, admin_email, subscription_plan || 'Basic']
-    );
-
-    const orgId = org.rows[0].id;
-    console.log('✅ Organization created with ID:', orgId);
-=======
       [organization_name, admin_email, subscription_plan]
     );
 
     const orgId = org.rows[0].id;
->>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
 
     // 3. Hash password
     const passwordHash = await bcrypt.hash(password, 10);
@@ -80,10 +48,6 @@ exports.signup = async (req, res) => {
       VALUES ($1, $2, $3, 'Admin', $4, 'Inactive', NOW(), NOW())`,
       [admin_name, admin_email, passwordHash, orgId]
     );
-<<<<<<< HEAD
-    console.log('✅ Admin user created');
-=======
->>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
 
     // 5. Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000);
@@ -92,15 +56,8 @@ exports.signup = async (req, res) => {
        VALUES ($1, $2, NOW() + interval '10 minutes', NOW(), NOW())`,
       [admin_email, otp]
     );
-<<<<<<< HEAD
-    console.log('✅ OTP generated:', otp);
 
     // 6. Send email
-    console.log('📧 Sending verification email to:', admin_email);
-=======
-
-    // 6. Send email
->>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
     await sendEmail(
       admin_email, 
       "WorkNex AI - Verify Your Account", 
@@ -110,11 +67,7 @@ exports.signup = async (req, res) => {
     res.json({ success: true, message: "OTP sent to email" });
 
   } catch (err) {
-<<<<<<< HEAD
-    console.error('❌ Signup error:', err);
-=======
     console.error(err);
->>>>>>> 0544562a1075bdc98c91d928eccf30541806636d
     res.status(500).json({ message: "Signup failed: " + err.message });
   }
 };

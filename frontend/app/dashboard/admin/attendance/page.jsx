@@ -23,11 +23,13 @@ export default function AdminAttendance() {
   const loadAttendance = async () => {
     try {
       setLoading(true);
-      const data = await attendanceAPI.getOverview({ date: selectedDate });
+      // Use getAll method with date parameter
+      const data = await attendanceAPI.getAll({ date: selectedDate });
       // Handle different response formats
       const records = Array.isArray(data) ? data : (data?.records || data?.data || []);
       setAttendanceRecords(records);
     } catch (err) {
+      console.error('Failed to load attendance:', err);
       toast.error('Failed to load attendance data');
       setAttendanceRecords([]);
     } finally {
@@ -69,8 +71,11 @@ export default function AdminAttendance() {
   ];
 
   const filteredRecords = attendanceRecords.filter(record => {
-    const matchesSearch = record.name.toLowerCase().includes(search.toLowerCase()) ||
-      record.department.toLowerCase().includes(search.toLowerCase());
+    const name = record.name || record.user?.name || `${record.user?.firstName || ''} ${record.user?.lastName || ''}`.trim() || '';
+    const department = record.department || record.user?.department?.name || '';
+    
+    const matchesSearch = name.toLowerCase().includes(search.toLowerCase()) ||
+      department.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = filterStatus === 'All' || record.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
@@ -267,37 +272,46 @@ export default function AdminAttendance() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {paginatedRecords.map((record) => (
+                  {paginatedRecords.map((record) => {
+                    const name = record.name || record.user?.name || `${record.user?.firstName || ''} ${record.user?.lastName || ''}`.trim() || 'Unknown';
+                    const department = record.department || record.user?.department?.name || 'N/A';
+                    const checkIn = record.checkIn || record.check_in || '-';
+                    const checkOut = record.checkOut || record.check_out || '-';
+                    const workHours = record.workHours || record.work_hours || record.workingHours || '-';
+                    const status = record.status || 'Unknown';
+                    
+                    return (
                     <tr key={record.id} className="hover:bg-muted/30 transition">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-semibold text-sm">
-                            {record.name.split(' ').map(n => n[0]).join('')}
+                            {name.split(' ').map(n => n[0]).join('').toUpperCase() || '?'}
                           </div>
-                          <span className="font-medium">{record.name}</span>
+                          <span className="font-medium">{name}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-muted-foreground">{record.department}</td>
-                      <td className="py-4 px-6"><span className={record.checkIn === '-' ? 'text-muted-foreground' : 'text-foreground'}>{record.checkIn}</span></td>
-                      <td className="py-4 px-6"><span className={record.checkOut === '-' ? 'text-muted-foreground' : 'text-foreground'}>{record.checkOut}</span></td>
-                      <td className="py-4 px-6 font-medium">{record.workHours}</td>
+                      <td className="py-4 px-6 text-muted-foreground">{department}</td>
+                      <td className="py-4 px-6"><span className={checkIn === '-' ? 'text-muted-foreground' : 'text-foreground'}>{checkIn}</span></td>
+                      <td className="py-4 px-6"><span className={checkOut === '-' ? 'text-muted-foreground' : 'text-foreground'}>{checkOut}</span></td>
+                      <td className="py-4 px-6 font-medium">{workHours}</td>
                       <td className="py-4 px-6">
                         <span className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
-                          record.status === 'Present' ? 'bg-success/20 text-success' :
-                          record.status === 'Late' ? 'bg-warning/20 text-warning' :
-                          record.status === 'Absent' ? 'bg-destructive/20 text-destructive' :
-                          record.status === 'On Leave' ? 'bg-primary/20 text-primary' :
+                          status === 'Present' || status === 'PRESENT' ? 'bg-success/20 text-success' :
+                          status === 'Late' || status === 'LATE' ? 'bg-warning/20 text-warning' :
+                          status === 'Absent' || status === 'ABSENT' ? 'bg-destructive/20 text-destructive' :
+                          status === 'On Leave' || status === 'ON_LEAVE' ? 'bg-primary/20 text-primary' :
                           'bg-accent/20 text-accent'
-                        }`}>{record.status}</span>
+                        }`}>{status}</span>
                       </td>
                       <td className="py-4 px-6">
-                        {record.status === 'Absent' && (
+                        {(status === 'Absent' || status === 'ABSENT') && (
                           <button onClick={() => handleMarkAttendance(record.id, 'Present')} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-success/20 text-success hover:bg-success/30 transition">Mark Present</button>
                         )}
-                        {record.status !== 'Absent' && <span className="text-muted-foreground text-xs">-</span>}
+                        {status !== 'Absent' && status !== 'ABSENT' && <span className="text-muted-foreground text-xs">-</span>}
                       </td>
                     </tr>
-                  ))}
+                  );
+                  })}
                 </tbody>
               </table>
             </div>

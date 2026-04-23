@@ -72,7 +72,18 @@ export default function Login() {
     setError("");
 
     try {
-      const res = await loginApi({ email, password, deviceId: getDeviceId() });
+      // Check if this is a super admin login attempt
+      const isSuperAdmin = email === 'admin@worknex';
+      let res;
+      
+      if (isSuperAdmin) {
+        // Use super admin login endpoint
+        const { superAdminLoginApi } = await import("@/src/api/api");
+        res = await superAdminLoginApi({ email, password });
+      } else {
+        // Use regular login endpoint
+        res = await loginApi({ email, password, deviceId: getDeviceId() });
+      }
 
       // If backend returns tokens:
       if (res.data?.token) localStorage.setItem("token", res.data.token);

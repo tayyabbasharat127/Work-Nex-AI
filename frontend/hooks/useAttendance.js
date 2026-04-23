@@ -11,11 +11,12 @@ export function useAttendance() {
     try {
       setLoading(true);
       setError(null);
-      const data = await attendanceAPI.getTodayStatus();
+      const data = await attendanceAPI.getToday(); // Fixed: was getTodayStatus
       setTodayStatus(data);
       return data;
     } catch (err) {
       setError(err.message);
+      setTodayStatus(null);
       throw err;
     } finally {
       setLoading(false);
@@ -26,9 +27,9 @@ export function useAttendance() {
     try {
       setLoading(true);
       setError(null);
-      const data = await attendanceAPI.getHistory(params);
+      const data = await attendanceAPI.getMy(params); // Fixed: was getHistory
       // Ensure data is always an array
-      const historyArray = Array.isArray(data) ? data : (data?.data || data?.history || []);
+      const historyArray = Array.isArray(data) ? data : (data?.data || data?.history || data?.attendance || []);
       setHistory(historyArray);
       return historyArray;
     } catch (err) {
@@ -40,12 +41,23 @@ export function useAttendance() {
     }
   };
 
-  const checkIn = async () => {
+  const checkIn = async (latitude, longitude) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await attendanceAPI.checkIn();
+      // Get geolocation if not provided
+      if (!latitude || !longitude) {
+        if (navigator.geolocation) {
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject);
+          });
+          latitude = position.coords.latitude;
+          longitude = position.coords.longitude;
+        }
+      }
+      const data = await attendanceAPI.checkIn(latitude, longitude);
       await fetchTodayStatus(); // Refresh status
+      await fetchHistory({ limit: 30 }); // Refresh history
       return data;
     } catch (err) {
       setError(err.message);
@@ -61,22 +73,13 @@ export function useAttendance() {
       setError(null);
       const data = await attendanceAPI.checkOut();
       await fetchTodayStatus(); // Refresh status
+      await fetchHistory({ limit: 30 }); // Refresh history
       return data;
     } catch (err) {
       setError(err.message);
       throw err;
     } finally {
       setLoading(false);
-    }
-  };
-
-  const ping = async () => {
-    try {
-      const data = await attendanceAPI.ping();
-      return data;
-    } catch (err) {
-      console.error('Ping failed:', err);
-      throw err;
     }
   };
 
@@ -89,6 +92,5 @@ export function useAttendance() {
     fetchHistory,
     checkIn,
     checkOut,
-    ping,
   };
 }

@@ -230,7 +230,7 @@ export default function ManagerDashboard() {
             {/* Team Members */}
             <div className="bg-card border border-border rounded-xl p-6">
               <h2 className="text-lg font-bold mb-4">Team Members</h2>
-              <div className="space-y-3 max-h-80 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-80 overflow-y-auto">
                 {teamMembers.map((member) => (
                   <div key={member.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition">
                     <div className="flex items-center gap-3">

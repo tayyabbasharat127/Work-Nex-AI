@@ -1,0 +1,272 @@
+{
+  "info": {
+    "name": "WorkNex AI - Complete API Collection",
+    "description": "Production-ready API collection for WorkNex AI Workforce Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@company.com\",\n  \"password\": \"SecurePass123!\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"employeeId\": \"EMP-001\",\n  \"role\": \"EMPLOYEE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.data && response.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', response.data.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', response.data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@company.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": "{{baseUrl}}/auth/refresh-token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "url": "{{baseUrl}}/auth/logout",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": "{{baseUrl}}/users/me"
+          }
+        },
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/users?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "url": "{{baseUrl}}/users",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"new.employee@company.com\",\n  \"employeeId\": \"EMP-002\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"role\": \"EMPLOYEE\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "item": [
+        {
+          "name": "Check In",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "url": "{{baseUrl}}/attendance/check-in",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 24.8607,\n  \"longitude\": 67.0011\n}"
+            }
+          }
+        },
+        {
+          "name": "Check Out",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": "{{baseUrl}}/attendance/check-out"
+          }
+        },
+        {
+          "name": "Get Today's Attendance",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": "{{baseUrl}}/attendance/today"
+          }
+        },
+        {
+          "name": "Get My Attendance",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/my?month=4&year=2025",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "my"],
+              "query": [
+                {"key": "month", "value": "4"},
+                {"key": "year", "value": "2025"}
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leave",
+      "item": [
+        {
+          "name": "Apply Leave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "url": "{{baseUrl}}/leave",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leaveType\": \"ANNUAL\",\n  \"startDate\": \"2025-04-15\",\n  \"endDate\": \"2025-04-17\",\n  \"reason\": \"Family vacation\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get My Leaves",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": "{{baseUrl}}/leave/my"
+          }
+        },
+        {
+          "name": "Get Pending Leaves",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": "{{baseUrl}}/leave/pending"
+          }
+        },
+        {
+          "name": "Approve Leave",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "url": "{{baseUrl}}/leave/:leaveId/approve",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approverNote\": \"Approved. Enjoy your vacation!\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Dashboard KPIs",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": "{{baseUrl}}/analytics/dashboard"
+          }
+        },
+        {
+          "name": "Attendance Trends",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/attendance/trends?year=2025&month=4",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "attendance", "trends"],
+              "query": [
+                {"key": "year", "value": "2025"},
+                {"key": "month", "value": "4"}
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -16,7 +16,10 @@ import {
   TrendingUp,
   Bell,
   BookOpen,
-  Shield
+  Shield,
+  Brain,
+  Zap,
+  Database
 } from 'lucide-react';
 
 const ADMIN_MENU = [
@@ -27,6 +30,9 @@ const ADMIN_MENU = [
   { label: 'Leaves', href: '/dashboard/admin/leaves', icon: CalendarX },
   { label: 'Departments', href: '/dashboard/admin/departments', icon: Users },
   { label: 'Reports', href: '/dashboard/admin/reports', icon: TrendingUp },
+  { label: 'Forecast', href: '/dashboard/admin/forecast', icon: Zap },
+  { label: 'AI Assistant', href: '/dashboard/admin/ai-chat', icon: Brain },
+  { label: 'ETL Pipeline', href: '/dashboard/admin/etl', icon: Database },
   { label: 'Notifications', href: '/dashboard/admin/notifications', icon: Bell },
   { label: 'Logs', href: '/dashboard/admin/logs', icon: BookOpen },
   { label: 'Settings', href: '/dashboard/admin/settings', icon: Settings },
@@ -94,7 +100,7 @@ export default function Sidebar({ role = 'admin' }) {
       </button>
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border transition-all duration-300 ${
+      <aside className={`fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border transition-all duration-300 flex flex-col ${
         isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       } z-40`}>
         {/* Logo */}
@@ -125,7 +131,7 @@ export default function Sidebar({ role = 'admin' }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-4">
+        <nav className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-sidebar-accent scrollbar-track-transparent">
           <ul className="space-y-2">
             {menuItems.map((item) => {
               const Icon = item.icon;

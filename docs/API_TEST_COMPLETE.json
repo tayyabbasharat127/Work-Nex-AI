@@ -1,0 +1,367 @@
+{
+  "baseUrl": "http://localhost:5000/api/v1",
+  "testSequence": [
+    {
+      "module": "Authentication",
+      "tests": [
+        {
+          "name": "1. Register User",
+          "method": "POST",
+          "endpoint": "/auth/register",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "email": "test.employee@worknex.com",
+            "password": "Test@123456",
+            "firstName": "Test",
+            "lastName": "Employee",
+            "employeeId": "EMP-TEST-001",
+            "role": "EMPLOYEE",
+            "designation": "Software Engineer",
+            "phone": "+92-300-1234567"
+          },
+          "expectedStatus": 201,
+          "saveResponse": {
+            "userId": "data.id"
+          }
+        },
+        {
+          "name": "2. Login",
+          "method": "POST",
+          "endpoint": "/auth/login",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "email": "test.employee@worknex.com",
+            "password": "Test@123456"
+          },
+          "expectedStatus": 200,
+          "saveResponse": {
+            "accessToken": "data.accessToken",
+            "refreshToken": "data.refreshToken",
+            "userId": "data.user.id"
+          }
+        },
+        {
+          "name": "3. Refresh Token",
+          "method": "POST",
+          "endpoint": "/auth/refresh-token",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "refreshToken": "{{refreshToken}}"
+          },
+          "expectedStatus": 200
+        }
+      ]
+    },
+    {
+      "module": "Users",
+      "tests": [
+        {
+          "name": "1. Get My Profile",
+          "method": "GET",
+          "endpoint": "/users/me",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}"
+          },
+          "expectedStatus": 200
+        },
+        {
+          "name": "2. Update My Profile",
+          "method": "PUT",
+          "endpoint": "/users/me",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "phone": "+92-300-9999999",
+            "designation": "Senior Software Engineer"
+          },
+          "expectedStatus": 200
+        },
+        {
+          "name": "3. Get All Departments",
+          "method": "GET",
+          "endpoint": "/users/departments/all",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}"
+          },
+          "expectedStatus": 200,
+          "saveResponse": {
+            "departmentId": "data[0].id"
+          }
+        }
+      ]
+    },
+    {
+      "module": "Attendance",
+      "tests": [
+        {
+          "name": "1. Check In",
+          "method": "POST",
+          "endpoint": "/attendance/check-in",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "latitude": 24.8607,
+            "longitude": 67.0011
+          },
+          "expectedStatus": 200,
+          "saveResponse": {
+            "attendanceId": "data.id"
+          }
+        },
+        {
+          "name": "2. Get Today's Attendance",
+          "method": "GET",
+          "endpoint": "/attendance/today",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}"
+          },
+          "expectedStatus": 200
+        },
+        {
+          "name": "3. Check Out",
+          "method": "POST",
+          "endpoint": "/attendance/check-out",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}"
+          },
+          "expectedStatus": 200
+        },
+        {
+          "name": "4. Get My Attendance History",
+          "method": "GET",
+          "endpoint": "/attendance/my?month=4&year=2025&page=1&limit=30",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}"
+          },
+          "expectedStatus": 200
+        },
+        {
+          "name": "5. Get Holidays",
+          "method": "GET",
+          "endpoint": "/attendance/holidays",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}"
+          },
+          "expectedStatus": 200
+        }
+      ]
+    },
+    {
+      "module": "Leave",
+      "tests": [
+        {
+          "name": "1. Get Leave Policies",
+          "method": "GET",
+          "endpoint": "/leave/policies/all",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}"
+          },
+          "expectedStatus": 200
+        },
+        {
+          "name": "2. Get My Leave Balances",
+          "method": "GET",
+          "endpoint": "/leave/balances/me",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}"
+          },
+          "expectedStatus": 200
+        },
+        {
+          "name": "3. Apply for Leave",
+          "method": "POST",
+          "endpoint": "/leave",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "leaveType": "ANNUAL",
+            "startDate": "2025-04-20",
+            "endDate": "2025-04-22",
+            "reason": "Family vacation - API test"
+          },
+          "expectedStatus": 201,
+          "saveResponse": {
+            "leaveId": "data.id"
+          }
+        },
+        {
+          "name": "4. Get My Leaves",
+          "method": "GET",
+          "endpoint": "/leave/my",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}"
+          },
+          "expectedStatus": 200
+        }
+      ]
+    },
+    {
+      "module": "Performance",
+      "tests": [
+        {
+          "name": "1. Get My Performance",
+          "method": "GET",
+          "endpoint": "/performance/me?month=4&year=2025",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}"
+          },
+          "expectedStatus": 200
+        }
+      ]
+    },
+    {
+      "module": "Notifications",
+      "tests": [
+        {
+          "name": "1. Get My Notifications",
+          "method": "GET",
+          "endpoint": "/notifications?page=1&limit=20",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}"
+          },
+          "expectedStatus": 200
+        },
+        {
+          "name": "2. Get Unread Count",
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}"
+          },
+          "expectedStatus": 200
+        }
+      ]
+    },
+    {
+      "module": "Analytics",
+      "tests": [
+        {
+          "name": "1. Dashboard KPIs",
+          "method": "GET",
+          "endpoint": "/analytics/dashboard",
+          "headers": {
+            "Authorization": "Bearer {{accessToken}}"
+          },
+          "expectedStatus": 200,
+          "note": "Requires ADMIN/MANAGER role"
+        }
+      ]
+    },
+    {
+      "module": "Billing",
+      "tests": [
+        {
+          "name": "1. Get Plans (Public)",
+          "method": "GET",
+          "endpoint": "/billing/plans",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "expectedStatus": 200
+        }
+      ]
+    }
+  ],
+  "adminTests": {
+    "note": "These tests require ADMIN or SUPER_ADMIN role",
+    "tests": [
+      {
+        "name": "Create User (Admin)",
+        "method": "POST",
+        "endpoint": "/users",
+        "headers": {
+          "Authorization": "Bearer {{adminToken}}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "new.user@worknex.com",
+          "employeeId": "EMP-NEW-001",
+          "firstName": "New",
+          "lastName": "User",
+          "role": "EMPLOYEE",
+          "departmentId": "{{departmentId}}",
+          "password": "TempPass@123"
+        },
+        "expectedStatus": 201
+      },
+      {
+        "name": "Get All Users (Admin)",
+        "method": "GET",
+        "endpoint": "/users?page=1&limit=10",
+        "headers": {
+          "Authorization": "Bearer {{adminToken}}"
+        },
+        "expectedStatus": 200
+      },
+      {
+        "name": "Manual Attendance Entry (Admin)",
+        "method": "POST",
+        "endpoint": "/attendance/manual",
+        "headers": {
+          "Authorization": "Bearer {{adminToken}}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "userId": "{{userId}}",
+          "date": "2025-04-09",
+          "checkIn": "2025-04-09T09:00:00.000Z",
+          "checkOut": "2025-04-09T18:00:00.000Z",
+          "status": "PRESENT",
+          "notes": "Manual entry by admin"
+        },
+        "expectedStatus": 200
+      },
+      {
+        "name": "Create Holiday (Admin)",
+        "method": "POST",
+        "endpoint": "/attendance/holidays",
+        "headers": {
+          "Authorization": "Bearer {{adminToken}}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "Test Holiday",
+          "date": "2025-05-01",
+          "description": "Labour Day",
+          "isRecurring": true
+        },
+        "expectedStatus": 201
+      },
+      {
+        "name": "Run ETL (Admin)",
+        "method": "POST",
+        "endpoint": "/analytics/etl/run",
+        "headers": {
+          "Authorization": "Bearer {{adminToken}}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "month": 4,
+          "year": 2025
+        },
+        "expectedStatus": 200
+      },
+      {
+        "name": "Get ETL Logs (Admin)",
+        "method": "GET",
+        "endpoint": "/analytics/etl/logs",
+        "headers": {
+          "Authorization": "Bearer {{adminToken}}"
+        },
+        "expectedStatus": 200
+      }
+    ]
+  }
+}

@@ -1,0 +1,335 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "darwin-arm64"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Department {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
+}
+
+model User {
+  id             String              @id @default(uuid())
+  employeeId     String              @unique
+  firstName      String
+  lastName       String
+  email          String              @unique
+  passwordHash   String
+  role           Role                @default(EMPLOYEE)
+  departmentId   String?
+  managerId      String?
+  designation    String?
+  joiningDate    DateTime?
+  isActive       Boolean             @default(true)
+  twoFAEnabled   Boolean             @default(false)
+  twoFASecret    String?
+  profilePicture String?
+  phone          String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  attendance     Attendance[]
+  auditLogs      AuditLog[]
+  leaveBalances  LeaveBalance[]
+  approvedLeaves LeaveRequest[]      @relation("ApproverLeaves")
+  leaveRequests  LeaveRequest[]      @relation("EmployeeLeaves")
+  notifications  Notification[]
+  performance    PerformanceRecord[]
+  refreshTokens  RefreshToken[]
+  department     Department?         @relation(fields: [departmentId], references: [id])
+  manager        User?               @relation("ManagerSubordinates", fields: [managerId], references: [id])
+  subordinates   User[]              @relation("ManagerSubordinates")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LeavePolicy {
+  id              String         @id @default(uuid())
+  leaveType       LeaveType
+  totalDays       Int
+  carryForward    Boolean        @default(false)
+  maxCarryForward Int            @default(0)
+  applicableRoles Role[]
+  description     String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  leaveBalances   LeaveBalance[]
+}
+
+model LeaveBalance {
+  id            String      @id @default(uuid())
+  userId        String
+  policyId      String
+  year          Int
+  totalDays     Int
+  usedDays      Int         @default(0)
+  remainingDays Int
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  policy        LeavePolicy @relation(fields: [policyId], references: [id])
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, policyId, year])
+}
+
+model LeaveRequest {
+  id           String      @id @default(uuid())
+  employeeId   String
+  approverId   String?
+  leaveType    LeaveType
+  startDate    DateTime
+  endDate      DateTime
+  totalDays    Int
+  reason       String
+  status       LeaveStatus @default(PENDING)
+  approverNote String?
+  appliedAt    DateTime    @default(now())
+  reviewedAt   DateTime?
+  updatedAt    DateTime    @updatedAt
+  approver     User?       @relation("ApproverLeaves", fields: [approverId], references: [id])
+  employee     User        @relation("EmployeeLeaves", fields: [employeeId], references: [id])
+}
+
+model Attendance {
+  id           String           @id @default(uuid())
+  userId       String
+  date         DateTime         @db.Date
+  checkIn      DateTime?
+  checkOut     DateTime?
+  status       AttendanceStatus @default(PRESENT)
+  workingHours Float?
+  source       String           @default("MANUAL")
+  latitude     Float?
+  longitude    Float?
+  ipAddress    String?
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([ipAddress])
+}
+
+model Holiday {
+  id          String   @id @default(uuid())
+  name        String
+  date        DateTime @db.Date
+  description String?
+  isRecurring Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PerformanceRecord {
+  id              String   @id @default(uuid())
+  userId          String
+  month           Int
+  year            Int
+  presentDays     Int      @default(0)
+  absentDays      Int      @default(0)
+  lateDays        Int      @default(0)
+  leaveDays       Int      @default(0)
+  avgWorkingHours Float    @default(0)
+  attendanceScore Float    @default(0)
+  leaveScore      Float    @default(0)
+  overallScore    Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month, year])
+}
+
+model EtlSyncLog {
+  id          String    @id @default(uuid())
+  source      String
+  status      String
+  recordsIn   Int       @default(0)
+  recordsOut  Int       @default(0)
+  errorLog    String?
+  startedAt   DateTime
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Organization {
+  id           String        @id @default(uuid())
+  name         String
+  slug         String        @unique
+  industry     String?
+  country      String        @default("Pakistan")
+  logoUrl      String?
+  address      String?
+  website      String?
+  phone        String?
+  ownerId      String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  invoices     Invoice[]
+  subscription Subscription?
+}
+
+model Subscription {
+  id                 String             @id @default(uuid())
+  organizationId     String             @unique
+  plan               PlanType           @default(TRIAL)
+  status             SubscriptionStatus @default(TRIAL)
+  billingCycle       BillingCycle       @default(MONTHLY)
+  maxEmployees       Int                @default(25)
+  pricePerMonth      Float
+  discountPercent    Float              @default(0)
+  trialEndsAt        DateTime?
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelledAt        DateTime?
+  licenseKey         String             @unique
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  invoices           Invoice[]
+  organization       Organization       @relation(fields: [organizationId], references: [id])
+}
+
+model Invoice {
+  id               String        @id @default(uuid())
+  organizationId   String
+  subscriptionId   String?
+  invoiceNumber    String        @unique
+  plan             PlanType
+  billingCycle     BillingCycle
+  amount           Float
+  discount         Float         @default(0)
+  tax              Float         @default(0)
+  totalAmount      Float
+  status           PaymentStatus @default(PENDING)
+  paymentMethod    String?
+  paymentReference String?
+  paidAt           DateTime?
+  dueDate          DateTime
+  periodStart      DateTime
+  periodEnd        DateTime
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  organization     Organization  @relation(fields: [organizationId], references: [id])
+  subscription     Subscription? @relation(fields: [subscriptionId], references: [id])
+}
+
+model AuditLog {
+  id        String      @id @default(uuid())
+  userId    String?
+  action    AuditAction
+  entity    String
+  entityId  String?
+  oldValues Json?
+  newValues Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime    @default(now())
+  user      User?       @relation(fields: [userId], references: [id])
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  CASUAL
+  MATERNITY
+  PATERNITY
+  UNPAID
+  OTHER
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALF_DAY
+  ON_LEAVE
+  HOLIDAY
+}
+
+enum NotificationType {
+  LEAVE_APPLIED
+  LEAVE_APPROVED
+  LEAVE_REJECTED
+  ATTENDANCE_ALERT
+  SYSTEM
+  REMINDER
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  APPROVE
+  REJECT
+}
+
+enum PlanType {
+  TRIAL
+  STARTER
+  GROWTH
+  BUSINESS
+  ENTERPRISE
+}
+
+enum BillingCycle {
+  MONTHLY
+  ANNUAL
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIAL
+  EXPIRED
+  CANCELLED
+  SUSPENDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}

@@ -1,5 +1,4 @@
 @import 'tailwindcss';
-@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -88,8 +87,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback';
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-sans: 'Poppins', 'system-ui', sans-serif;
+  --font-mono: 'Poppins', 'system-ui', sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -134,5 +133,10 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 18px;
+    line-height: 1.6;
+  }
+  html {
+    font-size: 18px;
   }
 }

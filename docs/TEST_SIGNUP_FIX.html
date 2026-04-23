@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Signup Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .test-section { background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        button { background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #2563eb; }
+        .result { margin-top: 15px; padding: 15px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; }
+        .success { background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
+        .error { background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
+        input { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
+        label { display: block; margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Signup Fix</h1>
+    <p>This page tests if the <code>authAPI.signup</code> function is working correctly.</p>
+
+    <!-- Test 1: Organization Registration -->
+    <div class="test-section">
+        <h2>Test 1: Organization Registration</h2>
+        <p>Tests the full organization registration flow (billing + user creation)</p>
+        
+        <label>Organization Name:</label>
+        <input type="text" id="orgName" value="Test Company Inc" />
+        
+        <label>Admin Name:</label>
+        <input type="text" id="adminName" value="John Doe" />
+        
+        <label>Admin Email:</label>
+        <input type="email" id="adminEmail" value="admin@testcompany.com" />
+        
+        <label>Password:</label>
+        <input type="password" id="password" value="Test@123456" />
+        
+        <label>Industry:</label>
+        <input type="text" id="industry" value="Technology" />
+        
+        <label>Country:</label>
+        <input type="text" id="country" value="Pakistan" />
+        
+        <button onclick="testOrgRegistration()">Test Organization Registration</button>
+        <div id="result1" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Test 2: Employee Registration -->
+    <div class="test-section">
+        <h2>Test 2: Employee Registration</h2>
+        <p>Tests employee registration (direct user creation)</p>
+        
+        <label>Email:</label>
+        <input type="email" id="empEmail" value="employee@testcompany.com" />
+        
+        <label>Password:</label>
+        <input type="password" id="empPassword" value="Test@123456" />
+        
+        <label>First Name:</label>
+        <input type="text" id="firstName" value="Jane" />
+        
+        <label>Last Name:</label>
+        <input type="text" id="lastName" value="Smith" />
+        
+        <label>Employee ID:</label>
+        <input type="text" id="employeeId" value="EMP-001" />
+        
+        <button onclick="testEmployeeRegistration()">Test Employee Registration</button>
+        <div id="result2" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Test 3: Check if signup function exists -->
+    <div class="test-section">
+        <h2>Test 3: Function Existence Check</h2>
+        <p>Verifies that authAPI.signup is defined and callable</p>
+        <button onclick="testFunctionExists()">Check Function</button>
+        <div id="result3" class="result" style="display: none;"></div>
+    </div>
+
+    <script type="module">
+        // Import the API
+        import { authAPI } from './frontend/lib/api.js';
+        
+        // Make it available globally for testing
+        window.authAPI = authAPI;
+        
+        console.log('authAPI loaded:', authAPI);
+        console.log('authAPI.signup exists:', typeof authAPI.signup);
+    </script>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api/v1';
+
+        async function testOrgRegistration() {
+            const resultDiv = document.getElementById('result1');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = '⏳ Testing organization registration...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/billing/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        orgName: document.getElementById('orgName').value,
+                        ownerEmail: document.getElementById('adminEmail').value,
+                        ownerFirstName: document.getElementById('adminName').value.split(' ')[0],
+                        ownerLastName: document.getElementById('adminName').value.split(' ').slice(1).join(' ') || 'User',
+                        industry: document.getElementById('industry').value,
+                        country: document.getElementById('country').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Now try to create user
+                    const userResponse = await fetch(`${API_BASE_URL}/auth/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: document.getElementById('adminEmail').value,
+                            password: document.getElementById('password').value,
+                            firstName: document.getElementById('adminName').value.split(' ')[0],
+                            lastName: document.getElementById('adminName').value.split(' ').slice(1).join(' ') || 'User',
+                            employeeId: 'ADMIN-001',
+                            role: 'SUPER_ADMIN'
+                        })
+                    });
+
+                    const userData = await userResponse.json();
+
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ SUCCESS!\n\nOrganization Response:\n${JSON.stringify(data, null, 2)}\n\nUser Response:\n${JSON.stringify(userData, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ FAILED\n\nStatus: ${response.status}\nResponse:\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ ERROR\n\n${error.message}`;
+            }
+        }
+
+        async function testEmployeeRegistration() {
+            const resultDiv = document.getElementById('result2');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = '⏳ Testing employee registration...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('empEmail').value,
+                        password: document.getElementById('empPassword').value,
+                        firstName: document.getElementById('firstName').value,
+                        lastName: document.getElementById('lastName').value,
+                        employeeId: document.getElementById('employeeId').value,
+                        role: 'EMPLOYEE'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ SUCCESS!\n\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ FAILED\n\nStatus: ${response.status}\nResponse:\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ ERROR\n\n${error.message}`;
+            }
+        }
+
+        function testFunctionExists() {
+            const resultDiv = document.getElementById('result3');
+            resultDiv.style.display = 'block';
+
+            if (typeof window.authAPI !== 'undefined') {
+                if (typeof window.authAPI.signup === 'function') {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ SUCCESS!\n\nauthAPI.signup is defined and is a function.\n\nType: ${typeof window.authAPI.signup}\nFunction: ${window.authAPI.signup.toString().substring(0, 200)}...`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ FAILED\n\nauthAPI.signup exists but is not a function.\nType: ${typeof window.authAPI.signup}`;
+                }
+            } else {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ FAILED\n\nauthAPI is not loaded. Make sure the module is imported correctly.`;
+            }
+        }
+    </script>
+</body>
+</html>

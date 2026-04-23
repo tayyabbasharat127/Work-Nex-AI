@@ -27,7 +27,15 @@ export default function EmployeeAttendance() {
 
   useEffect(() => {
     if (todayStatus) {
-      setIsCheckedIn(todayStatus.checkIn && !todayStatus.checkOut);
+      console.log('Today status updated:', todayStatus);
+      console.log('checkIn:', todayStatus.checkIn);
+      console.log('checkOut:', todayStatus.checkOut);
+      const checkedIn = todayStatus.checkIn && !todayStatus.checkOut;
+      console.log('Is checked in:', checkedIn);
+      setIsCheckedIn(checkedIn);
+    } else {
+      console.log('No today status');
+      setIsCheckedIn(false);
     }
   }, [todayStatus]);
 
@@ -181,6 +189,7 @@ export default function EmployeeAttendance() {
                       <th className="text-left py-3 px-4 font-semibold">Check In</th>
                       <th className="text-left py-3 px-4 font-semibold">Check Out</th>
                       <th className="text-left py-3 px-4 font-semibold">Work Hours</th>
+                      <th className="text-left py-3 px-4 font-semibold">IP Address</th>
                       <th className="text-left py-3 px-4 font-semibold">Status</th>
                     </tr>
                   </thead>
@@ -191,6 +200,9 @@ export default function EmployeeAttendance() {
                         <td className="py-4 px-4 text-muted-foreground">{formatTime(record.checkIn || record.check_in)}</td>
                         <td className="py-4 px-4 text-muted-foreground">{formatTime(record.checkOut || record.check_out)}</td>
                         <td className="py-4 px-4 font-medium">{calculateHours(record.checkIn || record.check_in, record.checkOut || record.check_out)}</td>
+                        <td className="py-4 px-4 text-muted-foreground text-xs font-mono">
+                          {record.ipAddress || '---'}
+                        </td>
                         <td className="py-4 px-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                             record.status === 'Present' ? 'bg-success/20 text-success' :

@@ -10,19 +10,21 @@ export default function RegisterPage() {
   const router = useRouter();
   const { signup } = useAuth();
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
+    admin_name: '',
+    admin_email: '',
     password: '',
     confirmPassword: '',
-    companyName: '',
-    employeeCount: ''
+    organization_name: '',
+    subscription_plan: 'Pro',
+    industry: '',
+    company_domain: '',
+    city: '',
+    country: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showOTPModal, setShowOTPModal] = useState(false);
-  const [otp, setOtp] = useState('');
 
   const passwordRequirements = [
     { label: 'At least 8 characters', met: formData.password.length >= 8 },
@@ -46,8 +48,8 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
-        setError('Please fill in all fields');
+      if (!formData.admin_name || !formData.admin_email || !formData.password || !formData.confirmPassword || !formData.organization_name || !formData.industry || !formData.company_domain || !formData.city || !formData.country) {
+        setError('Please fill in all required fields');
         return;
       }
 
@@ -62,16 +64,21 @@ export default function RegisterPage() {
       }
 
       // Call signup API with correct field names
-      await signup({
-        admin_name: formData.fullName,
-        admin_email: formData.email,
+      const response = await signup({
+        organization_name: formData.organization_name,
+        admin_name: formData.admin_name,
+        admin_email: formData.admin_email,
         password: formData.password,
-        organization_name: formData.companyName || 'My Organization',
-        subscription_plan: 'Basic'
+        subscription_plan: formData.subscription_plan,
+        industry: formData.industry,
+        company_domain: formData.company_domain,
+        city: formData.city,
+        country: formData.country
       });
 
-      // Show OTP verification modal
-      setShowOTPModal(true);
+      // Registration successful - redirect to login
+      alert('Registration successful! You can now login with your credentials.');
+      router.push('/login');
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');
     } finally {
@@ -79,23 +86,7 @@ export default function RegisterPage() {
     }
   };
 
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
 
-    try {
-      const { authAPI } = await import('@/lib/api');
-      await authAPI.verifyOTP(formData.email, otp);
-      
-      // Redirect to login after successful verification
-      router.push('/login?verified=true');
-    } catch (err) {
-      setError(err.message || 'OTP verification failed');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-card flex items-center justify-center px-4 py-8">
@@ -120,28 +111,28 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {/* Full Name */}
+          {/* Admin Name */}
           <div>
             <label className="block text-sm font-medium mb-2">Full Name</label>
             <input
               type="text"
-              name="fullName"
-              value={formData.fullName}
+              name="admin_name"
+              value={formData.admin_name}
               onChange={handleChange}
               placeholder="John Doe"
               className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
             />
           </div>
 
-          {/* Email */}
+          {/* Admin Email */}
           <div>
             <label className="block text-sm font-medium mb-2">Email Address</label>
             <input
               type="email"
-              name="email"
-              value={formData.email}
+              name="admin_email"
+              value={formData.admin_email}
               onChange={handleChange}
-              placeholder="you@example.com"
+              placeholder="admin@responder.com"
               className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
             />
           </div>
@@ -151,29 +142,78 @@ export default function RegisterPage() {
             <label className="block text-sm font-medium mb-2">Company Name</label>
             <input
               type="text"
-              name="companyName"
-              value={formData.companyName}
+              name="organization_name"
+              value={formData.organization_name}
               onChange={handleChange}
               placeholder="Your Company"
               className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
             />
           </div>
 
-          {/* Employee Count */}
+          {/* Industry */}
           <div>
-            <label className="block text-sm font-medium mb-2">Number of Employees</label>
+            <label className="block text-sm font-medium mb-2">Industry</label>
+            <input
+              type="text"
+              name="industry"
+              value={formData.industry}
+              onChange={handleChange}
+              placeholder="Technology"
+              className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
+            />
+          </div>
+
+          {/* Company Domain */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Company Domain</label>
+            <input
+              type="text"
+              name="company_domain"
+              value={formData.company_domain}
+              onChange={handleChange}
+              placeholder="company.com"
+              className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
+            />
+          </div>
+
+          {/* City */}
+          <div>
+            <label className="block text-sm font-medium mb-2">City</label>
+            <input
+              type="text"
+              name="city"
+              value={formData.city}
+              onChange={handleChange}
+              placeholder="New York"
+              className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
+            />
+          </div>
+
+          {/* Country */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Country</label>
+            <input
+              type="text"
+              name="country"
+              value={formData.country}
+              onChange={handleChange}
+              placeholder="United States"
+              className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
+            />
+          </div>
+
+          {/* Subscription Plan */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Subscription Plan</label>
             <select
-              name="employeeCount"
-              value={formData.employeeCount}
+              name="subscription_plan"
+              value={formData.subscription_plan}
               onChange={handleChange}
               className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
             >
-              <option value="">Select...</option>
-              <option value="1-10">1-10</option>
-              <option value="11-50">11-50</option>
-              <option value="51-200">51-200</option>
-              <option value="201-500">201-500</option>
-              <option value="500+">500+</option>
+              <option value="Basic">Basic</option>
+              <option value="Pro">Pro</option>
+              <option value="Enterprise">Enterprise</option>
             </select>
           </div>
 
@@ -186,7 +226,7 @@ export default function RegisterPage() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="••••••••"
+                placeholder="MyPassword123"
                 className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition pr-10"
               />
               <button
@@ -208,7 +248,7 @@ export default function RegisterPage() {
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                placeholder="••••••••"
+                placeholder="MyPassword123"
                 className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition pr-10"
               />
               <button
@@ -269,54 +309,6 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
-
-      {/* OTP Verification Modal */}
-      {showOTPModal && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <h2 className="text-2xl font-bold mb-2">Verify Your Email</h2>
-            <p className="text-muted-foreground mb-6">
-              We've sent a verification code to {formData.email}
-            </p>
-            
-            {error && (
-              <div className="p-4 rounded-lg bg-destructive/10 border border-destructive text-destructive text-sm mb-4">
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleVerifyOTP} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Enter OTP</label>
-                <input
-                  type="text"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  placeholder="Enter 6-digit code"
-                  maxLength={6}
-                  className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground text-center text-2xl tracking-widest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || otp.length !== 6}
-                className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Verifying...' : 'Verify Email'}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowOTPModal(false)}
-                className="w-full py-3 rounded-lg border border-border hover:bg-muted transition"
-              >
-                Cancel
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

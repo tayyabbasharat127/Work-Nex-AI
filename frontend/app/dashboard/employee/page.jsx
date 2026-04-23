@@ -18,6 +18,15 @@ export default function EmployeeDashboard() {
     } else {
       setUser(JSON.parse(userData));
     }
+    
+    // Load check-in state from localStorage
+    const savedCheckInState = localStorage.getItem('isCheckedIn');
+    const savedCheckInTime = localStorage.getItem('checkInTime');
+    if (savedCheckInState === 'true' && savedCheckInTime) {
+      setIsCheckedIn(true);
+      setCheckInTime(new Date(savedCheckInTime));
+    }
+    
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
@@ -58,13 +67,20 @@ export default function EmployeeDashboard() {
   ];
 
   const handleCheckIn = () => {
+    const now = new Date();
     setIsCheckedIn(true);
-    setCheckInTime(new Date());
+    setCheckInTime(now);
+    // Persist check-in state
+    localStorage.setItem('isCheckedIn', 'true');
+    localStorage.setItem('checkInTime', now.toISOString());
   };
 
   const handleCheckOut = () => {
     setIsCheckedIn(false);
     setCheckInTime(null);
+    // Clear check-in state
+    localStorage.removeItem('isCheckedIn');
+    localStorage.removeItem('checkInTime');
   };
 
   const CustomTooltip = ({ active, payload, label }) => {

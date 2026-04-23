@@ -12,7 +12,7 @@ export function useLeaves() {
       setError(null);
       console.log('Fetching my leaves...');
       
-      const data = await leaveAPI.getMyLeaves();
+      const data = await leaveAPI.getMy(); // Fixed: was getMyLeaves
       console.log('Raw API response:', data);
       
       // Handle different response formats
@@ -36,7 +36,7 @@ export function useLeaves() {
     try {
       setLoading(true);
       setError(null);
-      const data = await leaveAPI.getAllLeaves(params);
+      const data = await leaveAPI.getAll(params); // Fixed: was getAllLeaves
       // Handle different response formats
       const leavesData = Array.isArray(data) ? data : (data?.leaves || data?.data || []);
       setLeaves(leavesData);
@@ -49,6 +49,23 @@ export function useLeaves() {
       setLoading(false);
     }
   };
+  
+  const fetchPendingLeaves = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await leaveAPI.getPending();
+      const leavesData = Array.isArray(data) ? data : (data?.leaves || data?.data || []);
+      setLeaves(leavesData);
+      return leavesData;
+    } catch (err) {
+      setError(err.message);
+      setLeaves([]);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const createLeave = async (leaveData) => {
     try {
@@ -56,7 +73,7 @@ export function useLeaves() {
       setError(null);
       console.log('Creating leave with data:', leaveData);
       
-      const data = await leaveAPI.create(leaveData);
+      const data = await leaveAPI.apply(leaveData); // Fixed: was create
       console.log('Leave created, response:', data);
       
       // Refresh leaves
@@ -74,12 +91,21 @@ export function useLeaves() {
     }
   };
 
-  const updateLeaveStatus = async (leaveId, status, remarks) => {
+  const updateLeaveStatus = async (leaveId, status, remarks = '') => {
     try {
       setLoading(true);
       setError(null);
-      const data = await leaveAPI.updateStatus(leaveId, status, remarks);
-      await fetchAllLeaves(); // Refresh leaves
+      
+      let data;
+      if (status === 'Approved' || status === 'APPROVED') {
+        data = await leaveAPI.approve(leaveId, remarks);
+      } else if (status === 'Rejected' || status === 'REJECTED') {
+        data = await leaveAPI.reject(leaveId, remarks);
+      } else {
+        throw new Error('Invalid status');
+      }
+      
+      await fetchPendingLeaves(); // Refresh pending leaves for managers
       return data;
     } catch (err) {
       setError(err.message);
@@ -89,11 +115,11 @@ export function useLeaves() {
     }
   };
 
-  const deleteLeave = async (leaveId) => {
+  const cancelLeave = async (leaveId) => {
     try {
       setLoading(true);
       setError(null);
-      await leaveAPI.delete(leaveId);
+      await leaveAPI.cancel(leaveId);
       await fetchMyLeaves(); // Refresh leaves
     } catch (err) {
       setError(err.message);
@@ -109,8 +135,9 @@ export function useLeaves() {
     error,
     fetchMyLeaves,
     fetchAllLeaves,
+    fetchPendingLeaves,
     createLeave,
     updateLeaveStatus,
-    deleteLeave,
+    cancelLeave,
   };
 }

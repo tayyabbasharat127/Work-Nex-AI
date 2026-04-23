@@ -1,0 +1,57 @@
+# ============================================
+# WorkNex Backend - .gitignore
+# ============================================
+
+# ─── Node.js ──────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# ─── Environment Variables ────────────────────
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+*.env
+
+# ─── Database ─────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+prisma/migrations/*_backup/
+
+# ─── Logs ─────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+
+# ─── Build Output ─────────────────────────────
+dist/
+build/
+
+# ─── Security & Secrets ───────────────────────
+gcp-key.json
+service-account.json
+*.pem
+*.key
+*.cert
+
+# ─── OS Files ─────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── IDE ──────────────────────────────────────
+.vscode/
+.idea/
+
+# ─── Testing ──────────────────────────────────
+coverage/
+.nyc_output/
+
+# ─── Temporary Files ──────────────────────────
+tmp/
+temp/
+*.tmp

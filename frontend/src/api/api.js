@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1",
   headers: { "Content-Type": "application/json" },
   // withCredentials: true, // enable ONLY if backend uses cookies/sessions
 });
@@ -44,45 +44,45 @@ api.interceptors.response.use(
 
 // Authentication
 export const signupApi = (payload) =>
-  api.post("/api/auth/signup", payload);
+  api.post("/auth/register", payload);
 export const loginApi = (payload) =>
-  api.post("/api/auth/login", payload);
+  api.post("/auth/login", payload);
+export const superAdminLoginApi = (payload) =>
+  api.post("/auth/login", payload); // Same endpoint, role determined by credentials
 export const forgotPasswordApi = (payload) =>
-  api.post("/api/auth/forgot-password", payload);
+  api.post("/auth/forgot-password", payload);
 export const verifyOtpApi = (payload) =>
-  api.post("/api/auth/verify-otp", payload);
+  api.post("/auth/verify-otp", payload);
 export const resetPasswordApi = (payload) =>
-  api.post("/api/auth/reset-password", payload);
+  api.post("/auth/reset-password", payload);
 export const changePasswordApi = (payload) =>
-  api.post("/api/auth/changePassword", payload);
+  api.post("/auth/change-password", payload);
 
 // Admin Users CRUD
-// Create user API Admin
-export const createUserApi = (payload) => api.post("/api/users/createuser", payload);
-export const getUserApi = (params = {}) => api.get("/api/users/getuser", { params });
+export const createUserApi = (payload) => api.post("/users", payload);
+export const getUserApi = (params = {}) => api.get("/users", { params });
 export const updateUserApi = (id, payload) =>
-  api.put(`/api/users/users/${id}`, payload);
-export const deleteUserApi = (id) => api.delete(`/api/users/users/${id}`);
+  api.put(`/users/${id}`, payload);
+export const deleteUserApi = (id) => api.delete(`/users/${id}`);
 
-export const createLeaveApi = (payload) => api.post("/api/leaves", payload);
-
-// Get my leaves (Employee)
-export const getMyLeavesApi = () => api.get("/api/leaves/my");
-
-// Delete my leave (Employee)
-
-
-// POST /api/attendance/check-in
+// Leave APIs (note: backend uses singular "leave" not "leaves")
+export const createLeaveApi = (payload) => api.post("/leave", payload);
+export const getMyLeavesApi = () => api.get("/leave/my");
+export const getAllLeavesApi = () => api.get("/leave");
+export const updateLeaveStatusApi = (leaveId, payload) =>
+  api.put(`/leave/${leaveId}/status`, payload);
+export const deleteLeaveApi = (leaveId) =>
+  api.delete(`/leave/${leaveId}`);
+export const getLeaveBalanceApi = () => api.get("/leave/balance");
+// Attendance APIs
 export const checkInApi = (payload = {}) => {
   console.log("check in clicked", payload);
-  return api.post("/api/attendance/check-in", payload);
+  return api.post("/attendance/check-in", payload);
 };
 
-// POST /api/attendance/check-out
 export const checkOutApi = (payload = {}) =>
-  api.post("/api/attendance/check-out", payload);
+  api.post("/attendance/check-out", payload);
 
-// POST /api/attendance/ping
 export const getDeviceId = () => {
   let id = localStorage.getItem("device_id");
   if (!id) {
@@ -94,63 +94,50 @@ export const getDeviceId = () => {
 
 export const pingApi = (payload = {}) => {
   const deviceId = payload.deviceId || getDeviceId();
-  return api.post("/api/attendance/ping", {
+  return api.post("/attendance/ping", {
     deviceId,
     wifiMacAddress: payload.wifiMacAddress || null
   });
 };
-// GET /api/attendance/today-status
-export const todayStatusApi = () =>
-  api.get("/api/attendance/today-status");
 
-// GET /api/attendance/history?from=2026-01-01&to=2026-01-31&page=1&limit=10
+export const todayStatusApi = () =>
+  api.get("/attendance/today-status");
+
 export const historyApi = (params = {}) =>
-  api.get("/api/attendance/history", { params });
+  api.get("/attendance/history", { params });
 
 export const getAttendanceOverviewApi = (params = {}) =>
-  api.get("/api/attendance/overview", { params });
+  api.get("/attendance/overview", { params });
 
-export const getAllLeavesApi = () => api.get("/api/leaves");
-// OR if your backend route is different, match it exactly (examples below)
+export const manualMarkAttendanceApi = (payload) => 
+  api.post("/attendance/manual-mark", payload);
 
-// 2) PUT update leave status
-export const updateLeaveStatusApi = (leaveId, payload) =>
-  api.put(`/api/leaves/${leaveId}/status`, payload);
+export const adjustAttendanceApi = (payload) => 
+  api.put("/attendance/adjust", payload);
 
-// 3) DELETE leave
-export const deleteLeaveApi = (leaveId) =>
-  api.delete(`/api/leaves/${leaveId}`);
-
-// Leave Balance API
-export const getLeaveBalanceApi = () => api.get("/api/leaves/balance");
-
-// Department Management APIs
-export const getAllDepartmentsApi = () => api.get("/api/departments");
-export const createDepartmentApi = (payload) => api.post("/api/departments", payload);
-export const updateDepartmentApi = (id, payload) => api.put(`/api/departments/${id}`, payload);
-export const deleteDepartmentApi = (id) => api.delete(`/api/departments/${id}`);
+// Department APIs (in users module)
+export const getAllDepartmentsApi = () => api.get("/users/departments/all");
+export const createDepartmentApi = (payload) => api.post("/users/departments", payload);
+export const getUsersByDepartmentApi = (deptId) => api.get(`/users/department/${deptId}`);
 
 // Notification APIs
-export const getNotificationsApi = (params = {}) => api.get("/api/notifications", { params });
-export const sendNotificationApi = (payload) => api.post("/api/notifications/send", payload);
-export const markNotificationReadApi = (id) => api.put(`/api/notifications/read/${id}`);
+export const getNotificationsApi = (params = {}) => api.get("/notifications", { params });
+export const sendNotificationApi = (payload) => api.post("/notifications/send", payload);
+export const markNotificationReadApi = (id) => api.put(`/notifications/${id}/read`);
 
 // Analytics APIs
-export const getKPIsApi = (params = {}) => api.get("/api/analytics/kpis", { params });
-export const getTrendsApi = (params = {}) => api.get("/api/analytics/trends", { params });
-export const getDepartmentAnalyticsApi = () => api.get("/api/analytics/departments");
+export const getKPIsApi = (params = {}) => api.get("/analytics/kpis", { params });
+export const getTrendsApi = (params = {}) => api.get("/analytics/attendance/trends", { params });
+export const getDepartmentAnalyticsApi = () => api.get("/analytics/attendance/department");
+export const getAttendanceHeatmapApi = (params = {}) => api.get("/analytics/attendance/heatmap", { params });
 
-// Reports APIs
-export const generateReportApi = (payload) => api.post("/api/reports/generate", payload);
-export const getReportsApi = () => api.get("/api/reports");
+// Performance APIs
+export const getPerformanceScoresApi = (params = {}) => api.get("/performance/scores", { params });
+export const getLeaderboardApi = (params = {}) => api.get("/performance/leaderboard", { params });
+
+// AI APIs
+export const getChatbotResponseApi = (payload) => api.post("/ai/chatbot", payload);
+export const getLeaveForecastApi = (params = {}) => api.get("/ai/leave-forecast", { params });
+export const getAnomalyDetectionApi = (params = {}) => api.get("/ai/anomaly-detection", { params });
 
 export default api;
-
-
-// Organization Settings APIs
-export const getOrganizationSettingsApi = () => api.get("/api/settings/organization");
-export const updateOrganizationSettingsApi = (payload) => api.put("/api/settings/organization", payload);
-
-// Manual Attendance APIs
-export const manualMarkAttendanceApi = (payload) => api.post("/api/attendance/manual-mark", payload);
-export const adjustAttendanceApi = (payload) => api.put("/api/attendance/adjust", payload);

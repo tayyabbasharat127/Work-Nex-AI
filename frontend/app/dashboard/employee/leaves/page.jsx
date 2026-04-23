@@ -8,12 +8,12 @@ import { formatDate } from '@/lib/helpers';
 import { toast } from 'sonner';
 
 export default function EmployeeLeaves() {
-  const { leaves, loading, fetchMyLeaves, createLeave, deleteLeave } = useLeaves();
+  const { leaves, loading, fetchMyLeaves, createLeave, cancelLeave } = useLeaves();
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     startDate: '',
     endDate: '',
-    type: 'Annual',
+    type: 'ANNUAL', // Changed to uppercase to match backend enum
     reason: ''
   });
 
@@ -32,17 +32,25 @@ export default function EmployeeLeaves() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validate dates
+    if (!formData.startDate || !formData.endDate) {
+      toast.error('Please select both start and end dates');
+      return;
+    }
+    
+    const startDate = new Date(formData.startDate);
+    const endDate = new Date(formData.endDate);
+    
+    if (endDate < startDate) {
+      toast.error('End date cannot be before start date');
+      return;
+    }
+    
     // Check if user is logged in
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('token');
       if (!token) {
-        toast.error('Please login first to apply for leave', {
-          description: 'You need to be logged in to perform this action',
-          action: {
-            label: 'Login',
-            onClick: () => window.location.href = '/login'
-          }
-        });
+        toast.error('Please login first to apply for leave');
         return;
       }
     }
@@ -50,18 +58,23 @@ export default function EmployeeLeaves() {
     try {
       console.log('Submitting leave:', formData);
       
-      const result = await createLeave({
-        start_date: formData.startDate,
-        end_date: formData.endDate,
-        leave_type: formData.type,
+      // Transform data to match backend expectations
+      const leaveData = {
+        leaveType: formData.type.toUpperCase(), // Convert to uppercase enum
+        startDate: formData.startDate, // Already in YYYY-MM-DD format from date input
+        endDate: formData.endDate,
         reason: formData.reason
-      });
+      };
+      
+      console.log('Transformed leave data:', leaveData);
+      
+      const result = await createLeave(leaveData);
       
       console.log('Leave created:', result);
       
       toast.success('Leave application submitted successfully');
       setShowModal(false);
-      setFormData({ startDate: '', endDate: '', type: 'Annual', reason: '' });
+      setFormData({ startDate: '', endDate: '', type: 'ANNUAL', reason: '' });
       
       // Force reload the leaves list
       await loadLeaves();
@@ -72,11 +85,7 @@ export default function EmployeeLeaves() {
       // Check if it's an authentication error
       if (errorMessage.includes('token') || errorMessage.includes('unauthorized') || errorMessage.includes('401')) {
         toast.error('Authentication required', {
-          description: 'Please login to apply for leave',
-          action: {
-            label: 'Login',
-            onClick: () => window.location.href = '/login'
-          }
+          description: 'Please login to apply for leave'
         });
       } else {
         toast.error(errorMessage);
@@ -88,7 +97,7 @@ export default function EmployeeLeaves() {
     if (!confirm('Are you sure you want to cancel this leave request?')) return;
     
     try {
-      await deleteLeave(leaveId);
+      await cancelLeave(leaveId); // Fixed: was deleteLeave, now cancelLeave
       toast.success('Leave request cancelled');
     } catch (err) {
       toast.error(err.message || 'Failed to cancel leave');
@@ -149,47 +158,72 @@ export default function EmployeeLeaves() {
               <div className="text-center py-8 text-muted-foreground">No leave requests found</div>
             ) : (
               <div className="space-y-4">
-                {leavesArray.map((leave) => (
-                  <div key={leave.id} className="p-6 border border-border rounded-lg hover:border-primary transition">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="font-semibold">{leave.leave_type || leave.type}</h3>
-                        <p className="text-sm text-muted-foreground">{leave.reason}</p>
+                {leavesArray.map((leave) => {
+                  // Handle different field name formats from backend
+                  const leaveType = leave.leaveType || leave.leave_type || leave.type || 'N/A';
+                  const startDate = leave.startDate || leave.start_date;
+                  const endDate = leave.endDate || leave.end_date;
+                  const status = leave.status || 'PENDING';
+                  const reason = leave.reason || '';
+                  
+                  return (
+                    <div key={leave.id} className="p-6 border border-border rounded-lg hover:border-primary transition">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="font-semibold capitalize">{leaveType.toLowerCase()}</h3>
+                          <p className="text-sm text-muted-foreground">{reason}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            status === 'APPROVED' || status === 'Approved' ? 'bg-green-500/20 text-green-400' :
+                            status === 'PENDING' || status === 'Pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                            status === 'REJECTED' || status === 'Rejected' ? 'bg-red-500/20 text-red-400' :
+                            'bg-muted/20 text-muted-foreground'
+                          }`}>
+                            {status}
+                          </span>
+                          {(status === 'PENDING' || status === 'Pending') && (
+                            <button
+                              onClick={() => handleDelete(leave.id)}
+                              className="p-2 hover:bg-red-500/10 rounded-lg text-red-400 hover:text-red-300 transition"
+                              title="Cancel leave request"
+                            >
+                              <X size={18} />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          leave.status === 'Approved' ? 'bg-success/20 text-success' :
-                          leave.status === 'Pending' ? 'bg-warning/20 text-warning' :
-                          'bg-destructive/20 text-destructive'
-                        }`}>
-                          {leave.status}
-                        </span>
-                        {leave.status === 'Pending' && (
-                          <button
-                            onClick={() => handleDelete(leave.id)}
-                            className="p-1 hover:bg-destructive/10 rounded text-destructive"
-                          >
-                            <X size={16} />
-                          </button>
-                        )}
+                      <div className="flex gap-6 text-sm">
+                        <div>
+                          <p className="text-muted-foreground mb-1">From</p>
+                          <p className="font-semibold">
+                            {startDate ? new Date(startDate).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric' 
+                            }) : '---'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground mb-1">To</p>
+                          <p className="font-semibold">
+                            {endDate ? new Date(endDate).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric' 
+                            }) : '---'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground mb-1">Days</p>
+                          <p className="font-semibold">
+                            {leave.totalDays || leave.days || calculateDays(startDate, endDate)}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex gap-6 text-sm">
-                      <div>
-                        <p className="text-muted-foreground mb-1">From</p>
-                        <p className="font-semibold">{formatDate(leave.start_date)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground mb-1">To</p>
-                        <p className="font-semibold">{formatDate(leave.end_date)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground mb-1">Days</p>
-                        <p className="font-semibold">{leave.days || calculateDays(leave.start_date, leave.end_date)}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -215,10 +249,13 @@ export default function EmployeeLeaves() {
                     className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
                     required
                   >
-                    <option value="Annual">Annual Leave</option>
-                    <option value="Sick">Sick Leave</option>
-                    <option value="Casual">Casual Leave</option>
-                    <option value="Personal">Personal Leave</option>
+                    <option value="ANNUAL">Annual Leave</option>
+                    <option value="SICK">Sick Leave</option>
+                    <option value="CASUAL">Casual Leave</option>
+                    <option value="MATERNITY">Maternity Leave</option>
+                    <option value="PATERNITY">Paternity Leave</option>
+                    <option value="UNPAID">Unpaid Leave</option>
+                    <option value="OTHER">Other</option>
                   </select>
                 </div>
 
@@ -229,6 +266,7 @@ export default function EmployeeLeaves() {
                       type="date"
                       value={formData.startDate}
                       onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      min={new Date().toISOString().split('T')[0]}
                       className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
                       required
                     />
@@ -239,6 +277,7 @@ export default function EmployeeLeaves() {
                       type="date"
                       value={formData.endDate}
                       onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      min={formData.startDate || new Date().toISOString().split('T')[0]}
                       className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
                       required
                     />

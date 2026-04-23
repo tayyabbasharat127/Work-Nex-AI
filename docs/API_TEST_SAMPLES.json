@@ -1,0 +1,956 @@
+{
+  "baseUrl": "http://localhost:5000/api/v1",
+  "description": "Complete API test samples for WorkNex AI Backend",
+  "testingInstructions": "Replace {{TOKEN}} with actual JWT token after login",
+  
+  "modules": {
+    "1_AUTHENTICATION": {
+      "description": "Test authentication flow first to get tokens",
+      "endpoints": [
+        {
+          "name": "Register User",
+          "method": "POST",
+          "url": "/auth/register",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "email": "test.employee@company.com",
+            "password": "TestPass123!",
+            "firstName": "Test",
+            "lastName": "Employee",
+            "employeeId": "EMP-TEST-001",
+            "role": "EMPLOYEE",
+            "designation": "Software Engineer",
+            "joiningDate": "2025-04-10",
+            "phone": "+92-300-1234567"
+          },
+          "expectedResponse": {
+            "success": true,
+            "message": "User registered successfully",
+            "data": {
+              "id": "uuid",
+              "employeeId": "EMP-TEST-001",
+              "email": "test.employee@company.com"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "method": "POST",
+          "url": "/auth/login",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "email": "test.employee@company.com",
+            "password": "TestPass123!"
+          },
+          "expectedResponse": {
+            "success": true,
+            "message": "Login successful",
+            "data": {
+              "accessToken": "SAVE_THIS_TOKEN",
+              "refreshToken": "SAVE_THIS_TOKEN",
+              "user": {
+                "id": "uuid",
+                "email": "test.employee@company.com",
+                "role": "EMPLOYEE"
+              }
+            }
+          },
+          "note": "SAVE THE accessToken - you'll need it for all other requests!"
+        },
+        {
+          "name": "Refresh Token",
+          "method": "POST",
+          "url": "/auth/refresh-token",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "refreshToken": "{{REFRESH_TOKEN}}"
+          }
+        },
+        {
+          "name": "Change Password",
+          "method": "POST",
+          "url": "/auth/change-password",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{TOKEN}}"
+          },
+          "body": {
+            "oldPassword": "TestPass123!",
+            "newPassword": "NewTestPass456!"
+          }
+        },
+        {
+          "name": "Setup 2FA",
+          "method": "POST",
+          "url": "/auth/2fa/setup",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          },
+          "expectedResponse": {
+            "success": true,
+            "data": {
+              "secret": "BASE32_SECRET",
+              "qrCode": "data:image/png;base64,...",
+              "manualEntryKey": "XXXX-XXXX-XXXX"
+            }
+          }
+        },
+        {
+          "name": "Verify 2FA",
+          "method": "POST",
+          "url": "/auth/2fa/verify",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{TOKEN}}"
+          },
+          "body": {
+            "token": "123456"
+          },
+          "note": "Get token from Google Authenticator app"
+        },
+        {
+          "name": "Forgot Password",
+          "method": "POST",
+          "url": "/auth/forgot-password",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "email": "test.employee@company.com"
+          }
+        },
+        {
+          "name": "Logout",
+          "method": "POST",
+          "url": "/auth/logout",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{TOKEN}}"
+          },
+          "body": {
+            "refreshToken": "{{REFRESH_TOKEN}}"
+          }
+        }
+      ]
+    },
+
+    "2_USER_MANAGEMENT": {
+      "description": "User and department management (requires ADMIN token)",
+      "endpoints": [
+        {
+          "name": "Get My Profile",
+          "method": "GET",
+          "url": "/users/me",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "method": "PUT",
+          "url": "/users/me",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{TOKEN}}"
+          },
+          "body": {
+            "phone": "+92-300-9999999",
+            "designation": "Senior Software Engineer"
+          }
+        },
+        {
+          "name": "Get All Users",
+          "method": "GET",
+          "url": "/users?page=1&limit=10&role=EMPLOYEE",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          },
+          "note": "Requires ADMIN or MANAGER role"
+        },
+        {
+          "name": "Get User By ID",
+          "method": "GET",
+          "url": "/users/{{USER_ID}}",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Create User",
+          "method": "POST",
+          "url": "/users",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          },
+          "body": {
+            "email": "new.user@company.com",
+            "employeeId": "EMP-TEST-002",
+            "firstName": "New",
+            "lastName": "User",
+            "role": "EMPLOYEE",
+            "departmentId": "{{DEPARTMENT_ID}}",
+            "designation": "Junior Developer",
+            "joiningDate": "2025-04-15",
+            "phone": "+92-300-1111111"
+          },
+          "note": "System generates temporary password"
+        },
+        {
+          "name": "Update User",
+          "method": "PUT",
+          "url": "/users/{{USER_ID}}",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          },
+          "body": {
+            "designation": "Senior Developer",
+            "role": "MANAGER"
+          }
+        },
+        {
+          "name": "Deactivate User",
+          "method": "DELETE",
+          "url": "/users/{{USER_ID}}",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          },
+          "note": "Soft delete - sets isActive=false"
+        },
+        {
+          "name": "Get All Departments",
+          "method": "GET",
+          "url": "/users/departments/all",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          }
+        },
+        {
+          "name": "Create Department",
+          "method": "POST",
+          "url": "/users/departments",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          },
+          "body": {
+            "name": "Quality Assurance",
+            "description": "QA and testing team"
+          }
+        },
+        {
+          "name": "Get Users By Department",
+          "method": "GET",
+          "url": "/users/department/{{DEPARTMENT_ID}}",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        }
+      ]
+    },
+
+    "3_ATTENDANCE": {
+      "description": "Attendance tracking and management",
+      "endpoints": [
+        {
+          "name": "Check In",
+          "method": "POST",
+          "url": "/attendance/check-in",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{TOKEN}}"
+          },
+          "body": {
+            "latitude": 24.8607,
+            "longitude": 67.0011
+          },
+          "expectedResponse": {
+            "success": true,
+            "message": "Checked in successfully",
+            "data": {
+              "id": "uuid",
+              "userId": "user-uuid",
+              "date": "2025-04-10",
+              "checkIn": "2025-04-10T09:00:00.000Z",
+              "status": "PRESENT"
+            }
+          }
+        },
+        {
+          "name": "Check Out",
+          "method": "POST",
+          "url": "/attendance/check-out",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          },
+          "expectedResponse": {
+            "success": true,
+            "message": "Checked out successfully",
+            "data": {
+              "checkOut": "2025-04-10T18:00:00.000Z",
+              "workingHours": 9.0
+            }
+          }
+        },
+        {
+          "name": "Get Today's Attendance",
+          "method": "GET",
+          "url": "/attendance/today",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          }
+        },
+        {
+          "name": "Get My Attendance History",
+          "method": "GET",
+          "url": "/attendance/my?month=4&year=2025&page=1&limit=30",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          }
+        },
+        {
+          "name": "Get All Attendance (Admin)",
+          "method": "GET",
+          "url": "/attendance?date=2025-04-10&status=PRESENT&page=1&limit=50",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Get User Attendance",
+          "method": "GET",
+          "url": "/attendance/user/{{USER_ID}}?month=4&year=2025",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Get Attendance Summary",
+          "method": "GET",
+          "url": "/attendance/summary?month=4&year=2025",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Manual Attendance Entry",
+          "method": "POST",
+          "url": "/attendance/manual",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          },
+          "body": {
+            "userId": "{{USER_ID}}",
+            "date": "2025-04-09",
+            "checkIn": "2025-04-09T09:00:00.000Z",
+            "checkOut": "2025-04-09T18:00:00.000Z",
+            "status": "PRESENT",
+            "notes": "Manual entry by admin"
+          }
+        },
+        {
+          "name": "Update Attendance",
+          "method": "PUT",
+          "url": "/attendance/{{ATTENDANCE_ID}}",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          },
+          "body": {
+            "checkOut": "2025-04-10T17:30:00.000Z",
+            "status": "LATE",
+            "notes": "Adjusted by admin"
+          }
+        },
+        {
+          "name": "Sync from TMS",
+          "method": "POST",
+          "url": "/attendance/sync/tms",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          },
+          "body": {
+            "date": "2025-04-10"
+          },
+          "note": "Syncs from biometric system"
+        },
+        {
+          "name": "Get Holidays",
+          "method": "GET",
+          "url": "/attendance/holidays",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          }
+        },
+        {
+          "name": "Create Holiday",
+          "method": "POST",
+          "url": "/attendance/holidays",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          },
+          "body": {
+            "name": "Independence Day",
+            "date": "2025-08-14",
+            "description": "Pakistan Independence Day",
+            "isRecurring": true
+          }
+        }
+      ]
+    },
+
+    "4_LEAVE_MANAGEMENT": {
+      "description": "Leave application and approval workflow",
+      "endpoints": [
+        {
+          "name": "Apply for Leave",
+          "method": "POST",
+          "url": "/leave",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{TOKEN}}"
+          },
+          "body": {
+            "leaveType": "ANNUAL",
+            "startDate": "2025-04-20",
+            "endDate": "2025-04-22",
+            "reason": "Family wedding ceremony"
+          },
+          "expectedResponse": {
+            "success": true,
+            "message": "Leave applied successfully",
+            "data": {
+              "id": "leave-uuid",
+              "leaveType": "ANNUAL",
+              "totalDays": 3,
+              "status": "PENDING"
+            }
+          },
+          "leaveTypes": ["ANNUAL", "SICK", "CASUAL", "MATERNITY", "PATERNITY", "UNPAID", "OTHER"]
+        },
+        {
+          "name": "Get My Leaves",
+          "method": "GET",
+          "url": "/leave/my?status=PENDING&year=2025",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          }
+        },
+        {
+          "name": "Get All Leaves",
+          "method": "GET",
+          "url": "/leave?page=1&limit=20&status=APPROVED",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          }
+        },
+        {
+          "name": "Get Leave By ID",
+          "method": "GET",
+          "url": "/leave/{{LEAVE_ID}}",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          }
+        },
+        {
+          "name": "Get Pending Leaves (Manager)",
+          "method": "GET",
+          "url": "/leave/pending",
+          "headers": {
+            "Authorization": "Bearer {{MANAGER_TOKEN}}"
+          },
+          "note": "Shows leaves pending approval"
+        },
+        {
+          "name": "Approve Leave",
+          "method": "PUT",
+          "url": "/leave/{{LEAVE_ID}}/approve",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{MANAGER_TOKEN}}"
+          },
+          "body": {
+            "approverNote": "Approved. Enjoy your time off!"
+          }
+        },
+        {
+          "name": "Reject Leave",
+          "method": "PUT",
+          "url": "/leave/{{LEAVE_ID}}/reject",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{MANAGER_TOKEN}}"
+          },
+          "body": {
+            "approverNote": "Cannot approve due to project deadline"
+          }
+        },
+        {
+          "name": "Cancel Leave",
+          "method": "PUT",
+          "url": "/leave/{{LEAVE_ID}}/cancel",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          },
+          "note": "Employee can cancel their own pending/approved leaves"
+        },
+        {
+          "name": "Get My Leave Balances",
+          "method": "GET",
+          "url": "/leave/balances/me",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          },
+          "expectedResponse": {
+            "success": true,
+            "data": [
+              {
+                "leaveType": "ANNUAL",
+                "totalDays": 20,
+                "usedDays": 5,
+                "remainingDays": 15
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get User Leave Balances",
+          "method": "GET",
+          "url": "/leave/balances/{{USER_ID}}",
+          "headers": {
+            "Authorization": "Bearer {{MANAGER_TOKEN}}"
+          }
+        },
+        {
+          "name": "Get Leave Policies",
+          "method": "GET",
+          "url": "/leave/policies/all",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          }
+        },
+        {
+          "name": "Create Leave Policy",
+          "method": "POST",
+          "url": "/leave/policies",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          },
+          "body": {
+            "leaveType": "ANNUAL",
+            "totalDays": 20,
+            "carryForward": true,
+            "maxCarryForward": 5,
+            "applicableRoles": ["EMPLOYEE", "MANAGER"],
+            "description": "Annual vacation leave policy"
+          }
+        },
+        {
+          "name": "Update Leave Policy",
+          "method": "PUT",
+          "url": "/leave/policies/{{POLICY_ID}}",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          },
+          "body": {
+            "totalDays": 25,
+            "maxCarryForward": 7
+          }
+        }
+      ]
+    },
+
+    "5_ANALYTICS": {
+      "description": "Analytics and reporting (requires ADMIN/MANAGER token)",
+      "endpoints": [
+        {
+          "name": "Dashboard KPIs",
+          "method": "GET",
+          "url": "/analytics/dashboard",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          },
+          "expectedResponse": {
+            "success": true,
+            "data": {
+              "totalEmployees": 150,
+              "activeToday": 142,
+              "pendingLeaves": 8,
+              "absentToday": 8,
+              "attendanceRate": 94.7
+            }
+          }
+        },
+        {
+          "name": "Attendance Trends",
+          "method": "GET",
+          "url": "/analytics/attendance/trends?year=2025&month=4",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Attendance Heatmap",
+          "method": "GET",
+          "url": "/analytics/attendance/heatmap?userId={{USER_ID}}&year=2025",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Department Attendance",
+          "method": "GET",
+          "url": "/analytics/attendance/department?month=4&year=2025",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Leave Summary",
+          "method": "GET",
+          "url": "/analytics/leave/summary?year=2025",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Leave Trends",
+          "method": "GET",
+          "url": "/analytics/leave/trends?year=2025",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Leave By Type",
+          "method": "GET",
+          "url": "/analytics/leave/by-type?year=2025",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Workforce Headcount",
+          "method": "GET",
+          "url": "/analytics/workforce/headcount",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Turnover Rate",
+          "method": "GET",
+          "url": "/analytics/workforce/turnover?year=2025",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Power BI Token",
+          "method": "GET",
+          "url": "/analytics/powerbi/token",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          },
+          "note": "Requires Power BI configuration in .env"
+        },
+        {
+          "name": "Run ETL",
+          "method": "POST",
+          "url": "/analytics/etl/run",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          },
+          "body": {
+            "month": 4,
+            "year": 2025
+          }
+        },
+        {
+          "name": "Get ETL Logs",
+          "method": "GET",
+          "url": "/analytics/etl/logs",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        }
+      ]
+    },
+
+    "6_PERFORMANCE": {
+      "description": "Performance tracking and leaderboard",
+      "endpoints": [
+        {
+          "name": "Get My Performance",
+          "method": "GET",
+          "url": "/performance/me?month=4&year=2025",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          },
+          "expectedResponse": {
+            "success": true,
+            "data": {
+              "presentDays": 20,
+              "absentDays": 1,
+              "lateDays": 2,
+              "avgWorkingHours": 8.5,
+              "attendanceScore": 95.0,
+              "overallScore": 92.5
+            }
+          }
+        },
+        {
+          "name": "Get User Performance",
+          "method": "GET",
+          "url": "/performance/user/{{USER_ID}}?month=4&year=2025",
+          "headers": {
+            "Authorization": "Bearer {{MANAGER_TOKEN}}"
+          }
+        },
+        {
+          "name": "Get Team Performance",
+          "method": "GET",
+          "url": "/performance/team?month=4&year=2025",
+          "headers": {
+            "Authorization": "Bearer {{MANAGER_TOKEN}}"
+          }
+        },
+        {
+          "name": "Get Leaderboard",
+          "method": "GET",
+          "url": "/performance/leaderboard?month=4&year=2025",
+          "headers": {
+            "Authorization": "Bearer {{MANAGER_TOKEN}}"
+          }
+        }
+      ]
+    },
+
+    "7_NOTIFICATIONS": {
+      "description": "In-app notifications",
+      "endpoints": [
+        {
+          "name": "Get My Notifications",
+          "method": "GET",
+          "url": "/notifications?page=1&limit=20&isRead=false",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "method": "GET",
+          "url": "/notifications/unread-count",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          }
+        },
+        {
+          "name": "Mark as Read",
+          "method": "PUT",
+          "url": "/notifications/{{NOTIFICATION_ID}}/read",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          }
+        },
+        {
+          "name": "Mark All as Read",
+          "method": "PUT",
+          "url": "/notifications/read-all",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          }
+        },
+        {
+          "name": "Delete Notification",
+          "method": "DELETE",
+          "url": "/notifications/{{NOTIFICATION_ID}}",
+          "headers": {
+            "Authorization": "Bearer {{TOKEN}}"
+          }
+        },
+        {
+          "name": "Broadcast Notification",
+          "method": "POST",
+          "url": "/notifications/broadcast",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          },
+          "body": {
+            "title": "System Maintenance",
+            "message": "System will be down for maintenance on April 15",
+            "type": "SYSTEM",
+            "targetRoles": ["EMPLOYEE", "MANAGER"]
+          }
+        }
+      ]
+    },
+
+    "8_AI_SERVICES": {
+      "description": "AI and predictive analytics (requires external AI service)",
+      "endpoints": [
+        {
+          "name": "AI Chatbot",
+          "method": "POST",
+          "url": "/ai/chat",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{TOKEN}}"
+          },
+          "body": {
+            "message": "How many leaves do I have remaining?"
+          },
+          "note": "Requires AI_SERVICE_URL configured in .env"
+        },
+        {
+          "name": "Leave Forecast",
+          "method": "GET",
+          "url": "/ai/predict/leave-forecast?userId={{USER_ID}}&months=3",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Attendance Anomaly Detection",
+          "method": "GET",
+          "url": "/ai/predict/attendance-anomaly?departmentId={{DEPARTMENT_ID}}",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Attrition Risk Prediction",
+          "method": "GET",
+          "url": "/ai/predict/attrition-risk",
+          "headers": {
+            "Authorization": "Bearer {{ADMIN_TOKEN}}"
+          }
+        }
+      ]
+    },
+
+    "9_BILLING": {
+      "description": "Billing and subscription management",
+      "endpoints": [
+        {
+          "name": "Get Plans (Public)",
+          "method": "GET",
+          "url": "/billing/plans",
+          "headers": {},
+          "note": "No authentication required"
+        },
+        {
+          "name": "Register Organization (Public)",
+          "method": "POST",
+          "url": "/billing/register",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "orgName": "TechCorp Solutions",
+            "ownerEmail": "owner@techcorp.com",
+            "ownerFirstName": "Ahmed",
+            "ownerLastName": "Khan",
+            "industry": "Technology",
+            "country": "Pakistan"
+          },
+          "note": "Creates organization with TRIAL plan"
+        },
+        {
+          "name": "Subscribe to Plan",
+          "method": "POST",
+          "url": "/billing/subscribe",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{SUPER_ADMIN_TOKEN}}"
+          },
+          "body": {
+            "organizationId": "{{ORG_ID}}",
+            "planType": "STARTER",
+            "billingCycle": "MONTHLY",
+            "paymentMethod": "credit_card",
+            "paymentReference": "ch_1234567890"
+          }
+        },
+        {
+          "name": "Upgrade Plan",
+          "method": "POST",
+          "url": "/billing/upgrade",
+          "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {{SUPER_ADMIN_TOKEN}}"
+          },
+          "body": {
+            "organizationId": "{{ORG_ID}}",
+            "newPlan": "GROWTH",
+            "billingCycle": "ANNUAL"
+          }
+        },
+        {
+          "name": "Get Subscription",
+          "method": "GET",
+          "url": "/billing/{{ORG_ID}}/subscription",
+          "headers": {
+            "Authorization": "Bearer {{SUPER_ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Get Invoices",
+          "method": "GET",
+          "url": "/billing/{{ORG_ID}}/invoices",
+          "headers": {
+            "Authorization": "Bearer {{SUPER_ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Check Employee Limit",
+          "method": "GET",
+          "url": "/billing/{{ORG_ID}}/employee-limit",
+          "headers": {
+            "Authorization": "Bearer {{SUPER_ADMIN_TOKEN}}"
+          }
+        },
+        {
+          "name": "Cancel Subscription",
+          "method": "POST",
+          "url": "/billing/{{ORG_ID}}/cancel",
+          "headers": {
+            "Authorization": "Bearer {{SUPER_ADMIN_TOKEN}}"
+          }
+        }
+      ]
+    }
+  },
+
+  "testingWorkflow": {
+    "step1": "Start backend: cd worknex-backend && npm run dev",
+    "step2": "Test health: GET http://localhost:5000/health",
+    "step3": "Register user: Use 1_AUTHENTICATION > Register User",
+    "step4": "Login: Use 1_AUTHENTICATION > Login (save the accessToken)",
+    "step5": "Replace {{TOKEN}} with your accessToken in all requests",
+    "step6": "Test each module in order",
+    "step7": "For admin endpoints, login with admin credentials first"
+  },
+
+  "commonErrors": {
+    "401": "Unauthorized - Token missing or invalid",
+    "403": "Forbidden - Insufficient permissions (wrong role)",
+    "404": "Not Found - Resource doesn't exist",
+    "422": "Validation Error - Check request body format",
+    "500": "Server Error - Check backend logs"
+  }
+}

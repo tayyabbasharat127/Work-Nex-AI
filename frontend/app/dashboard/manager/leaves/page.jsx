@@ -7,7 +7,7 @@ import { useLeaves } from '@/hooks/useLeaves';
 import { toast } from 'sonner';
 
 export default function ManagerLeaves() {
-  const { leaves, loading, fetchAllLeaves, updateLeaveStatus } = useLeaves();
+  const { leaves, loading, fetchPendingLeaves, updateLeaveStatus } = useLeaves();
 
   useEffect(() => {
     loadLeaves();
@@ -15,7 +15,7 @@ export default function ManagerLeaves() {
 
   const loadLeaves = async () => {
     try {
-      await fetchAllLeaves();
+      await fetchPendingLeaves(); // Changed to fetch only pending leaves
     } catch (err) {
       toast.error('Failed to load leaves');
     }
@@ -60,54 +60,75 @@ export default function ManagerLeaves() {
           ) : (
             <div className="space-y-4">
               {leavesArray.map((leave) => {
-                const employeeName = leave.user?.name || leave.userName || 'Unknown';
+                // Extract employee name from backend response
+                const employee = leave.employee || {};
+                const employeeName = employee.firstName && employee.lastName 
+                  ? `${employee.firstName} ${employee.lastName}`
+                  : employee.firstName || employee.lastName || 'Unknown';
+                
                 const leaveType = leave.leaveType || leave.type || 'N/A';
                 const startDate = leave.startDate || leave.from || '';
                 const endDate = leave.endDate || leave.to || '';
+                const totalDays = leave.totalDays || leave.days || 0;
+                const reason = leave.reason || '';
+                const status = leave.status || 'PENDING';
                 
                 return (
                   <div key={leave.id} className="bg-card border border-border rounded-lg p-6 hover:border-primary transition">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="font-semibold">{employeeName}</h3>
-                        <p className="text-sm text-muted-foreground">{leaveType}</p>
+                        <p className="text-sm text-muted-foreground capitalize">{leaveType.toLowerCase()}</p>
+                        {reason && <p className="text-sm text-muted-foreground mt-1">{reason}</p>}
                       </div>
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        leave.status === 'Approved' ? 'bg-success/20 text-success' : 
-                        leave.status === 'Rejected' ? 'bg-destructive/20 text-destructive' :
-                        'bg-warning/20 text-warning'
+                        status === 'APPROVED' || status === 'Approved' ? 'bg-green-500/20 text-green-400' : 
+                        status === 'REJECTED' || status === 'Rejected' ? 'bg-red-500/20 text-red-400' :
+                        'bg-yellow-500/20 text-yellow-400'
                       }`}>
-                        {leave.status}
+                        {status}
                       </span>
                     </div>
 
                     <div className="flex gap-6 text-sm mb-6">
                       <div>
                         <p className="text-muted-foreground mb-1">From</p>
-                        <p className="font-semibold">{startDate ? new Date(startDate).toLocaleDateString() : 'N/A'}</p>
+                        <p className="font-semibold">
+                          {startDate ? new Date(startDate).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          }) : 'N/A'}
+                        </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground mb-1">To</p>
-                        <p className="font-semibold">{endDate ? new Date(endDate).toLocaleDateString() : 'N/A'}</p>
+                        <p className="font-semibold">
+                          {endDate ? new Date(endDate).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          }) : 'N/A'}
+                        </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground mb-1">Days</p>
-                        <p className="font-semibold">{leave.days || 'N/A'}</p>
+                        <p className="font-semibold">{totalDays}</p>
                       </div>
                     </div>
 
-                    {leave.status === 'Pending' && (
+                    {(status === 'PENDING' || status === 'Pending') && (
                       <div className="flex gap-3">
                         <button 
                           onClick={() => handleApprove(leave.id)}
-                          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-success/20 text-success hover:bg-success/30 transition font-medium"
+                          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition font-medium"
                         >
                           <Check size={18} />
                           Approve
                         </button>
                         <button 
                           onClick={() => handleReject(leave.id)}
-                          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 transition font-medium"
+                          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition font-medium"
                         >
                           <X size={18} />
                           Reject

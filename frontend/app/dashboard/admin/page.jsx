@@ -1,12 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import { Users, Clock, CalendarX, TrendingUp, AlertCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export default function AdminDashboard() {
   const [user, setUser] = useState(null);
+  const [stats, setStats] = useState({
+    totalEmployees: 0,
+    presentToday: 0,
+    onLeave: 0,
+    attendanceRate: 0
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -14,14 +22,44 @@ export default function AdminDashboard() {
       window.location.href = '/login';
     } else {
       setUser(JSON.parse(userData));
+      loadDashboardData();
     }
   }, []);
 
-  const stats = [
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      // Fetch real data from API
+      // For now, show empty state for new accounts
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      // TODO: Replace with actual API calls
+      // const users = await userAPI.getAll();
+      // const attendance = await attendanceAPI.getToday();
+      // Calculate stats from real data
+      
+      setStats({
+        totalEmployees: 0,
+        presentToday: 0,
+        onLeave: 0,
+        attendanceRate: 0
+      });
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statsDisplay = [
     {
       label: 'Total Employees',
-      value: '2,543',
-      change: '+12%',
+      value: loading ? '...' : stats.totalEmployees.toString(),
+      change: '+0%',
       trend: 'up',
       icon: Users,
       gradient: 'from-cyan-500/20 to-blue-500/20',
@@ -29,8 +67,8 @@ export default function AdminDashboard() {
     },
     {
       label: 'Present Today',
-      value: '2,234',
-      change: '+8%',
+      value: loading ? '...' : stats.presentToday.toString(),
+      change: '+0%',
       trend: 'up',
       icon: Clock,
       gradient: 'from-emerald-500/20 to-green-500/20',
@@ -38,8 +76,8 @@ export default function AdminDashboard() {
     },
     {
       label: 'On Leave',
-      value: '156',
-      change: '-5%',
+      value: loading ? '...' : stats.onLeave.toString(),
+      change: '0%',
       trend: 'down',
       icon: CalendarX,
       gradient: 'from-amber-500/20 to-yellow-500/20',
@@ -47,8 +85,8 @@ export default function AdminDashboard() {
     },
     {
       label: 'Attendance Rate',
-      value: '87.8%',
-      change: '+2.3%',
+      value: loading ? '...' : `${stats.attendanceRate}%`,
+      change: '+0%',
       trend: 'up',
       icon: TrendingUp,
       gradient: 'from-violet-500/20 to-purple-500/20',
@@ -145,7 +183,7 @@ export default function AdminDashboard() {
         <div className="p-6 space-y-6">
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((stat, index) => {
+            {statsDisplay.map((stat, index) => {
               const Icon = stat.icon;
               return (
                 <div 
@@ -171,7 +209,31 @@ export default function AdminDashboard() {
             })}
           </div>
 
-          {/* Charts Row 1 */}
+          {/* Empty State for New Accounts */}
+          {!loading && stats.totalEmployees === 0 && (
+            <div className="bg-card border border-border rounded-xl p-12 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users size={32} className="text-primary" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Welcome to WorkNex AI!</h3>
+                <p className="text-muted-foreground mb-6">
+                  Your organization dashboard is ready. Start by adding employees and departments to see analytics and insights.
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <Link href="/dashboard/admin/users" className="px-6 py-3 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition font-medium">
+                    Add Employees
+                  </Link>
+                  <Link href="/dashboard/admin/departments" className="px-6 py-3 rounded-xl border border-border hover:bg-muted transition font-medium">
+                    Setup Departments
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Charts Row 1 - Only show if there's data */}
+          {!loading && stats.totalEmployees > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Weekly Attendance Chart */}
             <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6">
@@ -233,8 +295,10 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
+          )}
 
-          {/* Charts Row 2 */}
+          {/* Charts Row 2 - Only show if there's data */}
+          {!loading && stats.totalEmployees > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Monthly Trend */}
             <div className="bg-card border border-border rounded-xl p-6">
@@ -280,8 +344,10 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
+          )}
 
-          {/* Recent Activities */}
+          {/* Recent Activities - Only show if there's data */}
+          {!loading && stats.totalEmployees > 0 && (
           <div className="bg-card border border-border rounded-xl p-6">
             <h2 className="text-lg font-bold mb-6">Recent Activities</h2>
             <div className="overflow-x-auto">
@@ -329,6 +395,7 @@ export default function AdminDashboard() {
               </table>
             </div>
           </div>
+          )}
         </div>
       </main>
     </div>

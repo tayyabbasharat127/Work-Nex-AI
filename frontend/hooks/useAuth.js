@@ -23,9 +23,13 @@ export function useAuth() {
 
   const login = async (email, password) => {
     try {
-      const data = await authAPI.login(email, password);
-      setUser(data.user);
-      return data;
+      const response = await authAPI.login(email, password);
+      // Backend returns: { success, message, data: { accessToken, refreshToken, user } }
+      const user = response.data?.user || response.user;
+      if (user) {
+        setUser(user);
+      }
+      return response;
     } catch (error) {
       throw error;
     }

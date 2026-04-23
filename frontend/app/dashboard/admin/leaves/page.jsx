@@ -2,301 +2,395 @@
 
 import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { Check, X, Clock, Eye, Search, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
-import { useLeaves } from '@/hooks/useLeaves';
+import { Check, X, Clock, Eye, Search, ChevronLeft, ChevronRight, FileText, Calendar, Users, TrendingUp, Filter } from 'lucide-react';
+import { leaveAPI } from '@/lib/api';
 import { toast } from 'sonner';
 
+const STATUS_CONFIG = {
+  PENDING:   { label: 'Pending',   bg: 'bg-amber-500/15',  text: 'text-amber-400',  border: 'border-amber-500/30',  dot: 'bg-amber-400' },
+  APPROVED:  { label: 'Approved',  bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30', dot: 'bg-emerald-400' },
+  REJECTED:  { label: 'Rejected',  bg: 'bg-red-500/15',    text: 'text-red-400',    border: 'border-red-500/30',    dot: 'bg-red-400' },
+  CANCELLED: { label: 'Cancelled', bg: 'bg-muted/30',      text: 'text-muted-foreground', border: 'border-border', dot: 'bg-muted-foreground' },
+};
+
+const TYPE_COLORS = {
+  ANNUAL:    'bg-blue-500/15 text-blue-400',
+  SICK:      'bg-red-500/15 text-red-400',
+  CASUAL:    'bg-purple-500/15 text-purple-400',
+  MATERNITY: 'bg-pink-500/15 text-pink-400',
+  PATERNITY: 'bg-cyan-500/15 text-cyan-400',
+  UNPAID:    'bg-orange-500/15 text-orange-400',
+  OTHER:     'bg-muted/30 text-muted-foreground',
+};
+
+function getInitials(firstName, lastName) {
+  return `${(firstName || '?')[0]}${(lastName || '')[0] || ''}`.toUpperCase();
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 export default function AdminLeaves() {
-  const { leaves, loading, fetchAllLeaves, updateLeaveStatus } = useLeaves();
-  const [filterStatus, setFilterStatus] = useState('All');
-  const [filterType, setFilterType] = useState('All');
+  const [leaves, setLeaves] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState('ALL');
+  const [filterType, setFilterType] = useState('ALL');
   const [search, setSearch] = useState('');
-  const [showViewModal, setShowViewModal] = useState(false);
   const [viewingLeave, setViewingLeave] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 8;
 
-  const leaveTypes = ['Sick Leave', 'Annual Leave', 'Casual Leave', 'Maternity Leave', 'Paternity Leave', 'Emergency Leave'];
-
-  useEffect(() => {
-    loadLeaves();
-  }, []);
+  useEffect(() => { loadLeaves(); }, []);
 
   const loadLeaves = async () => {
     try {
-      await fetchAllLeaves();
+      setLoading(true);
+      const data = await leaveAPI.getAll();
+      // Backend returns { leaves: [...] } or array
+      const arr = Array.isArray(data) ? data : (data?.leaves || data?.data || []);
+      setLeaves(arr);
     } catch (err) {
       toast.error('Failed to load leaves');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Ensure leaves is always an array
-  const leavesArray = Array.isArray(leaves) ? leaves : [];
-
-  const stats = [
-    { label: 'Total Requests', value: leavesArray.length, icon: FileText, color: 'text-cyan-400', bg: 'bg-cyan-500/20' },
-    { label: 'Pending', value: leavesArray.filter(l => l.status === 'Pending').length, icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/20' },
-    { label: 'Approved', value: leavesArray.filter(l => l.status === 'Approved').length, icon: Check, color: 'text-emerald-400', bg: 'bg-emerald-500/20' },
-    { label: 'Rejected', value: leavesArray.filter(l => l.status === 'Rejected').length, icon: X, color: 'text-red-400', bg: 'bg-red-500/20' },
-  ];
-
-  const filteredLeaves = leavesArray.filter(leave => {
-    const matchesSearch = (leave.user?.name || leave.user_name || leave.userName || '').toLowerCase().includes(search.toLowerCase()) ||
-      (leave.user?.email || leave.user_email || leave.userEmail || '').toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = filterStatus === 'All' || leave.status === filterStatus;
-    const matchesType = filterType === 'All' || leave.leave_type === filterType || leave.leaveType === filterType || leave.type === filterType;
-    return matchesSearch && matchesStatus && matchesType;
-  });
-
-  const totalPages = Math.ceil(filteredLeaves.length / itemsPerPage);
-  const paginatedLeaves = filteredLeaves.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
   const handleApprove = async (id) => {
     try {
-      await updateLeaveStatus(id, 'Approved', '');
-      toast.success('Leave approved successfully');
+      await leaveAPI.approve(id, '');
+      toast.success('Leave approved');
+      loadLeaves();
+      setViewingLeave(null);
     } catch (err) {
-      toast.error(err.message || 'Failed to approve leave');
+      toast.error(err.message || 'Failed to approve');
     }
   };
 
   const handleReject = async (id) => {
     try {
-      await updateLeaveStatus(id, 'Rejected', '');
-      toast.success('Leave rejected successfully');
+      await leaveAPI.reject(id, '');
+      toast.success('Leave rejected');
+      loadLeaves();
+      setViewingLeave(null);
     } catch (err) {
-      toast.error(err.message || 'Failed to reject leave');
+      toast.error(err.message || 'Failed to reject');
     }
   };
 
-  const handleView = (leave) => {
-    setViewingLeave(leave);
-    setShowViewModal(true);
-  };
+  // Stats
+  const stats = [
+    { label: 'Total Requests', value: leaves.length, icon: FileText, color: 'text-blue-400', bg: 'bg-blue-500/15', border: 'border-blue-500/20' },
+    { label: 'Pending', value: leaves.filter(l => l.status === 'PENDING').length, icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/20' },
+    { label: 'Approved', value: leaves.filter(l => l.status === 'APPROVED').length, icon: Check, color: 'text-emerald-400', bg: 'bg-emerald-500/15', border: 'border-emerald-500/20' },
+    { label: 'Rejected', value: leaves.filter(l => l.status === 'REJECTED').length, icon: X, color: 'text-red-400', bg: 'bg-red-500/15', border: 'border-red-500/20' },
+  ];
+
+  // Filter
+  const filtered = leaves.filter(l => {
+    const emp = l.employee || {};
+    const name = `${emp.firstName || ''} ${emp.lastName || ''}`.toLowerCase();
+    const email = (emp.email || '').toLowerCase();
+    const matchSearch = !search || name.includes(search.toLowerCase()) || email.includes(search.toLowerCase());
+    const matchStatus = filterStatus === 'ALL' || l.status === filterStatus;
+    const matchType = filterType === 'ALL' || l.leaveType === filterType;
+    return matchSearch && matchStatus && matchType;
+  });
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="flex h-screen bg-background">
       <Sidebar role="admin" />
 
       <main className="flex-1 overflow-auto md:ml-64">
-        <div className="sticky top-0 bg-card/80 backdrop-blur-xl border-b border-border p-6 z-20">
-          <div>
-            <h1 className="text-3xl font-bold">Leave Management</h1>
-            <p className="text-muted-foreground mt-1">Review and approve employee leave requests</p>
+        {/* Header */}
+        <div className="sticky top-0 bg-card/80 backdrop-blur-xl border-b border-border px-8 py-5 z-20">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Leave Management</h1>
+              <p className="text-muted-foreground text-sm mt-0.5">Review and manage employee leave requests</p>
+            </div>
+            <button onClick={loadLeaves} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border hover:bg-muted transition text-sm">
+              Refresh
+            </button>
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="px-8 py-6 space-y-6">
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {stats.map((stat, index) => {
-              const Icon = stat.icon;
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {stats.map((s, i) => {
+              const Icon = s.icon;
               return (
-                <div key={index} className="bg-card border border-border rounded-xl p-5 hover:border-primary/50 transition">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-3 rounded-xl ${stat.bg}`}>
-                      <Icon size={24} className={stat.color} />
+                <div key={i} className={`bg-card border ${s.border} rounded-2xl p-5 hover:shadow-md transition-all`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={`p-2.5 rounded-xl ${s.bg}`}>
+                      <Icon size={18} className={s.color} />
                     </div>
-                    <div>
-                      <p className="text-muted-foreground text-sm">{stat.label}</p>
-                      <p className="text-2xl font-bold">{stat.value}</p>
-                    </div>
+                    <span className={`text-3xl font-bold ${s.color}`}>{loading ? '—' : s.value}</span>
                   </div>
+                  <p className="text-sm text-muted-foreground font-medium">{s.label}</p>
                 </div>
               );
             })}
           </div>
 
           {/* Filters */}
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search by name or email..."
+                placeholder="Search employee name or email..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 rounded-xl border border-border bg-card text-foreground focus:outline-none focus:border-primary transition"
+                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-card text-sm focus:outline-none focus:border-primary transition"
               />
             </div>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-3 rounded-xl border border-border bg-card text-foreground focus:outline-none focus:border-primary"
-            >
-              <option value="All">All Status</option>
-              <option value="Pending">Pending</option>
-              <option value="Approved">Approved</option>
-              <option value="Rejected">Rejected</option>
+            <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }}
+              className="px-4 py-2.5 rounded-xl border border-border bg-card text-sm focus:outline-none focus:border-primary min-w-[140px]">
+              <option value="ALL">All Status</option>
+              <option value="PENDING">Pending</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="CANCELLED">Cancelled</option>
             </select>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="px-4 py-3 rounded-xl border border-border bg-card text-foreground focus:outline-none focus:border-primary"
-            >
-              <option value="All">All Types</option>
-              {leaveTypes.map(type => <option key={type} value={type}>{type}</option>)}
+            <select value={filterType} onChange={e => { setFilterType(e.target.value); setCurrentPage(1); }}
+              className="px-4 py-2.5 rounded-xl border border-border bg-card text-sm focus:outline-none focus:border-primary min-w-[140px]">
+              <option value="ALL">All Types</option>
+              {['ANNUAL','SICK','CASUAL','MATERNITY','PATERNITY','UNPAID','OTHER'].map(t => (
+                <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</option>
+              ))}
             </select>
           </div>
 
-          {/* Leave Requests */}
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading...</div>
-          ) : paginatedLeaves.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No leave requests found</div>
-          ) : (
-            <div className="space-y-4">
-              {paginatedLeaves.map((leave) => {
-                const userName = leave.user?.name || leave.user_name || leave.userName || 'Unknown';
-                const userEmail = leave.user?.email || leave.user_email || leave.userEmail || '';
-                const department = leave.user?.department || leave.department || 'N/A';
-                const leaveType = leave.leave_type || leave.leaveType || leave.type || 'N/A';
-                const startDate = leave.start_date || leave.startDate || leave.from || '';
-                const endDate = leave.end_date || leave.endDate || leave.to || '';
-                const reason = leave.reason || 'No reason provided';
-                const days = leave.duration_days || leave.days || 'N/A';
-                
-                return (
-                  <div key={leave.id} className="bg-card border border-border rounded-xl p-6 hover:border-primary/50 transition">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-                          {userName.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold">{userName}</h3>
-                          <p className="text-muted-foreground text-sm">{department} - {leaveType}</p>
-                        </div>
-                      </div>
-                      <span className={`px-4 py-1.5 rounded-lg text-xs font-medium self-start ${
-                        leave.status === 'Approved' ? 'bg-success/20 text-success' :
-                        leave.status === 'Rejected' ? 'bg-destructive/20 text-destructive' :
-                        'bg-warning/20 text-warning'
-                      }`}>
-                        {leave.status}
-                      </span>
-                    </div>
+          {/* Table */}
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+            {loading ? (
+              <div className="p-12 text-center text-muted-foreground">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-3" />
+                Loading leave requests...
+              </div>
+            ) : paginated.length === 0 ? (
+              <div className="p-16 text-center">
+                <FileText size={40} className="mx-auto text-muted-foreground mb-3" />
+                <p className="font-semibold">No leave requests found</p>
+                <p className="text-sm text-muted-foreground mt-1">Try adjusting your filters</p>
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="text-left py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Employee</th>
+                    <th className="text-left py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</th>
+                    <th className="text-left py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Duration</th>
+                    <th className="text-left py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dates</th>
+                    <th className="text-left py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                    <th className="text-right py-3.5 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {paginated.map(leave => {
+                    const emp = leave.employee || {};
+                    const firstName = emp.firstName || '';
+                    const lastName = emp.lastName || '';
+                    const fullName = firstName || lastName ? `${firstName} ${lastName}`.trim() : 'Unknown Employee';
+                    const empId = emp.employeeId || '';
+                    const status = leave.status || 'PENDING';
+                    const statusCfg = STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
+                    const typeColor = TYPE_COLORS[leave.leaveType] || TYPE_COLORS.OTHER;
+                    const days = leave.totalDays || 0;
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 bg-muted/30 rounded-lg">
-                      <div>
-                        <p className="text-muted-foreground text-xs mb-1">From</p>
-                        <p className="font-semibold text-sm">{startDate ? new Date(startDate).toLocaleDateString() : 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-xs mb-1">To</p>
-                        <p className="font-semibold text-sm">{endDate ? new Date(endDate).toLocaleDateString() : 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-xs mb-1">Duration</p>
-                        <p className="font-semibold text-sm">{days} day{days > 1 ? 's' : ''}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-xs mb-1">Type</p>
-                        <p className="font-semibold text-sm">{leaveType}</p>
-                      </div>
-                    </div>
+                    return (
+                      <tr key={leave.id} className="hover:bg-muted/20 transition group">
+                        {/* Employee */}
+                        <td className="py-4 px-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-primary text-sm font-bold flex-shrink-0">
+                              {getInitials(firstName, lastName)}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm">{fullName}</p>
+                              {empId && <p className="text-xs text-muted-foreground">{empId}</p>}
+                            </div>
+                          </div>
+                        </td>
 
-                    <div className="flex flex-wrap gap-3">
-                      <button
-                        onClick={() => handleView(leave)}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:bg-muted transition font-medium text-sm"
-                      >
-                        <Eye size={16} />
-                        View Details
-                      </button>
-                      {leave.status === 'Pending' && (
-                        <>
-                          <button
-                            onClick={() => handleApprove(leave.id)}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-success/20 text-success hover:bg-success/30 transition font-medium text-sm"
-                          >
-                            <Check size={16} />
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleReject(leave.id)}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30 transition font-medium text-sm"
-                          >
-                            <X size={16} />
-                            Reject
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                        {/* Type */}
+                        <td className="py-4 px-5">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${typeColor}`}>
+                            {leave.leaveType ? leave.leaveType.charAt(0) + leave.leaveType.slice(1).toLowerCase() : '—'}
+                          </span>
+                        </td>
+
+                        {/* Duration */}
+                        <td className="py-4 px-5">
+                          <span className="text-sm font-semibold">{days}</span>
+                          <span className="text-xs text-muted-foreground ml-1">{days === 1 ? 'day' : 'days'}</span>
+                        </td>
+
+                        {/* Dates */}
+                        <td className="py-4 px-5">
+                          <p className="text-sm">{formatDate(leave.startDate)}</p>
+                          <p className="text-xs text-muted-foreground">to {formatDate(leave.endDate)}</p>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-4 px-5">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+                            {statusCfg.label}
+                          </span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-4 px-5">
+                          <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => setViewingLeave(leave)}
+                              className="p-2 rounded-lg hover:bg-muted transition text-muted-foreground hover:text-foreground">
+                              <Eye size={15} />
+                            </button>
+                            {status === 'PENDING' && (
+                              <>
+                                <button onClick={() => handleApprove(leave.id)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition text-xs font-medium">
+                                  <Check size={13} /> Approve
+                                </button>
+                                <button onClick={() => handleReject(leave.id)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition text-xs font-medium">
+                                  <X size={13} /> Reject
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-50 transition"><ChevronLeft size={16} /></button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button key={page} onClick={() => setCurrentPage(page)} className={`w-8 h-8 rounded-lg text-sm font-medium transition ${currentPage === page ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>{page}</button>
-              ))}
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-50 transition"><ChevronRight size={16} /></button>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length}
+              </p>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+                  className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-40 transition">
+                  <ChevronLeft size={15} />
+                </button>
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map(page => (
+                  <button key={page} onClick={() => setCurrentPage(page)}
+                    className={`w-8 h-8 rounded-lg text-sm font-medium transition ${currentPage === page ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>
+                    {page}
+                  </button>
+                ))}
+                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+                  className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-40 transition">
+                  <ChevronRight size={15} />
+                </button>
+              </div>
             </div>
           )}
         </div>
 
-        {/* View Modal */}
-        {showViewModal && viewingLeave && (
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        {/* Detail Modal */}
+        {viewingLeave && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl">
-              <div className="flex items-center justify-between p-6 border-b border-border">
-                <h2 className="text-xl font-bold">Leave Request Details</h2>
-                <button onClick={() => setShowViewModal(false)} className="p-2 hover:bg-muted rounded-lg transition">
-                  <X size={20} />
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+                <h2 className="text-lg font-bold">Leave Request Details</h2>
+                <button onClick={() => setViewingLeave(null)} className="p-2 hover:bg-muted rounded-xl transition">
+                  <X size={18} />
                 </button>
               </div>
-              <div className="p-6 space-y-4">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-lg">
-                    {(viewingLeave.user?.name || viewingLeave.user_name || viewingLeave.userName || 'U').split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold">{viewingLeave.user?.name || viewingLeave.user_name || viewingLeave.userName || 'Unknown'}</h3>
-                    <p className="text-muted-foreground">{viewingLeave.user?.email || viewingLeave.user_email || viewingLeave.userEmail || ''}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-muted/30 rounded-lg">
-                    <p className="text-muted-foreground text-xs mb-1">Department</p>
-                    <p className="font-semibold">{viewingLeave.user?.department || viewingLeave.department || 'N/A'}</p>
-                  </div>
-                  <div className="p-3 bg-muted/30 rounded-lg">
-                    <p className="text-muted-foreground text-xs mb-1">Leave Type</p>
-                    <p className="font-semibold">{viewingLeave.leave_type || viewingLeave.leaveType || viewingLeave.type || 'N/A'}</p>
-                  </div>
-                  <div className="p-3 bg-muted/30 rounded-lg">
-                    <p className="text-muted-foreground text-xs mb-1">From</p>
-                    <p className="font-semibold">{viewingLeave.start_date || viewingLeave.startDate || viewingLeave.from ? new Date(viewingLeave.start_date || viewingLeave.startDate || viewingLeave.from).toLocaleDateString() : 'N/A'}</p>
-                  </div>
-                  <div className="p-3 bg-muted/30 rounded-lg">
-                    <p className="text-muted-foreground text-xs mb-1">To</p>
-                    <p className="font-semibold">{viewingLeave.end_date || viewingLeave.endDate || viewingLeave.to ? new Date(viewingLeave.end_date || viewingLeave.endDate || viewingLeave.to).toLocaleDateString() : 'N/A'}</p>
-                  </div>
-                </div>
-                <div className="p-3 bg-muted/30 rounded-lg">
-                  <p className="text-muted-foreground text-xs mb-1">Reason</p>
-                  <p className="font-medium">{viewingLeave.reason || 'No reason provided'}</p>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <span className="text-muted-foreground">Status</span>
-                  <span className={`px-3 py-1 rounded-lg text-xs font-medium ${
-                    viewingLeave.status === 'Approved' ? 'bg-success/20 text-success' :
-                    viewingLeave.status === 'Rejected' ? 'bg-destructive/20 text-destructive' :
-                    'bg-warning/20 text-warning'
-                  }`}>{viewingLeave.status}</span>
-                </div>
-                {viewingLeave.status === 'Pending' && (
-                  <div className="flex gap-3 pt-2">
-                    <button onClick={() => { handleApprove(viewingLeave.id); setShowViewModal(false); }} className="flex-1 px-4 py-3 rounded-xl bg-success/20 text-success hover:bg-success/30 transition font-medium">Approve</button>
-                    <button onClick={() => { handleReject(viewingLeave.id); setShowViewModal(false); }} className="flex-1 px-4 py-3 rounded-xl bg-destructive/20 text-destructive hover:bg-destructive/30 transition font-medium">Reject</button>
-                  </div>
-                )}
+
+              <div className="p-6 space-y-5">
+                {/* Employee Info */}
+                {(() => {
+                  const emp = viewingLeave.employee || {};
+                  const firstName = emp.firstName || '';
+                  const lastName = emp.lastName || '';
+                  const fullName = firstName || lastName ? `${firstName} ${lastName}`.trim() : 'Unknown Employee';
+                  const status = viewingLeave.status || 'PENDING';
+                  const statusCfg = STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
+                  const typeColor = TYPE_COLORS[viewingLeave.leaveType] || TYPE_COLORS.OTHER;
+
+                  return (
+                    <>
+                      <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-xl">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-primary text-xl font-bold">
+                          {getInitials(firstName, lastName)}
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold">{fullName}</p>
+                          <p className="text-sm text-muted-foreground">{emp.employeeId || ''}</p>
+                        </div>
+                        <div className="ml-auto">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+                            {statusCfg.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-4 bg-muted/20 rounded-xl">
+                          <p className="text-xs text-muted-foreground mb-1">Leave Type</p>
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${typeColor}`}>
+                            {viewingLeave.leaveType ? viewingLeave.leaveType.charAt(0) + viewingLeave.leaveType.slice(1).toLowerCase() : '—'}
+                          </span>
+                        </div>
+                        <div className="p-4 bg-muted/20 rounded-xl">
+                          <p className="text-xs text-muted-foreground mb-1">Duration</p>
+                          <p className="font-bold text-lg">{viewingLeave.totalDays || 0} <span className="text-sm font-normal text-muted-foreground">days</span></p>
+                        </div>
+                        <div className="p-4 bg-muted/20 rounded-xl">
+                          <p className="text-xs text-muted-foreground mb-1">From</p>
+                          <p className="font-semibold text-sm">{formatDate(viewingLeave.startDate)}</p>
+                        </div>
+                        <div className="p-4 bg-muted/20 rounded-xl">
+                          <p className="text-xs text-muted-foreground mb-1">To</p>
+                          <p className="font-semibold text-sm">{formatDate(viewingLeave.endDate)}</p>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-muted/20 rounded-xl">
+                        <p className="text-xs text-muted-foreground mb-2">Reason</p>
+                        <p className="text-sm leading-relaxed">{viewingLeave.reason || 'No reason provided'}</p>
+                      </div>
+
+                      {viewingLeave.approverNote && (
+                        <div className="p-4 bg-muted/20 rounded-xl">
+                          <p className="text-xs text-muted-foreground mb-2">Approver Note</p>
+                          <p className="text-sm">{viewingLeave.approverNote}</p>
+                        </div>
+                      )}
+
+                      {status === 'PENDING' && (
+                        <div className="flex gap-3 pt-1">
+                          <button onClick={() => handleApprove(viewingLeave.id)}
+                            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition font-semibold">
+                            <Check size={16} /> Approve
+                          </button>
+                          <button onClick={() => handleReject(viewingLeave.id)}
+                            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/15 text-red-400 hover:bg-red-500/25 transition font-semibold">
+                            <X size={16} /> Reject
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>

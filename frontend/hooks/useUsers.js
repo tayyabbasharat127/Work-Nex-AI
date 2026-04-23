@@ -10,21 +10,47 @@ export function useUsers() {
     try {
       setLoading(true);
       setError(null);
-      const data = await userAPI.getUsers(params);
+      const data = await userAPI.getAll(params);  // Fixed: was getUsers, should be getAll
       // Handle different response formats
       const usersData = Array.isArray(data) ? data : (data?.users || data?.data || []);
-      // Map user_id to id for frontend compatibility and normalize status
+      
+      // Map backend format to frontend format
+      const roleMap = {
+        'SUPER_ADMIN': 0,
+        'ADMIN': 1,
+        'MANAGER': 2,
+        'EMPLOYEE': 3
+      };
+      
       const mappedUsers = usersData.map(user => ({
         ...user,
-        id: user.user_id || user.id,
-        status: user.status ? (user.status.charAt(0).toUpperCase() + user.status.slice(1).toLowerCase()) : 'Active'
+        id: user.id,
+        user_id: user.id,
+        name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        email: user.email,
+        role_id: roleMap[user.role] || 3,
+        role: user.role,
+        department_id: user.departmentId || user.department?.id,
+        department: user.department,
+        manager_id: user.managerId || user.manager?.id,
+        manager: user.manager,
+        designation: user.designation,
+        phone: user.phone,
+        joiningDate: user.joiningDate,
+        status: user.isActive ? 'Active' : 'Inactive',
+        employeeId: user.employeeId,
+        profilePicture: user.profilePicture,
+        twoFAEnabled: user.twoFAEnabled,
+        createdAt: user.createdAt
       }));
+      
       setUsers(mappedUsers);
       return mappedUsers;
     } catch (err) {
+      console.error('Failed to fetch users:', err);
       setError(err.message);
       setUsers([]); // Set empty array on error
-      throw err;
+      return []; // Return empty array instead of throwing
     } finally {
       setLoading(false);
     }

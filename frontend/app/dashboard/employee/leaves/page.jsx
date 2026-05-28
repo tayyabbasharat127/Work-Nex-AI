@@ -4,45 +4,47 @@ import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { Plus, X } from 'lucide-react';
 import { useLeaves } from '@/hooks/useLeaves';
-import { formatDate } from '@/lib/helpers';
+import { leaveAPI } from '@/lib/api';
 import { toast } from 'sonner';
 
 export default function EmployeeLeaves() {
-  const { leaves, loading, fetchMyLeaves, createLeave, deleteLeave } = useLeaves();
+  const { leaves, loading, fetchMyLeaves, createLeave, cancelLeave } = useLeaves();
   const [showModal, setShowModal] = useState(false);
+  const [balances, setBalances] = useState([]);
   const [formData, setFormData] = useState({
     startDate: '',
     endDate: '',
-    type: 'Annual',
+    type: 'ANNUAL', // Changed to uppercase to match backend enum
     reason: ''
   });
 
-  useEffect(() => {
-    loadLeaves();
-  }, []);
-
-  const loadLeaves = async () => {
+  async function loadLeaves() {
     try {
-      await fetchMyLeaves();
-    } catch (err) {
+      const [leaveRows, balanceRows] = await Promise.all([
+        fetchMyLeaves(),
+        leaveAPI.getMyBalances(),
+      ]);
+      setBalances(Array.isArray(balanceRows) ? balanceRows : []);
+      return leaveRows;
+    } catch {
       toast.error('Failed to load leaves');
     }
-  };
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(loadLeaves, 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Check if user is logged in
+    // Check if user context exists; the httpOnly refresh cookie can rehydrate the access token.
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Please login first to apply for leave', {
-          description: 'You need to be logged in to perform this action',
-          action: {
-            label: 'Login',
-            onClick: () => window.location.href = '/login'
-          }
-        });
+      const user = localStorage.getItem('user');
+      if (!user) {
+        toast.error('Please login first to apply for leave');
         return;
       }
     }
@@ -50,18 +52,23 @@ export default function EmployeeLeaves() {
     try {
       console.log('Submitting leave:', formData);
       
-      const result = await createLeave({
-        start_date: formData.startDate,
-        end_date: formData.endDate,
-        leave_type: formData.type,
+      // Transform data to match backend expectations
+      const leaveData = {
+        leaveType: formData.type.toUpperCase(), // Convert to uppercase enum
+        startDate: formData.startDate, // Already in YYYY-MM-DD format from date input
+        endDate: formData.endDate,
         reason: formData.reason
-      });
+      };
+      
+      console.log('Transformed leave data:', leaveData);
+      
+      const result = await createLeave(leaveData);
       
       console.log('Leave created:', result);
       
       toast.success('Leave application submitted successfully');
       setShowModal(false);
-      setFormData({ startDate: '', endDate: '', type: 'Annual', reason: '' });
+      setFormData({ startDate: '', endDate: '', type: 'ANNUAL', reason: '' });
       
       // Force reload the leaves list
       await loadLeaves();
@@ -72,11 +79,7 @@ export default function EmployeeLeaves() {
       // Check if it's an authentication error
       if (errorMessage.includes('token') || errorMessage.includes('unauthorized') || errorMessage.includes('401')) {
         toast.error('Authentication required', {
-          description: 'Please login to apply for leave',
-          action: {
-            label: 'Login',
-            onClick: () => window.location.href = '/login'
-          }
+          description: 'Please login to apply for leave'
         });
       } else {
         toast.error(errorMessage);
@@ -88,7 +91,7 @@ export default function EmployeeLeaves() {
     if (!confirm('Are you sure you want to cancel this leave request?')) return;
     
     try {
-      await deleteLeave(leaveId);
+      await cancelLeave(leaveId); // Fixed: was deleteLeave, now cancelLeave
       toast.success('Leave request cancelled');
     } catch (err) {
       toast.error(err.message || 'Failed to cancel leave');
@@ -98,8 +101,9 @@ export default function EmployeeLeaves() {
   // Ensure leaves is always an array
   const leavesArray = Array.isArray(leaves) ? leaves : [];
 
-  // Calculate leave balance (mock data - should come from API)
-  const balance = { casual: 8, annual: 12, sick: 5 };
+  const balanceByType = Object.fromEntries(
+    balances.map((balance) => [balance.policy?.leaveType, balance.remainingDays])
+  );
 
   return (
     <div className="flex h-screen bg-background">
@@ -127,15 +131,15 @@ export default function EmployeeLeaves() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-card border border-border rounded-lg p-6">
               <p className="text-muted-foreground text-sm mb-2">Casual Leave Balance</p>
-              <p className="text-3xl font-bold text-primary">{balance.casual} days</p>
+              <p className="text-3xl font-bold text-primary">{balanceByType.CASUAL ?? 0} days</p>
             </div>
             <div className="bg-card border border-border rounded-lg p-6">
               <p className="text-muted-foreground text-sm mb-2">Annual Leave Balance</p>
-              <p className="text-3xl font-bold text-primary">{balance.annual} days</p>
+              <p className="text-3xl font-bold text-primary">{balanceByType.ANNUAL ?? 0} days</p>
             </div>
             <div className="bg-card border border-border rounded-lg p-6">
               <p className="text-muted-foreground text-sm mb-2">Sick Leave Balance</p>
-              <p className="text-3xl font-bold text-primary">{balance.sick} days</p>
+              <p className="text-3xl font-bold text-primary">{balanceByType.SICK ?? 0} days</p>
             </div>
           </div>
 
@@ -149,47 +153,79 @@ export default function EmployeeLeaves() {
               <div className="text-center py-8 text-muted-foreground">No leave requests found</div>
             ) : (
               <div className="space-y-4">
-                {leavesArray.map((leave) => (
-                  <div key={leave.id} className="p-6 border border-border rounded-lg hover:border-primary transition">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="font-semibold">{leave.leave_type || leave.type}</h3>
-                        <p className="text-sm text-muted-foreground">{leave.reason}</p>
+                {leavesArray.map((leave) => {
+                  // Handle different field name formats from backend
+                  const leaveType = leave.leaveType || leave.leave_type || leave.type || 'N/A';
+                  const startDate = leave.startDate || leave.start_date;
+                  const endDate = leave.endDate || leave.end_date;
+                  const status = leave.status || 'PENDING';
+                  const reason = leave.reason || '';
+                  const decision = leave.decisionExplanation;
+                  
+                  return (
+                    <div key={leave.id} className="p-6 border border-border rounded-lg hover:border-primary transition">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="font-semibold capitalize">{leaveType.toLowerCase()}</h3>
+                          <p className="text-sm text-muted-foreground">{reason}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            status === 'APPROVED' || status === 'Approved' ? 'bg-green-500/20 text-green-400' :
+                            status === 'PENDING' || status === 'Pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                            status === 'REJECTED' || status === 'Rejected' ? 'bg-red-500/20 text-red-400' :
+                            'bg-muted/20 text-muted-foreground'
+                          }`}>
+                            {status}
+                          </span>
+                          {(status === 'PENDING' || status === 'Pending') && (
+                            <button
+                              onClick={() => handleDelete(leave.id)}
+                              className="p-2 hover:bg-red-500/10 rounded-lg text-red-400 hover:text-red-300 transition"
+                              title="Cancel leave request"
+                            >
+                              <X size={18} />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          leave.status === 'Approved' ? 'bg-success/20 text-success' :
-                          leave.status === 'Pending' ? 'bg-warning/20 text-warning' :
-                          'bg-destructive/20 text-destructive'
-                        }`}>
-                          {leave.status}
-                        </span>
-                        {leave.status === 'Pending' && (
-                          <button
-                            onClick={() => handleDelete(leave.id)}
-                            className="p-1 hover:bg-destructive/10 rounded text-destructive"
-                          >
-                            <X size={16} />
-                          </button>
-                        )}
+                      <div className="flex gap-6 text-sm">
+                        <div>
+                          <p className="text-muted-foreground mb-1">From</p>
+                          <p className="font-semibold">
+                            {startDate ? new Date(startDate).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric' 
+                            }) : '---'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground mb-1">To</p>
+                          <p className="font-semibold">
+                            {endDate ? new Date(endDate).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric' 
+                            }) : '---'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground mb-1">Days</p>
+                          <p className="font-semibold">
+                            {leave.totalDays || leave.days || calculateDays(startDate, endDate)}
+                          </p>
+                        </div>
                       </div>
+                      {decision && (
+                        <div className="mt-4 rounded-lg border border-border bg-muted/20 p-4 text-sm">
+                          <p className="font-semibold">Decision: {decision.decision}</p>
+                          <p className="text-muted-foreground mt-1">{(decision.reasons || []).join('; ')}</p>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex gap-6 text-sm">
-                      <div>
-                        <p className="text-muted-foreground mb-1">From</p>
-                        <p className="font-semibold">{formatDate(leave.start_date)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground mb-1">To</p>
-                        <p className="font-semibold">{formatDate(leave.end_date)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground mb-1">Days</p>
-                        <p className="font-semibold">{leave.days || calculateDays(leave.start_date, leave.end_date)}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -215,10 +251,13 @@ export default function EmployeeLeaves() {
                     className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
                     required
                   >
-                    <option value="Annual">Annual Leave</option>
-                    <option value="Sick">Sick Leave</option>
-                    <option value="Casual">Casual Leave</option>
-                    <option value="Personal">Personal Leave</option>
+                    <option value="ANNUAL">Annual Leave</option>
+                    <option value="SICK">Sick Leave</option>
+                    <option value="CASUAL">Casual Leave</option>
+                    <option value="MATERNITY">Maternity Leave</option>
+                    <option value="PATERNITY">Paternity Leave</option>
+                    <option value="UNPAID">Unpaid Leave</option>
+                    <option value="OTHER">Other</option>
                   </select>
                 </div>
 

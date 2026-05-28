@@ -29,14 +29,14 @@ export default function AdminUsers() {
     password: '',
     role_id: 3,
     department_id: '',
+    manager_id: '',
+    designation: '',
+    phone: '',
+    joiningDate: '',
     status: 'Active',
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  async function loadData() {
     try {
       await fetchUsers();
       const depts = await departmentAPI.getAll();
@@ -45,7 +45,12 @@ export default function AdminUsers() {
       toast.error('Failed to load data');
       setDepartments([]);
     }
-  };
+  }
+
+  useEffect(() => {
+    const loadTimer = setTimeout(loadData, 0);
+    return () => clearTimeout(loadTimer);
+  }, []);
 
   // Ensure users is always an array
   const usersArray = Array.isArray(users) ? users : [];
@@ -54,7 +59,7 @@ export default function AdminUsers() {
     const matchesSearch = user.name?.toLowerCase().includes(search.toLowerCase()) ||
       user.email?.toLowerCase().includes(search.toLowerCase());
     const matchesRole = filterRole === 'All' || user.role_id === parseInt(filterRole);
-    const matchesDept = filterDept === 'All' || user.department_id === parseInt(filterDept);
+    const matchesDept = filterDept === 'All' || user.department_id === filterDept;
     return matchesSearch && matchesRole && matchesDept;
   });
 
@@ -63,7 +68,18 @@ export default function AdminUsers() {
 
   const handleOpenAddModal = () => {
     setEditingUser(null);
-    setFormData({ name: '', email: '', password: '', role_id: 3, department_id: '', status: 'Active' });
+    setFormData({ 
+      name: '', 
+      email: '', 
+      password: '', 
+      role_id: 3, 
+      department_id: '', 
+      manager_id: '',
+      designation: '',
+      phone: '',
+      joiningDate: '',
+      status: 'Active' 
+    });
     setShowModal(true);
   };
 
@@ -75,6 +91,10 @@ export default function AdminUsers() {
       password: '',
       role_id: user.role_id || 3,
       department_id: user.department_id || '',
+      manager_id: user.manager_id || '',
+      designation: user.designation || '',
+      phone: user.phone || '',
+      joiningDate: user.joiningDate ? new Date(user.joiningDate).toISOString().split('T')[0] : '',
       status: user.status || 'Active'
     });
     setShowModal(true);
@@ -172,7 +192,7 @@ export default function AdminUsers() {
               >
                 <option value="All">All Departments</option>
                 {Array.isArray(departments) && departments.map(dept => (
-                  <option key={dept.department_id || dept.id} value={dept.department_id || dept.id}>{dept.name}</option>
+                  <option key={dept.id} value={dept.id}>{dept.name}</option>
                 ))}
               </select>
             </div>
@@ -240,7 +260,7 @@ export default function AdminUsers() {
                             </span>
                           </td>
                           <td className="py-4 px-6 text-muted-foreground">
-                            {departments.find(d => (d.department_id || d.id) === user.department_id)?.name || 'N/A'}
+                            {departments.find(d => d.id === user.department_id)?.name || 'N/A'}
                           </td>
                           <td className="py-4 px-6 text-center">
                             <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${
@@ -359,12 +379,14 @@ export default function AdminUsers() {
                     <label className="block text-sm font-medium mb-2">Password</label>
                     <input
                       type="password"
-                      required={!editingUser}
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
-                      placeholder="Enter password"
+                      placeholder="Enter password (optional)"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Leave empty to auto-generate. User will receive password via email.
+                    </p>
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-4">
@@ -384,16 +406,66 @@ export default function AdminUsers() {
                     <label className="block text-sm font-medium mb-2">Department</label>
                     <select
                       value={formData.department_id}
-                      onChange={(e) => setFormData({ ...formData, department_id: parseInt(e.target.value) || '' })}
+                      onChange={(e) => setFormData({ ...formData, department_id: e.target.value || '' })}
                       className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
                     >
                       <option value="">Select Department</option>
                       {Array.isArray(departments) && departments.map(dept => (
-                        <option key={dept.department_id || dept.id} value={dept.department_id || dept.id}>
+                        <option key={dept.id} value={dept.id}>
                           {dept.name}
                         </option>
                       ))}
                     </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Designation</label>
+                    <input
+                      type="text"
+                      value={formData.designation}
+                      onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
+                      placeholder="e.g. Senior Developer"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Phone</label>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
+                      placeholder="+92 300 1234567"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Manager</label>
+                    <select
+                      value={formData.manager_id}
+                      onChange={(e) => setFormData({ ...formData, manager_id: e.target.value || '' })}
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
+                    >
+                      <option value="">No Manager</option>
+                      {Array.isArray(users) && users
+                        .filter(u => [0, 1, 2].includes(u.role_id) && u.id !== editingUser?.id)
+                        .map(manager => (
+                          <option key={manager.id} value={manager.id}>
+                            {manager.name} ({getRoleName(manager.role_id)})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Joining Date</label>
+                    <input
+                      type="date"
+                      value={formData.joiningDate}
+                      onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
+                    />
                   </div>
                 </div>
                 <div className="flex gap-3 pt-4">
@@ -445,7 +517,7 @@ export default function AdminUsers() {
                   <div className="flex justify-between py-3 border-b border-border">
                     <span className="text-muted-foreground">Department</span>
                     <span className="font-medium">
-                      {departments.find(d => (d.department_id || d.id) === viewingUser.department_id)?.name || 'N/A'}
+                      {departments.find(d => d.id === viewingUser.department_id)?.name || 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between py-3">

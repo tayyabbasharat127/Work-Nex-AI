@@ -285,8 +285,8 @@ useEffect(() => {
 ### Protected Route
 ```javascript
 useEffect(() => {
-  const token = localStorage.getItem('token');
-  if (!token) {
+  const user = localStorage.getItem('user');
+  if (!user) {
     router.push('/login');
   }
 }, []);
@@ -296,8 +296,8 @@ useEffect(() => {
 
 ### Check Token
 ```javascript
-const token = localStorage.getItem('token');
-console.log('Token:', token);
+const user = localStorage.getItem('user');
+console.log('User context:', user);
 ```
 
 ### Check User

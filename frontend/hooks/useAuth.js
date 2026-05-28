@@ -1,31 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { authAPI } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
-export function useAuth() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
+function readStoredUser() {
+  if (typeof window === 'undefined') return null;
+  const storedUser = localStorage.getItem('user');
+  if (!storedUser) return null;
+  try {
+    return JSON.parse(storedUser);
+  } catch (error) {
+    console.error('Error parsing user data:', error);
+    localStorage.removeItem('user');
+    return null;
+  }
+}
 
-  useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        localStorage.removeItem('user');
-      }
-    }
-    setLoading(false);
-  }, []);
+export function useAuth() {
+  const [user, setUser] = useState(readStoredUser);
+  const [loading] = useState(false);
+  const router = useRouter();
 
   const login = async (email, password) => {
     try {
-      const data = await authAPI.login(email, password);
-      setUser(data.user);
-      return data;
+      const response = await authAPI.login(email, password);
+      // Backend returns: { success, message, data: { accessToken, refreshToken, user } }
+      const user = response.data?.user || response.user;
+      if (user) {
+        setUser(user);
+      } else if (response.data?.requires2FA) {
+        setUser(null);
+      }
+      return response;
     } catch (error) {
       throw error;
     }
@@ -33,9 +38,12 @@ export function useAuth() {
 
   const superAdminLogin = async (email, password) => {
     try {
-      const data = await authAPI.superAdminLogin(email, password);
-      setUser(data.user);
-      return data;
+      const response = await authAPI.superAdminLogin(email, password);
+      const user = response.data?.user || response.user;
+      if (user) {
+        setUser(user);
+      }
+      return response;
     } catch (error) {
       throw error;
     }
@@ -50,8 +58,8 @@ export function useAuth() {
     }
   };
 
-  const logout = () => {
-    authAPI.logout();
+  const logout = async () => {
+    await authAPI.logout();
     setUser(null);
     router.push('/login');
   };

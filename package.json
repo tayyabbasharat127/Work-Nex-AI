@@ -1,0 +1,18 @@
+{
+  "name": "worknex-ai-workspace",
+  "private": true,
+  "scripts": {
+    "health": "powershell -ExecutionPolicy Bypass -File scripts/health-check.ps1",
+    "start:dev": "powershell -ExecutionPolicy Bypass -File scripts/start-dev.ps1",
+    "smoke": "powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1",
+    "test:full": "powershell -ExecutionPolicy Bypass -File scripts/full-module-test.ps1",
+    "db:validate": "cd worknex-backend && npm.cmd run db:validate",
+    "db:setup": "cd worknex-backend && npm.cmd run db:setup",
+    "db:status": "cd worknex-backend && npm.cmd run db:status",
+    "db:reset": "cd worknex-backend && npm.cmd run db:reset",
+    "db:seed": "cd worknex-backend && npm.cmd run db:seed",
+    "db:preflight": "cd worknex-backend && npm.cmd run db:preflight",
+    "lint": "cd frontend && npm.cmd run lint",
+    "build": "cd frontend && npm.cmd run build"
+  }
+}

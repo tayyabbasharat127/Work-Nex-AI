@@ -1,0 +1,34 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+   ▲ Next.js 16.0.0 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.100.7:3000
+
+ ✓ Starting...
+Creating turbopack project {
+  dir: 'C:\\Users\\TECHXCESS\\Desktop\\Work-Nex-AI\\frontend',
+  testMode: true
+}
+ ✓ Ready in 1766ms
+ ○ Compiling / ...
+ GET / 200 in 4.6s (compile: 4.3s, render: 260ms)
+ GET / 200 in 112ms (compile: 6ms, render: 107ms)
+ GET /dashboard/admin/powerbi 200 in 561ms (compile: 457ms, render: 103ms)
+ GET / 200 in 54ms (compile: 3ms, render: 51ms)
+ GET /login 200 in 379ms (compile: 317ms, render: 62ms)
+ GET /dashboard/admin 200 in 2.2s (compile: 2.0s, render: 204ms)
+ GET /dashboard/admin/attendance 200 in 1086ms (compile: 923ms, render: 163ms)
+ GET /dashboard/admin/leaves 200 in 532ms (compile: 421ms, render: 110ms)
+ GET /dashboard/admin/reports 200 in 512ms (compile: 406ms, render: 106ms)
+ GET /dashboard/admin/settings 200 in 563ms (compile: 462ms, render: 102ms)
+ GET /dashboard/admin/ai-chat 200 in 410ms (compile: 318ms, render: 92ms)
+ GET /dashboard/admin/forecast 200 in 790ms (compile: 633ms, render: 157ms)
+ GET /dashboard/admin/performance 200 in 390ms (compile: 306ms, render: 85ms)
+ GET /dashboard/admin/powerbi 200 in 60ms (compile: 3ms, render: 57ms)
+ GET /dashboard/manager 200 in 743ms (compile: 624ms, render: 119ms)
+ GET /dashboard/employee 200 in 616ms (compile: 526ms, render: 90ms)
+ GET /dashboard/employee/assistant 200 in 472ms (compile: 374ms, render: 97ms)
+ GET /dashboard/employee/forecast 200 in 473ms (compile: 405ms, render: 68ms)
+ GET /dashboard/employee/performance 200 in 679ms (compile: 521ms, render: 158ms)

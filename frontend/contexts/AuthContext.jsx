@@ -1,35 +1,39 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState } from 'react';
 import { authAPI } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext({});
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
+function readStoredUser() {
+  if (typeof window === 'undefined') return null;
+  const storedUser = localStorage.getItem('user');
+  if (!storedUser) return null;
+  try {
+    return JSON.parse(storedUser);
+  } catch (error) {
+    console.error('Error parsing user data:', error);
+    localStorage.removeItem('user');
+    return null;
+  }
+}
 
-  useEffect(() => {
-    // Check if user is logged in on mount
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        localStorage.removeItem('user');
-      }
-    }
-    setLoading(false);
-  }, []);
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(readStoredUser);
+  const [loading] = useState(false);
+  const router = useRouter();
 
   const login = async (email, password) => {
     try {
-      const data = await authAPI.login(email, password);
-      setUser(data.user);
-      return data;
+      const response = await authAPI.login(email, password);
+      const loggedInUser = response.data?.user || response.user;
+      if (loggedInUser) {
+        setUser(loggedInUser);
+      } else if (response.data?.requires2FA) {
+        setUser(null);
+      }
+      return response;
     } catch (error) {
       throw error;
     }
@@ -37,9 +41,12 @@ export function AuthProvider({ children }) {
 
   const superAdminLogin = async (email, password) => {
     try {
-      const data = await authAPI.superAdminLogin(email, password);
-      setUser(data.user);
-      return data;
+      const response = await authAPI.superAdminLogin(email, password);
+      const loggedInUser = response.data?.user || response.user;
+      if (loggedInUser) {
+        setUser(loggedInUser);
+      }
+      return response;
     } catch (error) {
       throw error;
     }
@@ -54,8 +61,8 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = () => {
-    authAPI.logout();
+  const logout = async () => {
+    await authAPI.logout();
     setUser(null);
     router.push('/login');
   };

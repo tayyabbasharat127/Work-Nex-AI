@@ -2,13 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { Search, Download, Calendar, Clock, UserCheck, UserX, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Download, Calendar, UserCheck, UserX, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { attendanceAPI } from '@/lib/api';
 import { toast } from 'sonner';
 
+const localDateInputValue = (date = new Date()) => {
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return offsetDate.toISOString().slice(0, 10);
+};
+
+function EmptyChart({ loading, label }) {
+  return (
+    <div className="min-h-48 flex items-center justify-center border border-dashed border-border rounded-lg text-sm text-muted-foreground">
+      {loading ? 'Loading...' : label}
+    </div>
+  );
+}
+
 export default function AdminAttendance() {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(localDateInputValue());
   const [filterStatus, setFilterStatus] = useState('All');
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -16,18 +29,36 @@ export default function AdminAttendance() {
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const itemsPerPage = 8;
 
+  const statusLabel = (status) => (status || '').replace('_', ' ');
+  const formatTime = (value) => value ? new Date(value).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '---';
+  const formatHours = (hours) => {
+    if (hours === null || hours === undefined) return '---';
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return `${h}h ${m}m`;
+  };
+  const personName = (record) => {
+    const user = record.user || {};
+    return `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown';
+  };
+  const departmentName = (record) => record.user?.department?.name || 'Unassigned';
+
   useEffect(() => {
     loadAttendance();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
   const loadAttendance = async () => {
     try {
       setLoading(true);
-      const data = await attendanceAPI.getOverview({ date: selectedDate });
+      // Use getAll method with date parameter
+      const data = await attendanceAPI.getAll({ date: selectedDate });
       // Handle different response formats
       const records = Array.isArray(data) ? data : (data?.records || data?.data || []);
       setAttendanceRecords(records);
+      setCurrentPage(1);
     } catch (err) {
+      console.error('Failed to load attendance:', err);
       toast.error('Failed to load attendance data');
       setAttendanceRecords([]);
     } finally {
@@ -37,64 +68,49 @@ export default function AdminAttendance() {
 
   // Calculate stats from actual data
   const stats = [
-    { label: 'Present Today', value: attendanceRecords.filter(r => r.status === 'Present').length, icon: UserCheck, color: 'text-emerald-400', bg: 'bg-emerald-500/20' },
-    { label: 'Absent', value: attendanceRecords.filter(r => r.status === 'Absent').length, icon: UserX, color: 'text-red-400', bg: 'bg-red-500/20' },
-    { label: 'Late Arrivals', value: attendanceRecords.filter(r => r.status === 'Late').length, icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/20' },
-    { label: 'On Leave', value: attendanceRecords.filter(r => r.status === 'On Leave').length, icon: Calendar, color: 'text-cyan-400', bg: 'bg-cyan-500/20' },
+    { label: 'Present Today', value: attendanceRecords.filter(r => ['PRESENT', 'LATE'].includes(r.status)).length, icon: UserCheck, color: 'text-emerald-400', bg: 'bg-emerald-500/20' },
+    { label: 'Absent', value: attendanceRecords.filter(r => r.status === 'ABSENT').length, icon: UserX, color: 'text-red-400', bg: 'bg-red-500/20' },
+    { label: 'Late Arrivals', value: attendanceRecords.filter(r => r.status === 'LATE').length, icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/20' },
+    { label: 'On Leave', value: attendanceRecords.filter(r => r.status === 'ON_LEAVE').length, icon: Calendar, color: 'text-cyan-400', bg: 'bg-cyan-500/20' },
   ];
 
   // Calculate status distribution from actual data
   const statusDistribution = [
-    { name: 'Present', value: attendanceRecords.filter(r => r.status === 'Present').length, color: '#10b981' },
-    { name: 'Late', value: attendanceRecords.filter(r => r.status === 'Late').length, color: '#f59e0b' },
-    { name: 'Absent', value: attendanceRecords.filter(r => r.status === 'Absent').length, color: '#ef4444' },
-    { name: 'On Leave', value: attendanceRecords.filter(r => r.status === 'On Leave').length, color: '#06b6d4' },
-  ];
+    { name: 'Present', value: attendanceRecords.filter(r => r.status === 'PRESENT').length, color: '#10b981' },
+    { name: 'Late', value: attendanceRecords.filter(r => r.status === 'LATE').length, color: '#f59e0b' },
+    { name: 'Absent', value: attendanceRecords.filter(r => r.status === 'ABSENT').length, color: '#ef4444' },
+    { name: 'On Leave', value: attendanceRecords.filter(r => r.status === 'ON_LEAVE').length, color: '#06b6d4' },
+  ].filter(item => item.value > 0);
 
-  // Mock data for charts (can be replaced with real data later)
-  const weeklyData = [
-    { day: 'Mon', present: 245, absent: 12, late: 8 },
-    { day: 'Tue', present: 252, absent: 8, late: 5 },
-    { day: 'Wed', present: 248, absent: 10, late: 7 },
-    { day: 'Thu', present: 255, absent: 6, late: 4 },
-    { day: 'Fri', present: 240, absent: 15, late: 10 },
-  ];
+  const weeklyData = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => ({
+    day,
+    present: attendanceRecords.filter(r => new Date(r.date).getDay() === index && ['PRESENT', 'LATE'].includes(r.status)).length,
+    late: attendanceRecords.filter(r => new Date(r.date).getDay() === index && r.status === 'LATE').length,
+    absent: attendanceRecords.filter(r => new Date(r.date).getDay() === index && r.status === 'ABSENT').length,
+  })).filter(item => item.present || item.late || item.absent);
 
-  const hourlyTrend = [
-    { time: '7 AM', count: 45 },
-    { time: '8 AM', count: 120 },
-    { time: '9 AM', count: 85 },
-    { time: '10 AM', count: 15 },
-    { time: '11 AM', count: 5 },
-  ];
+  const hourlyTrend = Array.from({ length: 6 }, (_, i) => 7 + i).map(hour => ({
+    time: `${hour > 12 ? hour - 12 : hour} ${hour >= 12 ? 'PM' : 'AM'}`,
+    count: attendanceRecords.filter(r => r.checkIn && new Date(r.checkIn).getHours() === hour).length,
+  })).filter(item => item.count > 0);
 
   const filteredRecords = attendanceRecords.filter(record => {
-    const matchesSearch = record.name.toLowerCase().includes(search.toLowerCase()) ||
-      record.department.toLowerCase().includes(search.toLowerCase());
+    const needle = search.toLowerCase();
+    const matchesSearch = personName(record).toLowerCase().includes(needle) ||
+      departmentName(record).toLowerCase().includes(needle);
     const matchesStatus = filterStatus === 'All' || record.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
-  const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / itemsPerPage));
   const paginatedRecords = filteredRecords.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleMarkAttendance = async (id, newStatus) => {
     try {
-      // Update locally first for immediate feedback
-      setAttendanceRecords(records => 
-        records.map(r => r.id === id ? { 
-          ...r, 
-          status: newStatus,
-          checkIn: newStatus === 'Present' ? '08:30 AM' : r.checkIn,
-          checkOut: newStatus === 'Present' ? '05:30 PM' : r.checkOut,
-          workHours: newStatus === 'Present' ? '9h 0m' : r.workHours
-        } : r)
-      );
-      
-      // Call API to update on backend
-      // await attendanceAPI.adjust(id, checkIn, checkOut, newStatus);
+      await attendanceAPI.update(id, { status: newStatus, notes: 'Admin correction from attendance dashboard' });
+      await loadAttendance();
       toast.success('Attendance updated successfully');
-    } catch (err) {
+    } catch {
       toast.error('Failed to update attendance');
       // Reload data on error
       loadAttendance();
@@ -166,7 +182,7 @@ export default function AdminAttendance() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6">
               <h2 className="text-lg font-bold mb-4">Weekly Attendance Overview</h2>
-              <div className="h-64">
+              {weeklyData.length ? <div className="h-64 min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={weeklyData} barGap={4}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
@@ -178,12 +194,12 @@ export default function AdminAttendance() {
                     <Bar dataKey="absent" name="Absent" fill="#ef4444" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </div> : <EmptyChart loading={loading} label="No weekly attendance data for this date" />}
             </div>
 
             <div className="bg-card border border-border rounded-xl p-6">
               <h2 className="text-lg font-bold mb-4">Today Status</h2>
-              <div className="h-48">
+              {statusDistribution.length ? <div className="h-48 min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={statusDistribution} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={4} dataKey="value">
@@ -194,21 +210,21 @@ export default function AdminAttendance() {
                     <Tooltip content={<CustomTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mt-4">
+              </div> : <EmptyChart loading={loading} label="No status data for this date" />}
+              {statusDistribution.length > 0 && <div className="grid grid-cols-2 gap-2 mt-4">
                 {statusDistribution.map((item, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
                     <span className="text-xs text-muted-foreground">{item.name}: {item.value}</span>
                   </div>
                 ))}
-              </div>
+              </div>}
             </div>
           </div>
 
           <div className="bg-card border border-border rounded-xl p-6">
             <h2 className="text-lg font-bold mb-4">Check-in Time Distribution</h2>
-            <div className="h-48">
+            {hourlyTrend.length ? <div className="h-48 min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={hourlyTrend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
@@ -218,7 +234,7 @@ export default function AdminAttendance() {
                   <Line type="monotone" dataKey="count" name="Check-ins" stroke="#06b6d4" strokeWidth={3} dot={{ fill: '#06b6d4', strokeWidth: 2 }} />
                 </LineChart>
               </ResponsiveContainer>
-            </div>
+            </div> : <EmptyChart loading={loading} label="No check-in times recorded for this date" />}
           </div>
 
           <div className="flex flex-col md:flex-row gap-4">
@@ -238,11 +254,11 @@ export default function AdminAttendance() {
               className="px-4 py-3 rounded-xl border border-border bg-card text-foreground focus:outline-none focus:border-primary"
             >
               <option value="All">All Status</option>
-              <option value="Present">Present</option>
-              <option value="Late">Late</option>
-              <option value="Absent">Absent</option>
-              <option value="On Leave">On Leave</option>
-              <option value="Early Leave">Early Leave</option>
+              <option value="PRESENT">Present</option>
+              <option value="LATE">Late</option>
+              <option value="ABSENT">Absent</option>
+              <option value="ON_LEAVE">On Leave</option>
+              <option value="HALF_DAY">Half Day</option>
             </select>
           </div>
 
@@ -272,29 +288,29 @@ export default function AdminAttendance() {
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-semibold text-sm">
-                            {record.name.split(' ').map(n => n[0]).join('')}
+                            {personName(record).split(' ').map(n => n[0]).join('')}
                           </div>
-                          <span className="font-medium">{record.name}</span>
+                          <span className="font-medium">{personName(record)}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-muted-foreground">{record.department}</td>
-                      <td className="py-4 px-6"><span className={record.checkIn === '-' ? 'text-muted-foreground' : 'text-foreground'}>{record.checkIn}</span></td>
-                      <td className="py-4 px-6"><span className={record.checkOut === '-' ? 'text-muted-foreground' : 'text-foreground'}>{record.checkOut}</span></td>
-                      <td className="py-4 px-6 font-medium">{record.workHours}</td>
+                      <td className="py-4 px-6 text-muted-foreground">{departmentName(record)}</td>
+                      <td className="py-4 px-6"><span className={!record.checkIn ? 'text-muted-foreground' : 'text-foreground'}>{formatTime(record.checkIn)}</span></td>
+                      <td className="py-4 px-6"><span className={!record.checkOut ? 'text-muted-foreground' : 'text-foreground'}>{formatTime(record.checkOut)}</span></td>
+                      <td className="py-4 px-6 font-medium">{formatHours(record.workingHours)}</td>
                       <td className="py-4 px-6">
                         <span className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
-                          record.status === 'Present' ? 'bg-success/20 text-success' :
-                          record.status === 'Late' ? 'bg-warning/20 text-warning' :
-                          record.status === 'Absent' ? 'bg-destructive/20 text-destructive' :
-                          record.status === 'On Leave' ? 'bg-primary/20 text-primary' :
+                          record.status === 'PRESENT' ? 'bg-success/20 text-success' :
+                          record.status === 'LATE' ? 'bg-warning/20 text-warning' :
+                          record.status === 'ABSENT' ? 'bg-destructive/20 text-destructive' :
+                          record.status === 'ON_LEAVE' ? 'bg-primary/20 text-primary' :
                           'bg-accent/20 text-accent'
-                        }`}>{record.status}</span>
+                        }`}>{statusLabel(record.status)}</span>
                       </td>
                       <td className="py-4 px-6">
-                        {record.status === 'Absent' && (
-                          <button onClick={() => handleMarkAttendance(record.id, 'Present')} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-success/20 text-success hover:bg-success/30 transition">Mark Present</button>
+                        {record.status === 'ABSENT' && (
+                          <button onClick={() => handleMarkAttendance(record.id, 'PRESENT')} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-success/20 text-success hover:bg-success/30 transition">Mark Present</button>
                         )}
-                        {record.status !== 'Absent' && <span className="text-muted-foreground text-xs">-</span>}
+                        {record.status !== 'ABSENT' && <span className="text-muted-foreground text-xs">-</span>}
                       </td>
                     </tr>
                   ))}

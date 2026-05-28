@@ -1,16 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Check, ArrowLeft } from 'lucide-react';
+import { authAPI } from '@/lib/api';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    password: '',
+    newPassword: '',
     confirmPassword: ''
   });
+  const [token, setToken] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
@@ -18,11 +20,16 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
 
   const passwordRequirements = [
-    { label: 'At least 8 characters', met: formData.password.length >= 8 },
-    { label: 'Contains uppercase letter', met: /[A-Z]/.test(formData.password) },
-    { label: 'Contains lowercase letter', met: /[a-z]/.test(formData.password) },
-    { label: 'Contains number', met: /[0-9]/.test(formData.password) }
+    { label: 'At least 8 characters', met: formData.newPassword.length >= 8 },
+    { label: 'Contains uppercase letter', met: /[A-Z]/.test(formData.newPassword) },
+    { label: 'Contains lowercase letter', met: /[a-z]/.test(formData.newPassword) },
+    { label: 'Contains number', met: /[0-9]/.test(formData.newPassword) }
   ];
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setToken(params.get('token') || '');
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -38,12 +45,17 @@ export default function ResetPasswordPage() {
     setLoading(true);
 
     try {
-      if (!formData.password || !formData.confirmPassword) {
+      if (!token) {
+        setError('Reset token is missing or invalid');
+        return;
+      }
+
+      if (!formData.newPassword || !formData.confirmPassword) {
         setError('Please fill in all fields');
         return;
       }
 
-      if (formData.password !== formData.confirmPassword) {
+      if (formData.newPassword !== formData.confirmPassword) {
         setError('Passwords do not match');
         return;
       }
@@ -53,8 +65,7 @@ export default function ResetPasswordPage() {
         return;
       }
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await authAPI.resetPassword(token, formData.newPassword);
       setSuccess(true);
 
       // Redirect to login after 2 seconds
@@ -122,8 +133,8 @@ export default function ResetPasswordPage() {
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={formData.password}
+                name="newPassword"
+                value={formData.newPassword}
                 onChange={handleChange}
                 placeholder="••••••••"
                 className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition pr-10"
@@ -161,7 +172,7 @@ export default function ResetPasswordPage() {
           </div>
 
           {/* Password Requirements */}
-          {formData.password && (
+          {formData.newPassword && (
             <div className="p-4 rounded-lg bg-muted/50 border border-border text-sm space-y-2">
               <p className="font-semibold text-foreground">Password requirements:</p>
               {passwordRequirements.map((req, index) => (

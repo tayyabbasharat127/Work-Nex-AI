@@ -1,133 +1,164 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { Save } from 'lucide-react';
+import TwoFactorSettings from '@/components/TwoFactorSettings';
+import { organizationSettingsAPI } from '@/lib/api';
+import { toast } from 'sonner';
+
+const defaultSettings = {
+  name: '',
+  timezone: 'Asia/Karachi',
+  workingHours: { start: '09:00', end: '17:00' },
+  lateThreshold: { hour: 9, minute: 30 },
+  officeIpRanges: [],
+  wifiVerificationEnabled: false,
+  attendancePolicy: { halfDayHours: 4 },
+  leaveAutomationEnabled: true,
+};
 
 export default function AdminSettings() {
-  const [settings, setSettings] = useState({
-    companyName: 'WorkNexAI Corp',
-    timezone: 'UTC',
-    workingHours: '9:00 AM - 5:00 PM',
-    attendanceAlertTime: '9:30 AM',
-    emailNotifications: true,
-    smsNotifications: false
-  });
+  const [settings, setSettings] = useState(defaultSettings);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const handleChange = (key, value) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+  const loadSettings = async () => {
+    try {
+      setLoading(true);
+      const data = await organizationSettingsAPI.get();
+      setSettings({ ...defaultSettings, ...data });
+    } catch {
+      toast.error('Failed to load organization settings');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSave = () => {
-    alert('Settings saved successfully!');
+  useEffect(() => {
+    const timer = setTimeout(loadSettings, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const update = (key, value) => setSettings((prev) => ({ ...prev, [key]: value }));
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      const payload = {
+        ...settings,
+        officeIpRanges: Array.isArray(settings.officeIpRanges)
+          ? settings.officeIpRanges
+          : String(settings.officeIpRanges || '').split(',').map((item) => item.trim()).filter(Boolean),
+      };
+      const saved = await organizationSettingsAPI.update(payload);
+      setSettings({ ...defaultSettings, ...saved });
+      toast.success('Settings saved');
+    } catch (error) {
+      toast.error(error.message || 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="flex h-screen bg-background">
       <Sidebar role="admin" />
-
       <main className="flex-1 overflow-auto md:ml-64">
         <div className="sticky top-0 bg-card border-b border-border p-6 z-20">
           <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground mt-1">Manage system settings and preferences.</p>
+          <p className="text-muted-foreground mt-1">Manage organization settings and preferences.</p>
         </div>
 
         <div className="p-6">
           <div className="max-w-2xl">
             <div className="bg-card border border-border rounded-lg p-6 space-y-6">
-              {/* Company Settings */}
-              <div>
-                <h2 className="text-lg font-bold mb-4">Company Settings</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Company Name</label>
-                    <input
-                      type="text"
-                      value={settings.companyName}
-                      onChange={(e) => handleChange('companyName', e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-input text-foreground focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Timezone</label>
-                    <select
-                      value={settings.timezone}
-                      onChange={(e) => handleChange('timezone', e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-input text-foreground focus:outline-none focus:border-primary"
-                    >
-                      <option>UTC</option>
-                      <option>EST</option>
-                      <option>CST</option>
-                      <option>PST</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
+              {loading ? (
+                <div className="text-muted-foreground">Loading settings...</div>
+              ) : (
+                <>
+                  <Section title="Organization">
+                    <Field label="Organization Name">
+                      <input value={settings.name || ''} onChange={(event) => update('name', event.target.value)} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                    </Field>
+                    <Field label="Timezone">
+                      <select value={settings.timezone || 'Asia/Karachi'} onChange={(event) => update('timezone', event.target.value)} className="w-full px-4 py-2 rounded-lg border border-border bg-input">
+                        <option value="Asia/Karachi">Asia/Karachi</option>
+                        <option value="UTC">UTC</option>
+                        <option value="America/New_York">America/New_York</option>
+                        <option value="Europe/London">Europe/London</option>
+                      </select>
+                    </Field>
+                  </Section>
 
-              {/* Working Hours */}
-              <div>
-                <h2 className="text-lg font-bold mb-4">Working Hours</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Working Hours</label>
-                    <input
-                      type="text"
-                      value={settings.workingHours}
-                      onChange={(e) => handleChange('workingHours', e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-input text-foreground focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Attendance Alert Time</label>
-                    <input
-                      type="text"
-                      value={settings.attendanceAlertTime}
-                      onChange={(e) => handleChange('attendanceAlertTime', e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-input text-foreground focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                </div>
-              </div>
+                  <Section title="Attendance">
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field label="Work Start">
+                        <input type="time" value={settings.workingHours?.start || '09:00'} onChange={(event) => update('workingHours', { ...settings.workingHours, start: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                      </Field>
+                      <Field label="Work End">
+                        <input type="time" value={settings.workingHours?.end || '17:00'} onChange={(event) => update('workingHours', { ...settings.workingHours, end: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                      </Field>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field label="Late Hour">
+                        <input type="number" value={settings.lateThreshold?.hour ?? 9} onChange={(event) => update('lateThreshold', { ...settings.lateThreshold, hour: Number(event.target.value) })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                      </Field>
+                      <Field label="Late Minute">
+                        <input type="number" value={settings.lateThreshold?.minute ?? 30} onChange={(event) => update('lateThreshold', { ...settings.lateThreshold, minute: Number(event.target.value) })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                      </Field>
+                    </div>
+                    <Field label="Office IP Ranges">
+                      <input value={(settings.officeIpRanges || []).join(', ')} onChange={(event) => update('officeIpRanges', event.target.value)} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                    </Field>
+                    <label className="flex items-center gap-3">
+                      <input type="checkbox" checked={Boolean(settings.wifiVerificationEnabled)} onChange={(event) => update('wifiVerificationEnabled', event.target.checked)} />
+                      <span>Enable Wi-Fi/IP verification</span>
+                    </label>
+                  </Section>
 
-              {/* Notifications */}
-              <div>
-                <h2 className="text-lg font-bold mb-4">Notifications</h2>
-                <div className="space-y-3">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settings.emailNotifications}
-                      onChange={(e) => handleChange('emailNotifications', e.target.checked)}
-                      className="w-4 h-4 rounded border-border"
-                    />
-                    <span>Email Notifications</span>
-                  </label>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settings.smsNotifications}
-                      onChange={(e) => handleChange('smsNotifications', e.target.checked)}
-                      className="w-4 h-4 rounded border-border"
-                    />
-                    <span>SMS Notifications</span>
-                  </label>
-                </div>
-              </div>
+                  <Section title="Leave Automation">
+                    <label className="flex items-center gap-3">
+                      <input type="checkbox" checked={Boolean(settings.leaveAutomationEnabled)} onChange={(event) => update('leaveAutomationEnabled', event.target.checked)} />
+                      <span>Enable leave automation rules</span>
+                    </label>
+                  </Section>
 
-              {/* Save Button */}
-              <div className="pt-6 border-t border-border">
-                <button
-                  onClick={handleSave}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition font-medium"
-                >
-                  <Save size={20} />
-                  Save Changes
-                </button>
-              </div>
+                  <div className="pt-6 border-t border-border">
+                    <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition font-medium disabled:opacity-50">
+                      <Save size={20} />
+                      {saving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="bg-card border border-border rounded-lg p-6 mt-6">
+              <h2 className="text-lg font-bold mb-4">Account Security</h2>
+              <TwoFactorSettings />
             </div>
           </div>
         </div>
       </main>
+    </div>
+  );
+}
+
+function Section({ title, children }) {
+  return (
+    <div>
+      <h2 className="text-lg font-bold mb-4">{title}</h2>
+      <div className="space-y-4">{children}</div>
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-2">{label}</label>
+      {children}
     </div>
   );
 }

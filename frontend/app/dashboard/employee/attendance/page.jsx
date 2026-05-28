@@ -1,35 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { Clock } from 'lucide-react';
 import { useAttendance } from '@/hooks/useAttendance';
 import { toast } from 'sonner';
 
 export default function EmployeeAttendance() {
-  const { todayStatus, history, loading, error, fetchTodayStatus, fetchHistory, checkIn, checkOut } = useAttendance();
-  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const { todayStatus, history, loading, fetchTodayStatus, fetchHistory, checkIn, checkOut } = useAttendance();
+  const isCheckedIn = Boolean(todayStatus?.checkIn && !todayStatus?.checkOut);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  async function loadData() {
     try {
       await Promise.all([
         fetchTodayStatus(),
         fetchHistory({ limit: 30 })
       ]);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load attendance data');
     }
-  };
+  }
 
   useEffect(() => {
-    if (todayStatus) {
-      setIsCheckedIn(todayStatus.checkIn && !todayStatus.checkOut);
-    }
-  }, [todayStatus]);
+    const loadTimer = setTimeout(loadData, 0);
+    return () => clearTimeout(loadTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCheckIn = async () => {
     try {
@@ -44,7 +40,6 @@ export default function EmployeeAttendance() {
     try {
       await checkOut();
       toast.success('Checked out successfully!');
-      setIsCheckedIn(false);
     } catch (err) {
       toast.error(err.message || 'Failed to check out');
     }
@@ -77,6 +72,22 @@ export default function EmployeeAttendance() {
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     return `${hours}h ${minutes}m`;
+  };
+
+  const formatHours = (record) => {
+    if (record?.workingHours === null || record?.workingHours === undefined) {
+      return calculateHours(record?.checkIn || record?.check_in, record?.checkOut || record?.check_out);
+    }
+    const hours = Math.floor(record.workingHours);
+    const minutes = Math.round((record.workingHours - hours) * 60);
+    return `${hours}h ${minutes}m`;
+  };
+
+  const statusClass = (status) => {
+    if (['PRESENT', 'LATE'].includes(status)) return 'bg-success/20 text-success';
+    if (status === 'ABSENT') return 'bg-destructive/20 text-destructive';
+    if (status === 'HOLIDAY') return 'bg-primary/20 text-primary';
+    return 'bg-muted/20 text-muted-foreground';
   };
 
   return (
@@ -123,7 +134,7 @@ export default function EmployeeAttendance() {
 
           {/* Today's Status */}
           <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-lg font-bold mb-6">Today's Status</h2>
+            <h2 className="text-lg font-bold mb-6">Today&apos;s Status</h2>
             {loading && !todayStatus ? (
               <div className="text-center py-8 text-muted-foreground">Loading...</div>
             ) : (
@@ -181,24 +192,23 @@ export default function EmployeeAttendance() {
                       <th className="text-left py-3 px-4 font-semibold">Check In</th>
                       <th className="text-left py-3 px-4 font-semibold">Check Out</th>
                       <th className="text-left py-3 px-4 font-semibold">Work Hours</th>
+                      <th className="text-left py-3 px-4 font-semibold">IP Address</th>
                       <th className="text-left py-3 px-4 font-semibold">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {Array.isArray(history) && history.map((record, idx) => (
                       <tr key={record.id || idx} className="hover:bg-background transition">
-                        <td className="py-4 px-4 font-medium">{formatDate(record.check_in || record.checkIn)}</td>
+                        <td className="py-4 px-4 font-medium">{formatDate(record.date)}</td>
                         <td className="py-4 px-4 text-muted-foreground">{formatTime(record.checkIn || record.check_in)}</td>
                         <td className="py-4 px-4 text-muted-foreground">{formatTime(record.checkOut || record.check_out)}</td>
-                        <td className="py-4 px-4 font-medium">{calculateHours(record.checkIn || record.check_in, record.checkOut || record.check_out)}</td>
+                        <td className="py-4 px-4 font-medium">{formatHours(record)}</td>
+                        <td className="py-4 px-4 text-muted-foreground text-xs font-mono">
+                          {record.ipAddress || '---'}
+                        </td>
                         <td className="py-4 px-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            record.status === 'Present' ? 'bg-success/20 text-success' :
-                            record.status === 'Absent' ? 'bg-destructive/20 text-destructive' :
-                            record.status === 'Holiday' ? 'bg-primary/20 text-primary' :
-                            'bg-muted/20 text-muted-foreground'
-                          }`}>
-                            {record.status}
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusClass(record.status)}`}>
+                            {(record.status || '').replace('_', ' ')}
                           </span>
                         </td>
                       </tr>

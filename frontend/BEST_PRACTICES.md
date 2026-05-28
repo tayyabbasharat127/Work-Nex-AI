@@ -49,8 +49,8 @@ await createUser(formData);
 ```javascript
 // ✅ Always check authentication before protected operations
 useEffect(() => {
-  const token = localStorage.getItem('token');
-  if (!token) {
+  const user = localStorage.getItem('user');
+  if (!user) {
     router.push('/login');
   }
 }, []);
@@ -60,8 +60,6 @@ useEffect(() => {
 ```javascript
 // ✅ Clear all user data on logout
 const handleLogout = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
   router.push('/login');
 };
@@ -287,7 +285,7 @@ const sanitizedInput = input.trim().replace(/[<>]/g, '');
 localStorage.setItem('password', password);
 
 // ✅ Good - only store tokens
-localStorage.setItem('token', token);
+setTokens(accessToken);
 ```
 
 ## 📱 Responsive Design

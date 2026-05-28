@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   BarChart3,
+  Award,
   Users,
   CalendarX,
   Settings,
@@ -16,8 +17,13 @@ import {
   TrendingUp,
   Bell,
   BookOpen,
-  Shield
+  Brain,
+  Zap,
+  Database,
+  Monitor,
+  Sparkles
 } from 'lucide-react';
+import { authAPI } from '@/lib/api';
 
 const ADMIN_MENU = [
   { label: 'Dashboard', href: '/dashboard/admin', icon: Home },
@@ -26,7 +32,12 @@ const ADMIN_MENU = [
   { label: 'Attendance', href: '/dashboard/admin/attendance', icon: Clock },
   { label: 'Leaves', href: '/dashboard/admin/leaves', icon: CalendarX },
   { label: 'Departments', href: '/dashboard/admin/departments', icon: Users },
+  { label: 'Performance', href: '/dashboard/admin/performance', icon: Award },
   { label: 'Reports', href: '/dashboard/admin/reports', icon: TrendingUp },
+  { label: 'Forecast', href: '/dashboard/admin/forecast', icon: Zap },
+  { label: 'AI Assistant', href: '/dashboard/admin/ai-chat', icon: Brain },
+  { label: 'ETL Pipeline', href: '/dashboard/admin/etl', icon: Database },
+  { label: 'Power BI', href: '/dashboard/admin/powerbi', icon: Monitor },
   { label: 'Notifications', href: '/dashboard/admin/notifications', icon: Bell },
   { label: 'Logs', href: '/dashboard/admin/logs', icon: BookOpen },
   { label: 'Settings', href: '/dashboard/admin/settings', icon: Settings },
@@ -46,24 +57,26 @@ const EMPLOYEE_MENU = [
   { label: 'Attendance', href: '/dashboard/employee/attendance', icon: Clock },
   { label: 'My Leaves', href: '/dashboard/employee/leaves', icon: CalendarX },
   { label: 'Analytics', href: '/dashboard/employee/analytics', icon: BarChart3 },
+  { label: 'Performance', href: '/dashboard/employee/performance', icon: TrendingUp },
+  { label: 'Forecast', href: '/dashboard/employee/forecast', icon: Sparkles },
+  { label: 'AI Assistant', href: '/dashboard/employee/assistant', icon: Brain },
   { label: 'Settings', href: '/dashboard/employee/settings', icon: Settings },
 ];
 
 export default function Sidebar({ role = 'admin' }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [user, setUser] = useState(null);
-  const pathname = usePathname();
-
-  useEffect(() => {
+  const [user] = useState(() => {
+    if (typeof window === 'undefined') return null;
     const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        setUser(JSON.parse(userData));
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-      }
+    if (!userData) return null;
+    try {
+      return JSON.parse(userData);
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      return null;
     }
-  }, []);
+  });
+  const pathname = usePathname();
 
   const getMenuItems = () => {
     switch (role) {
@@ -78,8 +91,8 @@ export default function Sidebar({ role = 'admin' }) {
 
   const menuItems = getMenuItems();
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await authAPI.logout();
     window.location.href = '/login';
   };
 
@@ -115,7 +128,7 @@ export default function Sidebar({ role = 'admin' }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-sidebar-foreground truncate">
-                {user?.name || role.charAt(0).toUpperCase() + role.slice(1)}
+                {[user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.name || role.charAt(0).toUpperCase() + role.slice(1)}
               </p>
               <p className="text-xs text-muted-foreground truncate">
                 {user?.email || `${role}@worknexai.com`}

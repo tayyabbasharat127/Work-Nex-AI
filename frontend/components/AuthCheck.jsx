@@ -3,43 +3,39 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { getPending2FAUserId } from '@/lib/api';
 
 export default function AuthCheck({ children }) {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
+  const [isAuthenticated] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    if (getPending2FAUserId()) return false;
+    return Boolean(localStorage.getItem('user'));
+  });
+  const [isChecking] = useState(false);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = () => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
-      const user = localStorage.getItem('user');
-      
-      if (!token || !user) {
-        toast.error('Please login to access this page', {
-          description: 'You need to be authenticated',
-          action: {
-            label: 'Login',
-            onClick: () => router.push('/login')
-          }
-        });
-        
-        // Redirect to login after a short delay
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
-        
-        setIsAuthenticated(false);
-      } else {
-        setIsAuthenticated(true);
+    if (!isAuthenticated) {
+      if (getPending2FAUserId()) {
+        router.push('/verify-otp');
+        return;
       }
-      
-      setIsChecking(false);
+
+      toast.error('Please login to access this page', {
+        description: 'You need to be authenticated',
+        action: {
+          label: 'Login',
+          onClick: () => router.push('/login')
+        }
+      });
+
+      const redirectTimer = setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+
+      return () => clearTimeout(redirectTimer);
     }
-  };
+  }, [isAuthenticated, router]);
 
   if (isChecking) {
     return (

@@ -37,17 +37,31 @@ export default function LoginPage() {
         return;
       }
 
-      const data = await login(formData.email, formData.password);
+      const response = await login(formData.email, formData.password);
+
+      if (response.data?.requires2FA) {
+        router.push('/verify-otp');
+        return;
+      }
       
-      // Redirect based on user role
+      // Backend returns: { success, message, data: { accessToken, refreshToken, user } }
+      // Extract user from response.data
+      const user = response.data?.user || response.user;
+      
+      if (!user || !user.role) {
+        setError('Login failed: Invalid response from server');
+        return;
+      }
+      
+      // Redirect based on user role (backend returns string enums)
       const roleMap = {
-        0: '/dashboard/admin',      // Super Admin
-        1: '/dashboard/admin',       // Admin
-        2: '/dashboard/manager',     // Manager
-        3: '/dashboard/employee',    // Employee
+        'SUPER_ADMIN': '/dashboard/admin',
+        'ADMIN': '/dashboard/admin',
+        'MANAGER': '/dashboard/manager',
+        'EMPLOYEE': '/dashboard/employee',
       };
       
-      const redirectPath = roleMap[data.user.role] || '/dashboard/admin';
+      const redirectPath = roleMap[user.role] || '/dashboard/employee';
       router.push(redirectPath);
     } catch (err) {
       setError(err.message || 'Invalid email or password');
@@ -139,7 +153,7 @@ export default function LoginPage() {
 
         {/* Sign Up Link */}
         <p className="text-center text-muted-foreground mt-6">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <Link href="/register" className="text-primary hover:underline font-semibold">
             Sign up
           </Link>

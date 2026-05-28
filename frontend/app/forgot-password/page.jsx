@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { authAPI } from '@/lib/api';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -21,8 +22,7 @@ export default function ForgotPasswordPage() {
         return;
       }
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await authAPI.forgotPassword(email);
       setSubmitted(true);
     } finally {
       setLoading(false);
@@ -47,7 +47,7 @@ export default function ForgotPasswordPage() {
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold">Reset Password</h1>
               <p className="text-muted-foreground mt-2">
-                Enter your email address and we'll send you a link to reset your password.
+                Enter your email address and we&apos;ll send you a link to reset your password.
               </p>
             </div>
 
@@ -91,10 +91,10 @@ export default function ForgotPasswordPage() {
               </div>
               <h1 className="text-3xl font-bold mb-3">Check Your Email</h1>
               <p className="text-muted-foreground mb-6">
-                We've sent a password reset link to <span className="font-semibold text-foreground">{email}</span>
+                We&apos;ve sent a password reset link to <span className="font-semibold text-foreground">{email}</span>
               </p>
               <p className="text-muted-foreground text-sm mb-8">
-                The link will expire in 24 hours. If you don't see the email, check your spam folder.
+                The link will expire in 24 hours. If you don&apos;t see the email, check your spam folder.
               </p>
 
               <button

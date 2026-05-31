@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function RegisterPage() {
@@ -64,7 +65,7 @@ export default function RegisterPage() {
       }
 
       // Call signup API with correct field names
-      const response = await signup({
+      await signup({
         organization_name: formData.organization_name,
         admin_name: formData.admin_name,
         admin_email: formData.admin_email,
@@ -77,7 +78,7 @@ export default function RegisterPage() {
       });
 
       // Registration successful - redirect to login
-      alert('Registration successful! You can now login with your credentials.');
+      toast.success('Registration successful! You can now login with your credentials.');
       router.push('/login');
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');

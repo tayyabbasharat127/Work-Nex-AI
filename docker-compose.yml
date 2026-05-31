@@ -34,17 +34,22 @@ services:
       JWT_REFRESH_EXPIRES_IN: 30d
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
       SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
       EMAIL_FROM: ${EMAIL_FROM:-noreply@worknexai.com}
       AI_SERVICE_URL: http://ai-service:8000
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       TMS_API_URL: http://backend:5000/tms-mock
+      # Power BI
       POWERBI_CLIENT_ID: ${POWERBI_CLIENT_ID:-}
       POWERBI_CLIENT_SECRET: ${POWERBI_CLIENT_SECRET:-}
       POWERBI_TENANT_ID: ${POWERBI_TENANT_ID:-}
       POWERBI_WORKSPACE_ID: ${POWERBI_WORKSPACE_ID:-}
-      ETL_ENABLED: true
+      POWERBI_REPORT_ID: ${POWERBI_REPORT_ID:-}
+      POWERBI_DATASET_ID: ${POWERBI_DATASET_ID:-}
+      POWERBI_EMBED_URL: ${POWERBI_EMBED_URL:-}
+      # ETL
+      ETL_ENABLED: "true"
       ETL_CRON_SCHEDULE: "0 2 * * *"
       ETL_MONTHLY_SCHEDULE: "0 3 1 * *"
       ETL_TIMEZONE: Asia/Karachi
@@ -65,8 +70,16 @@ services:
       HOST: "0.0.0.0"
       PORT: "8000"
       BACKEND_URL: http://backend:5000/api/v1
-      AI_PROVIDER: statistical
-      EMBEDDING_PROVIDER: deterministic
+      BACKEND_TOKEN: ${BACKEND_TOKEN:-}
+      # LangChain — set AI_PROVIDER=langchain to activate Gemini agent
+      AI_PROVIDER: ${AI_PROVIDER:-statistical}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
+      LANGCHAIN_MODEL: ${LANGCHAIN_MODEL:-}
+      LANGCHAIN_VERBOSE: ${LANGCHAIN_VERBOSE:-false}
     ports:
       - "8000:8000"
     restart: unless-stopped

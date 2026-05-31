@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { aiAPI } from '@/lib/api';
-import { Brain, Send, RefreshCw, Trash2, Sparkles, User } from 'lucide-react';
+import { Brain, Send, RefreshCw, Trash2, Sparkles, User, Zap, Activity } from 'lucide-react';
 
 const QUICK_PROMPTS = [
   'What is the current attendance rate?',
@@ -15,6 +15,15 @@ const QUICK_PROMPTS = [
 ];
 
 export default function AIChatPage() {
+  const [aiMode, setAiMode] = useState(null); // null | 'langchain' | 'statistical'
+
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/chat/status`)
+      .then((r) => r.json())
+      .then((d) => setAiMode(d.mode || 'statistical'))
+      .catch(() => setAiMode('statistical'));
+  }, []);
+
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -84,13 +93,25 @@ export default function AIChatPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold">AI HR Assistant</h1>
-              <p className="text-xs text-muted-foreground">Powered by WorkNex AI — statistical + rule-based intelligence</p>
+              <p className="text-xs text-muted-foreground">Powered by WorkNex AI — LangChain agentic + ChromaDB RAG + statistical fallback</p>
             </div>
           </div>
-          <button onClick={clearChat} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-muted transition text-sm">
-            <Trash2 size={14} />
-            Clear
-          </button>
+          <div className="flex items-center gap-2">
+            {aiMode && (
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
+                aiMode === 'langchain'
+                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+              }`}>
+                {aiMode === 'langchain' ? <Zap size={11} /> : <Activity size={11} />}
+                {aiMode === 'langchain' ? 'LangChain Agent' : 'Statistical Mode'}
+              </span>
+            )}
+            <button onClick={clearChat} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-muted transition text-sm">
+              <Trash2 size={14} />
+              Clear
+            </button>
+          </div>
         </div>
 
         {/* Quick Prompts */}

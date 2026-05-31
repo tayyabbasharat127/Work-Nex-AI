@@ -23,8 +23,12 @@ router.get('/leave/by-type', analyticsController.getLeaveByType);
 router.get('/workforce/headcount', analyticsController.getHeadcount);
 router.get('/workforce/turnover', analyticsController.getTurnoverRate);
 
-// Power BI embed token
+// Power BI — service-principal token (no RLS)
 router.get('/powerbi/token', authorize('SUPER_ADMIN', 'ADMIN'), analyticsController.getPowerBIToken);
+// Power BI — per-user embed token with RLS identity
+router.get('/powerbi/embed-token', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), analyticsController.getPowerBIEmbedToken);
+// Power BI — push WorkNex data rows into the push dataset
+router.post('/powerbi/push-data', authorize('SUPER_ADMIN', 'ADMIN'), analyticsController.pushDataToPowerBI);
 
 // ETL
 router.post('/etl/run', authorize('SUPER_ADMIN', 'ADMIN'), analyticsController.runETL);

@@ -261,13 +261,18 @@ const getTurnoverRate = async (year, requestingUser) => {
   return { deactivated, total, rate: total > 0 ? parseFloat(((deactivated / total) * 100).toFixed(2)) : 0 };
 };
 
-/**
- * Get Power BI embed token via Azure AD
- */
-const getPowerBIToken = async () => {
-  if (!process.env.POWERBI_CLIENT_ID || !process.env.POWERBI_TENANT_ID || !process.env.POWERBI_CLIENT_SECRET) {
-    throw new ApiError(503, 'Power BI is not configured. Set POWERBI_CLIENT_ID, POWERBI_CLIENT_SECRET, POWERBI_TENANT_ID in environment.');
+const POWERBI_BASE = 'https://api.powerbi.com/v1.0/myorg';
+
+const _requirePowerBIEnv = () => {
+  const missing = ['POWERBI_CLIENT_ID', 'POWERBI_CLIENT_SECRET', 'POWERBI_TENANT_ID']
+    .filter((k) => !process.env[k]);
+  if (missing.length) {
+    throw new ApiError(503, `Power BI not configured. Missing env vars: ${missing.join(', ')}`);
   }
+};
+
+const _getPowerBIAccessToken = async () => {
+  _requirePowerBIEnv();
   const tokenRes = await axios.post(
     `https://login.microsoftonline.com/${process.env.POWERBI_TENANT_ID}/oauth2/v2.0/token`,
     new URLSearchParams({
@@ -278,16 +283,257 @@ const getPowerBIToken = async () => {
     }),
     { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
   );
+  return tokenRes.data.access_token;
+};
 
+/**
+ * Get Power BI embed token via Azure AD (service-principal flow)
+ */
+const getPowerBIToken = async () => {
+  const accessToken = await _getPowerBIAccessToken();
   return {
-    accessToken: tokenRes.data.access_token,
+    accessToken,
     workspaceId: process.env.POWERBI_WORKSPACE_ID,
     reportId: process.env.POWERBI_REPORT_ID,
     embedUrl: process.env.POWERBI_EMBED_URL,
     rls: {
       supported: false,
-      note: 'Current embed token does not apply full row-level-security identities; backend route access is ADMIN/SUPER_ADMIN only.',
+      note: 'Service-principal token — ADMIN/SUPER_ADMIN only. Per-user RLS available via /powerbi/embed-token.',
     },
+  };
+};
+
+/**
+ * Generate a per-user RLS embed token scoped to the user's organization.
+ * Requires POWERBI_DATASET_ID to apply RLS identities.
+ */
+const getPowerBIEmbedToken = async (requestingUser) => {
+  const accessToken = await _getPowerBIAccessToken();
+  const workspaceId = process.env.POWERBI_WORKSPACE_ID;
+  const reportId = process.env.POWERBI_REPORT_ID;
+  const datasetId = process.env.POWERBI_DATASET_ID;
+
+  if (!workspaceId || !reportId) {
+    throw new ApiError(503, 'POWERBI_WORKSPACE_ID and POWERBI_REPORT_ID must be set.');
+  }
+
+  const body = { accessLevel: 'View' };
+
+  // Apply RLS identity when dataset supports it
+  if (datasetId) {
+    body.identities = [
+      {
+        username: requestingUser.email,
+        roles: [requestingUser.role],
+        datasets: [datasetId],
+      },
+    ];
+  }
+
+  const embedRes = await axios.post(
+    `${POWERBI_BASE}/groups/${workspaceId}/reports/${reportId}/GenerateToken`,
+    body,
+    { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+  );
+
+  return {
+    embedToken: embedRes.data.token,
+    embedTokenId: embedRes.data.tokenId,
+    expiration: embedRes.data.expiration,
+    reportId,
+    workspaceId,
+    datasetId: datasetId || null,
+    embedUrl: process.env.POWERBI_EMBED_URL,
+    rlsApplied: !!datasetId,
+    userEmail: requestingUser.email,
+    userRole: requestingUser.role,
+  };
+};
+
+/**
+ * Build the WorkNex Push Dataset schema definition.
+ */
+const _buildDatasetSchema = (orgId) => ({
+  name: `WorkNex_${orgId || 'default'}`,
+  defaultMode: 'Push',
+  tables: [
+    {
+      name: 'Attendance',
+      columns: [
+        { name: 'UserId', dataType: 'string' },
+        { name: 'Date', dataType: 'dateTime' },
+        { name: 'Status', dataType: 'string' },
+        { name: 'WorkingHours', dataType: 'double' },
+        { name: 'Department', dataType: 'string' },
+        { name: 'CheckIn', dataType: 'dateTime' },
+        { name: 'CheckOut', dataType: 'dateTime' },
+      ],
+    },
+    {
+      name: 'LeaveRequests',
+      columns: [
+        { name: 'EmployeeId', dataType: 'string' },
+        { name: 'LeaveType', dataType: 'string' },
+        { name: 'Status', dataType: 'string' },
+        { name: 'StartDate', dataType: 'dateTime' },
+        { name: 'EndDate', dataType: 'dateTime' },
+        { name: 'TotalDays', dataType: 'double' },
+        { name: 'Department', dataType: 'string' },
+      ],
+    },
+    {
+      name: 'Performance',
+      columns: [
+        { name: 'UserId', dataType: 'string' },
+        { name: 'Month', dataType: 'int64' },
+        { name: 'Year', dataType: 'int64' },
+        { name: 'AttendanceScore', dataType: 'double' },
+        { name: 'LeaveScore', dataType: 'double' },
+        { name: 'OverallScore', dataType: 'double' },
+        { name: 'PresentDays', dataType: 'int64' },
+        { name: 'LateDays', dataType: 'int64' },
+        { name: 'AbsentDays', dataType: 'int64' },
+        { name: 'Department', dataType: 'string' },
+      ],
+    },
+    {
+      name: 'Employees',
+      columns: [
+        { name: 'UserId', dataType: 'string' },
+        { name: 'FullName', dataType: 'string' },
+        { name: 'Email', dataType: 'string' },
+        { name: 'Role', dataType: 'string' },
+        { name: 'Department', dataType: 'string' },
+        { name: 'IsActive', dataType: 'bool' },
+        { name: 'JoinDate', dataType: 'dateTime' },
+      ],
+    },
+  ],
+});
+
+/**
+ * Create or reuse a Push Dataset in Power BI workspace for the organization.
+ */
+const _ensurePushDataset = async (accessToken, workspaceId, orgId) => {
+  const listRes = await axios.get(
+    `${POWERBI_BASE}/groups/${workspaceId}/datasets`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  const datasetName = `WorkNex_${orgId || 'default'}`;
+  const existing = listRes.data.value?.find((d) => d.name === datasetName);
+  if (existing) return existing.id;
+
+  const createRes = await axios.post(
+    `${POWERBI_BASE}/groups/${workspaceId}/datasets`,
+    _buildDatasetSchema(orgId),
+    { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+  );
+  return createRes.data.id;
+};
+
+/**
+ * Push WorkNex organization data rows into the Power BI dataset tables.
+ */
+const pushDataToPowerBI = async (requestingUser) => {
+  const accessToken = await _getPowerBIAccessToken();
+  const workspaceId = process.env.POWERBI_WORKSPACE_ID;
+  if (!workspaceId) throw new ApiError(503, 'POWERBI_WORKSPACE_ID must be set.');
+
+  const orgId = requestingUser.organizationId;
+  const datasetId = await _ensurePushDataset(accessToken, workspaceId, orgId);
+
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(now.getDate() - 30);
+
+  // Fetch data to push — last 30 days for attendance + leaves + perf records
+  const [attendance, leaves, performance, employees] = await Promise.all([
+    prisma.attendance.findMany({
+      where: { organizationId: orgId, date: { gte: thirtyDaysAgo } },
+      include: { user: { select: { department: { select: { name: true } } } } },
+      take: 2000,
+    }),
+    prisma.leaveRequest.findMany({
+      where: { organizationId: orgId, startDate: { gte: thirtyDaysAgo } },
+      include: { employee: { select: { department: { select: { name: true } } } } },
+      take: 1000,
+    }),
+    prisma.performanceRecord.findMany({
+      where: { organizationId: orgId },
+      include: { user: { select: { department: { select: { name: true } } } } },
+      take: 2000,
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
+    }),
+    prisma.user.findMany({
+      where: { organizationId: orgId },
+      select: {
+        id: true, firstName: true, lastName: true, email: true,
+        role: true, isActive: true, createdAt: true,
+        department: { select: { name: true } },
+      },
+      take: 1000,
+    }),
+  ]);
+
+  const pushTable = async (tableName, rows) => {
+    if (!rows.length) return { table: tableName, pushed: 0 };
+    await axios.post(
+      `${POWERBI_BASE}/groups/${workspaceId}/datasets/${datasetId}/tables/${tableName}/rows`,
+      { rows },
+      { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+    );
+    return { table: tableName, pushed: rows.length };
+  };
+
+  const results = await Promise.all([
+    pushTable('Attendance', attendance.map((a) => ({
+      UserId: a.userId,
+      Date: a.date?.toISOString(),
+      Status: a.status,
+      WorkingHours: a.workingHours ? Number(a.workingHours) : 0,
+      Department: a.user?.department?.name || 'Unassigned',
+      CheckIn: a.checkIn?.toISOString() || null,
+      CheckOut: a.checkOut?.toISOString() || null,
+    }))),
+    pushTable('LeaveRequests', leaves.map((l) => ({
+      EmployeeId: l.employeeId,
+      LeaveType: l.leaveType,
+      Status: l.status,
+      StartDate: l.startDate?.toISOString(),
+      EndDate: l.endDate?.toISOString(),
+      TotalDays: l.totalDays ? Number(l.totalDays) : 0,
+      Department: l.employee?.department?.name || 'Unassigned',
+    }))),
+    pushTable('Performance', performance.map((p) => ({
+      UserId: p.userId,
+      Month: p.month,
+      Year: p.year,
+      AttendanceScore: p.attendanceScore ? Number(p.attendanceScore) : 0,
+      LeaveScore: p.leaveScore ? Number(p.leaveScore) : 0,
+      OverallScore: p.overallScore ? Number(p.overallScore) : 0,
+      PresentDays: p.presentDays || 0,
+      LateDays: p.lateDays || 0,
+      AbsentDays: p.absentDays || 0,
+      Department: p.user?.department?.name || 'Unassigned',
+    }))),
+    pushTable('Employees', employees.map((u) => ({
+      UserId: u.id,
+      FullName: `${u.firstName} ${u.lastName}`.trim(),
+      Email: u.email,
+      Role: u.role,
+      Department: u.department?.name || 'Unassigned',
+      IsActive: u.isActive,
+      JoinDate: u.createdAt?.toISOString(),
+    }))),
+  ]);
+
+  return {
+    datasetId,
+    workspaceId,
+    datasetName: `WorkNex_${orgId || 'default'}`,
+    tables: results,
+    totalRowsPushed: results.reduce((s, r) => s + r.pushed, 0),
+    pushedAt: now.toISOString(),
   };
 };
 
@@ -323,5 +569,7 @@ const getAuditLogs = async (requestingUser, limit = 50) => {
 module.exports = {
   getDashboardKPIs, getAttendanceTrends, getAttendanceHeatmap,
   getDepartmentAttendance, getLeaveSummary, getLeaveTrends, getLeaveByType,
-  getHeadcount, getTurnoverRate, getPowerBIToken, runETL, getEtlLogs, getAuditLogs,
+  getHeadcount, getTurnoverRate,
+  getPowerBIToken, getPowerBIEmbedToken, pushDataToPowerBI,
+  runETL, getEtlLogs, getAuditLogs,
 };

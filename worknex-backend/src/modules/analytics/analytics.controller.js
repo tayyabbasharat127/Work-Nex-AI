@@ -58,6 +58,16 @@ const getPowerBIToken = async (req, res) => {
   apiResponse(res, 200, 'Power BI token', data);
 };
 
+const getPowerBIEmbedToken = async (req, res) => {
+  const data = await analyticsService.getPowerBIEmbedToken(req.user);
+  apiResponse(res, 200, 'Power BI embed token with RLS', data);
+};
+
+const pushDataToPowerBI = async (req, res) => {
+  const data = await analyticsService.pushDataToPowerBI(req.user);
+  apiResponse(res, 200, 'Data pushed to Power BI', data);
+};
+
 const runETL = async (req, res) => {
   const { month, year } = req.body;
   const result = await analyticsService.runETL(month, year, req.user);
@@ -77,5 +87,7 @@ const getAuditLogs = async (req, res) => {
 module.exports = {
   getDashboardKPIs, getAttendanceTrends, getAttendanceHeatmap,
   getDepartmentAttendance, getLeaveSummary, getLeaveTrends, getLeaveByType,
-  getHeadcount, getTurnoverRate, getPowerBIToken, runETL, getEtlLogs, getAuditLogs,
+  getHeadcount, getTurnoverRate,
+  getPowerBIToken, getPowerBIEmbedToken, pushDataToPowerBI,
+  runETL, getEtlLogs, getAuditLogs,
 };

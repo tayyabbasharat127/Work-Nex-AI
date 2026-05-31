@@ -738,6 +738,16 @@ export const analyticsAPI = {
     const response = await apiFetch('/analytics/powerbi/token');
     return response.data || response;
   },
+
+  getPowerBIEmbedToken: async () => {
+    const response = await apiFetch('/analytics/powerbi/embed-token');
+    return response.data || response;
+  },
+
+  pushDataToPowerBI: async () => {
+    const response = await apiFetch('/analytics/powerbi/push-data', { method: 'POST' });
+    return response.data || response;
+  },
 };
 
 // Reports API

@@ -13,7 +13,29 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+ROOT = Path(__file__).resolve().parents[2]
+ANOMALY_MODEL_PATH = ROOT / "models" / "anomaly_model.pkl"
+
 SEVERITY_THRESHOLDS = {"HIGH": 2.5, "MEDIUM": 1.5}
+
+ANOMALY_FEATURES = [
+    "attendanceRate30Days", "lateCountThisMonth", "absenceCountThisMonth",
+    "checkInHourAvg", "checkInStdDev", "mondayAbsenceRate", "fridayAbsenceRate",
+    "consecutiveLateMax", "earlyCheckoutCount", "avgWorkingHours",
+]
+
+
+def _load_anomaly_model():
+    if not ANOMALY_MODEL_PATH.exists():
+        return None, None, None
+    try:
+        import joblib
+        artifact = joblib.load(ANOMALY_MODEL_PATH)
+        if isinstance(artifact, dict) and artifact.get("model") is not None:
+            return artifact["model"], artifact.get("typeModel"), artifact.get("labelEncoder")
+    except Exception as exc:
+        logger.warning("Could not load anomaly model: %s", exc)
+    return None, None, None
 
 
 async def _fetch(path: str) -> Any:
@@ -154,6 +176,57 @@ def _static_patterns(user_id: Optional[str]) -> list[dict]:
     ]
 
 
+def _ml_anomaly_check(trend_data: list[dict]) -> list[dict] | None:
+    """Run ML anomaly classifier if model is available."""
+    clf, type_clf, le = _load_anomaly_model()
+    if clf is None or not trend_data:
+        return None
+
+    absent_vals = [int(d.get("ABSENT", 0)) for d in trend_data]
+    late_vals   = [int(d.get("LATE", 0))   for d in trend_data]
+    present_vals= [int(d.get("PRESENT", 0)) for d in trend_data]
+
+    if len(absent_vals) < 3:
+        return None
+
+    import statistics as _stats
+    att_rate = (_stats.mean(present_vals) / max(_stats.mean([sum(x) for x in zip(absent_vals, late_vals, present_vals)]), 1)) * 100
+    late_count = sum(late_vals)
+    absence_count = sum(absent_vals)
+    working_hrs = 8.0
+
+    fv = [att_rate, late_count, absence_count, 9.0, 0.5, 0.1, 0.1, max(late_vals), 0, working_hrs]
+
+    try:
+        is_anomaly = int(clf.predict([fv])[0])
+        anomaly_type = "NONE"
+        if type_clf is not None and le is not None:
+            type_pred = type_clf.predict([fv])[0]
+            anomaly_type = le.inverse_transform([type_pred])[0]
+
+        if is_anomaly == 0:
+            return []
+
+        return [{
+            "type": anomaly_type,
+            "description": f"ML model detected {anomaly_type.replace('_', ' ').lower()} pattern in current period.",
+            "date": None,
+            "value": None,
+            "zScore": None,
+            "severity": "HIGH" if anomaly_type == "HIGH_ABSENTEEISM" else "MEDIUM",
+            "recommendation": {
+                "FREQUENT_LATE": "Review shift times and commute policies.",
+                "WEEKEND_BRIDGING": "Investigate Monday/Friday absence patterns.",
+                "HIGH_ABSENTEEISM": "Schedule wellness check-in with HR.",
+                "EARLY_CHECKOUT": "Verify flexible-hours policy compliance.",
+            }.get(anomaly_type, "Review attendance records with manager."),
+            "detectedBy": "ml-model",
+        }]
+    except Exception as exc:
+        logger.warning("ML anomaly prediction failed: %s", exc)
+        return None
+
+
 async def detect_anomalies(user_id: Optional[str] = None) -> dict:
     now = datetime.now()
     month, year = now.month, now.year
@@ -164,12 +237,21 @@ async def detect_anomalies(user_id: Optional[str] = None) -> dict:
     )
 
     fallback = False
+    ml_used = False
+
     if trend_data and isinstance(trend_data, list) and len(trend_data) >= 3:
-        anomalies = _analyse_trend_data(trend_data)
+        # Try ML classifier first
+        ml_results = _ml_anomaly_check(trend_data)
+        if ml_results is not None:
+            anomalies = ml_results
+            ml_used = True
+        else:
+            anomalies = _analyse_trend_data(trend_data)
     else:
         fallback = True
         anomalies = _static_patterns(user_id)
 
+    algorithm = "ml-random-forest-v1" if ml_used else ("z-score-daily-trend" if not fallback else "static-pattern-fallback")
     return {
         "anomalies": anomalies,
         "count": len(anomalies),
@@ -177,7 +259,8 @@ async def detect_anomalies(user_id: Optional[str] = None) -> dict:
         "month": month,
         "year": year,
         "analysisDate": now.isoformat(),
-        "algorithm": "z-score-daily-trend" if not fallback else "static-pattern-fallback",
+        "algorithm": algorithm,
+        "mlModel": ml_used,
         "fallback": fallback,
         "message": (
             f"Found {len(anomalies)} attendance anomaly(ies) in {now.strftime('%B %Y')}."

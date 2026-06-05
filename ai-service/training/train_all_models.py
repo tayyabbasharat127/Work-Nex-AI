@@ -1,10 +1,10 @@
 """
-WorkNex AI — Train All ML Models
+WorkNex AI - Train All ML Models
 Trains 3 models from the datasets in ai-service/data/:
 
-  Model 1: Performance Predictor  → models/performance_model.pkl
-  Model 2: Leave Demand Forecaster → models/leave_forecast_model.pkl
-  Model 3: Anomaly Detector        → models/anomaly_model.pkl
+  Model 1: Performance Predictor  -> models/performance_model.pkl
+  Model 2: Leave Demand Forecaster -> models/leave_forecast_model.pkl
+  Model 3: Anomaly Detector        -> models/anomaly_model.pkl
 
 Run: python ai-service/training/train_all_models.py
      (from the project root or ai-service/ directory)
@@ -65,7 +65,8 @@ def save_model(artifact: dict, path: Path, metadata: dict):
     joblib.dump(artifact, path)
     meta_path = path.with_suffix(".json").with_stem(path.stem + "_metadata")
     meta_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
-    print(f"  [SAVED] {path.name}  ({metadata})")
+    info = str(metadata).encode("ascii", errors="replace").decode("ascii")
+    print(f"  [SAVED] {path.name}  {info}")
 
 
 def save_fallback(path: Path, features: list[str], reason: str):
@@ -94,7 +95,7 @@ PERF_FEATURES = [
 ]
 
 def train_performance_model():
-    print("\n── Model 1: Performance Predictor ──────────────────")
+    print("\n--- Model 1: Performance Predictor ---")
     path = MODEL_DIR / "performance_model.pkl"
     rows = read_csv("attendance_performance_dataset.csv")
     print(f"  Rows loaded: {len(rows)}")
@@ -161,7 +162,7 @@ FORECAST_FEATURES = [
 ]
 
 def train_leave_forecast_model():
-    print("\n── Model 2: Leave Demand Forecaster ────────────────")
+    print("\n--- Model 2: Leave Demand Forecaster ---")
     path = MODEL_DIR / "leave_forecast_model.pkl"
     rows = read_csv("leave_forecast_dataset.csv")
     print(f"  Rows loaded: {len(rows)}")
@@ -227,7 +228,7 @@ ANOMALY_FEATURES = [
 ]
 
 def train_anomaly_model():
-    print("\n── Model 3: Anomaly Detector ───────────────────────")
+    print("\n--- Model 3: Anomaly Detector ---")
     path = MODEL_DIR / "anomaly_model.pkl"
     rows = read_csv("anomaly_detection_dataset.csv")
     print(f"  Rows loaded: {len(rows)}")
@@ -302,8 +303,8 @@ def train_anomaly_model():
 # Main
 # ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    print("\nWorkNex AI — Training All Models")
-    print("="*45)
+    print("\nWorkNex AI - Training All Models")
+    print("="*40)
     print(f"Data dir  : {DATA_DIR}")
     print(f"Model dir : {MODEL_DIR}")
 
@@ -322,7 +323,7 @@ if __name__ == "__main__":
             print(f"\n  [ERROR] {label}: {e}")
             errors.append(label)
 
-    print("\n" + "="*45)
+    print("\n" + "="*40)
     if errors:
         print(f"[DONE with errors] Failed: {errors}")
         print("Generate datasets first: python ai-service/data/generate_datasets.py")

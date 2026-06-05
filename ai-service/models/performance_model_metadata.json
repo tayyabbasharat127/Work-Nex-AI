@@ -1,5 +1,5 @@
 {
-  "modelVersion": "performance-rf-v1",
+  "modelVersion": "performance-rf-v2",
   "modelType": "RandomForestRegressor",
   "features": [
     "attendanceRate",
@@ -12,7 +12,19 @@
     "overtimeHours",
     "halfDayCount"
   ],
-  "rows": 350,
-  "r2Score": 0.7272,
-  "fallback": false
+  "rows": 2500,
+  "r2Score": 0.831,
+  "mae": 3.13,
+  "fallback": false,
+  "featureImportances": {
+    "attendanceRate": 0.117,
+    "lateCount": 0.3774,
+    "absenceCount": 0.2334,
+    "leaveCount": 0.0165,
+    "averageWorkingHours": 0.0757,
+    "previousPerformanceScore": 0.1121,
+    "departmentAverage": 0.0194,
+    "overtimeHours": 0.0319,
+    "halfDayCount": 0.0166
+  }
 }

@@ -1,0 +1,40 @@
+{
+  "modelVersion": "forecast-gbr-v1",
+  "modelType": "GradientBoostingRegressor",
+  "features": [
+    "dayOfWeek",
+    "month",
+    "weekOfYear",
+    "isWeekend",
+    "isPublicHoliday",
+    "isEidSeason",
+    "isRamadan",
+    "isSummer",
+    "isYearEnd",
+    "isMonday",
+    "isFriday",
+    "prevWeekDailyAvgLeaves",
+    "rollingAvg14Days",
+    "monthLeaveFactor"
+  ],
+  "rows": 730,
+  "r2Score": 0.8941,
+  "mae": 0.45,
+  "fallback": false,
+  "featureImportances": {
+    "dayOfWeek": 0.3008,
+    "month": 0.0015,
+    "weekOfYear": 0.0127,
+    "isWeekend": 0.2958,
+    "isPublicHoliday": 0.0,
+    "isEidSeason": 0.0484,
+    "isRamadan": 0.0081,
+    "isSummer": 0.0025,
+    "isYearEnd": 0.0069,
+    "isMonday": 0.0221,
+    "isFriday": 0.0353,
+    "prevWeekDailyAvgLeaves": 0.0498,
+    "rollingAvg14Days": 0.0235,
+    "monthLeaveFactor": 0.1925
+  }
+}

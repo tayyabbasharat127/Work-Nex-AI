@@ -17,10 +17,11 @@ class Settings:
     # AI Provider: "statistical" | "langchain"
     AI_PROVIDER: str = os.getenv("AI_PROVIDER", "statistical")
 
-    # LLM API keys — first non-empty one wins in langchain_agent
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    # LLM API keys — priority order: Groq → OpenAI → Gemini → Anthropic → Ollama
+    GROK_API_KEY: str = os.getenv("GROK_API_KEY", "").strip()   # Groq (fast + free)
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "").strip()
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "").strip()
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "").strip()
 
     # Ollama (local, free)
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")

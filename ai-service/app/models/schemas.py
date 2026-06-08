@@ -7,6 +7,7 @@ class ChatRequest(BaseModel):
     userId: str
     userContext: Optional[Dict] = {}
     message: str
+    authToken: Optional[str] = None   # user's JWT — enables personal DB queries
 
 
 class ChatResponse(BaseModel):

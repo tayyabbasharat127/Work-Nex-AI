@@ -20,7 +20,7 @@ FORECAST_FEATURES = [
     "dayOfWeek", "month", "weekOfYear", "isWeekend",
     "isPublicHoliday", "isEidSeason", "isRamadan",
     "isSummer", "isYearEnd", "isMonday", "isFriday",
-    "prevWeekDailyAvgLeaves", "rollingAvg14Days", "monthLeaveFactor",
+    "prevWeekDailyAvgLeaves", "rollingAvg14Days",
 ]
 
 
@@ -53,8 +53,8 @@ def _build_feature_vector(d: datetime, rolling_avg: float) -> list[float]:
     week = d.isocalendar()[1]
     return [
         dow, month, week,
-        1 if dow >= 5 else 0,               # isWeekend
-        0,                                   # isPublicHoliday (simplified)
+        1 if dow >= 5 else 0,
+        0,                                   # isPublicHoliday
         _is_eid(d),
         _is_ramadan(d),
         1 if month in (6, 7, 8) else 0,     # isSummer
@@ -63,7 +63,7 @@ def _build_feature_vector(d: datetime, rolling_avg: float) -> list[float]:
         1 if dow == 4 else 0,               # isFriday
         rolling_avg,                         # prevWeekDailyAvgLeaves
         rolling_avg,                         # rollingAvg14Days
-        MONTH_WEIGHTS.get(month, 1.0),       # monthLeaveFactor
+        # monthLeaveFactor removed (was leakage)
     ]
 
 

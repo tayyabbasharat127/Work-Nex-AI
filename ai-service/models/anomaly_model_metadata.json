@@ -1,0 +1,39 @@
+{
+  "modelVersion": "anomaly-rf-v1",
+  "modelType": "RandomForestClassifier",
+  "features": [
+    "attendanceRate30Days",
+    "lateCountThisMonth",
+    "absenceCountThisMonth",
+    "checkInHourAvg",
+    "checkInStdDev",
+    "mondayAbsenceRate",
+    "fridayAbsenceRate",
+    "consecutiveLateMax",
+    "earlyCheckoutCount",
+    "avgWorkingHours"
+  ],
+  "classes": [
+    "EARLY_CHECKOUT",
+    "FREQUENT_LATE",
+    "HIGH_ABSENTEEISM",
+    "NONE",
+    "WEEKEND_BRIDGING"
+  ],
+  "rows": 1200,
+  "binaryAccuracy": 0.9958,
+  "typeAccuracy": 1.0,
+  "fallback": false,
+  "featureImportances": {
+    "attendanceRate30Days": 0.0357,
+    "lateCountThisMonth": 0.1324,
+    "absenceCountThisMonth": 0.1696,
+    "checkInHourAvg": 0.0328,
+    "checkInStdDev": 0.1346,
+    "mondayAbsenceRate": 0.0461,
+    "fridayAbsenceRate": 0.2163,
+    "consecutiveLateMax": 0.0637,
+    "earlyCheckoutCount": 0.0466,
+    "avgWorkingHours": 0.1223
+  }
+}

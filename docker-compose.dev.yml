@@ -1,0 +1,72 @@
+# WorkNex AI — DEVELOPMENT Docker Compose
+# Hot-reload for all 3 services. Code changes apply instantly.
+#
+# First time / after adding packages:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Normal daily start:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+
+  backend:
+    build:
+      context: ./worknex-backend
+      dockerfile: Dockerfile
+      target: development
+    # Use node directly — no nodemon needed, volume mount covers hot reload
+    command: sh -c "npx prisma migrate deploy && node src/app.js"
+    environment:
+      NODE_ENV: development
+    volumes:
+      # Mount only source — node_modules stays from image (nodemon/prisma intact)
+      - ./worknex-backend/src:/app/src
+      - ./worknex-backend/prisma:/app/prisma
+      # NO anonymous /app/node_modules — that was emptying the image's node_modules
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      DEBUG: "true"
+      AI_PROVIDER: ${AI_PROVIDER:-langchain}
+      GROK_API_KEY: ${GROK_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
+      LANGCHAIN_MODEL: ${LANGCHAIN_MODEL:-}
+      LANGCHAIN_VERBOSE: ${LANGCHAIN_VERBOSE:-false}
+      BACKEND_TOKEN: ${BACKEND_TOKEN:-}
+      BACKEND_URL: http://backend:5000/api/v1
+    volumes:
+      # Mount source only — Python packages stay from image
+      - ./ai-service/app:/app/app
+      - ./ai-service/knowledge:/app/knowledge
+      - ./ai-service/models:/app/models
+      - ./ai-service/vector_store:/app/vector_store
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    # Use full path to avoid PATH issues in alpine
+    command: sh -c "node_modules/.bin/next dev"
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000/api/v1}
+      NEXT_PUBLIC_AI_URL: ${NEXT_PUBLIC_AI_URL:-http://localhost:8000}
+      NEXT_PUBLIC_APP_NAME: WorkNex AI
+    volumes:
+      # Mount source only — node_modules stays from image
+      - ./frontend/app:/app/app
+      - ./frontend/components:/app/components
+      - ./frontend/lib:/app/lib
+      - ./frontend/hooks:/app/hooks
+      - ./frontend/services:/app/services
+      - ./frontend/styles:/app/styles
+      - ./frontend/public:/app/public
+      - ./frontend/contexts:/app/contexts

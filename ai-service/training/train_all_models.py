@@ -158,7 +158,8 @@ FORECAST_FEATURES = [
     "dayOfWeek", "month", "weekOfYear", "isWeekend",
     "isPublicHoliday", "isEidSeason", "isRamadan",
     "isSummer", "isYearEnd", "isMonday", "isFriday",
-    "prevWeekDailyAvgLeaves", "rollingAvg14Days", "monthLeaveFactor",
+    "prevWeekDailyAvgLeaves", "rollingAvg14Days",
+    # monthLeaveFactor removed — it was the generation multiplier (data leakage)
 ]
 
 def train_leave_forecast_model():

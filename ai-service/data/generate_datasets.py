@@ -266,89 +266,94 @@ def gen_leave_forecast_dataset():
 
 # ─────────────────────────────────────────────────────────────
 # DATASET 3 — Attendance Anomaly Detection
-# 1200 records: employee-month observations
-# Target: isAnomaly (0/1), anomalyType (string)
+# 1500 records: overlapping realistic feature ranges
+# Noise added to prevent perfect class separation (overfitting fix)
 # ─────────────────────────────────────────────────────────────
-def gen_anomaly_dataset(n_records=1200):
+def _add_noise(val, sigma=0.8):
+    """Add Gaussian noise to a value."""
+    return round(val + random.gauss(0, sigma), 2)
+
+
+def gen_anomaly_dataset(n_records=1500):
     rows = []
     for i in range(n_records):
         dept = random.choice(DEPARTMENTS)
         month = randi(1, 12)
 
-        # 75% normal, 25% anomalous
-        anomaly_type_roll = random.random()
-        if anomaly_type_roll < 0.75:
-            # Normal employee
-            attendance_rate = randf(85, 99)
-            late_count = randi(0, 2)
-            absence_count = randi(0, 1)
-            checkin_hour_avg = randf(8.5, 9.3)
-            monday_absence_rate = randf(0, 0.15)
-            friday_absence_rate = randf(0, 0.15)
-            consecutive_late_max = randi(0, 2)
-            early_checkout_count = randi(0, 1)
-            checkin_std_dev = randf(0.1, 0.4)
-            working_hours_avg = randf(7.5, 9.0)
+        roll = random.random()
+
+        if roll < 0.72:
+            # NORMAL — but with realistic variance (some days late is OK)
+            attendance_rate = _add_noise(randf(82, 99), 2.0)
+            late_count = randi(0, 4)          # overlap: 3-4 late is borderline
+            absence_count = randi(0, 2)        # overlap: up to 2 absences is normal
+            checkin_hour_avg = _add_noise(randf(8.2, 9.4), 0.3)
+            monday_absence_rate = randf(0, 0.20)
+            friday_absence_rate = randf(0, 0.20)
+            consecutive_late_max = randi(0, 3)  # overlap with FREQUENT_LATE
+            early_checkout_count = randi(0, 3)  # overlap with EARLY_CHECKOUT
+            checkin_std_dev = randf(0.1, 0.6)
+            working_hours_avg = _add_noise(randf(7.2, 9.2), 0.5)
             is_anomaly = 0
             anomaly_type = "NONE"
 
-        elif anomaly_type_roll < 0.85:
-            # Frequent late arrival
-            attendance_rate = randf(78, 92)
-            late_count = randi(6, 15)
-            absence_count = randi(0, 2)
-            checkin_hour_avg = randf(9.6, 11.0)
-            monday_absence_rate = randf(0, 0.2)
-            friday_absence_rate = randf(0, 0.2)
-            consecutive_late_max = randi(4, 8)
-            early_checkout_count = randi(0, 2)
-            checkin_std_dev = randf(0.5, 1.5)
-            working_hours_avg = randf(6.5, 8.0)
+        elif roll < 0.82:
+            # FREQUENT_LATE — overlaps with normal at low end (4-5 late)
+            attendance_rate = _add_noise(randf(75, 94), 2.5)
+            late_count = randi(4, 14)          # overlap starts at 4 (NORMAL max is 4)
+            absence_count = randi(0, 3)         # can have some absences too
+            checkin_hour_avg = _add_noise(randf(9.2, 11.0), 0.4)
+            monday_absence_rate = randf(0, 0.25)
+            friday_absence_rate = randf(0, 0.25)
+            consecutive_late_max = randi(3, 9)  # overlap at 3
+            early_checkout_count = randi(0, 3)
+            checkin_std_dev = randf(0.4, 1.6)
+            working_hours_avg = _add_noise(randf(6.0, 8.2), 0.5)
             is_anomaly = 1
             anomaly_type = "FREQUENT_LATE"
 
-        elif anomaly_type_roll < 0.90:
-            # Monday/Friday absence pattern
-            attendance_rate = randf(72, 88)
-            late_count = randi(0, 3)
-            absence_count = randi(4, 8)
-            checkin_hour_avg = randf(8.5, 9.5)
-            monday_absence_rate = randf(0.4, 0.8)
-            friday_absence_rate = randf(0.35, 0.75)
-            consecutive_late_max = randi(0, 2)
-            early_checkout_count = randi(1, 3)
-            checkin_std_dev = randf(0.2, 0.8)
-            working_hours_avg = randf(7.0, 8.5)
+        elif roll < 0.88:
+            # WEEKEND_BRIDGING — absence pattern Mon/Fri
+            attendance_rate = _add_noise(randf(70, 90), 2.5)
+            late_count = randi(0, 4)            # can also be late sometimes
+            absence_count = randi(3, 9)         # overlap at 3 (NORMAL max is 2)
+            checkin_hour_avg = _add_noise(randf(8.3, 9.6), 0.3)
+            monday_absence_rate = randf(0.30, 0.80)  # key signal — high Mon absence
+            friday_absence_rate = randf(0.25, 0.75)  # key signal — high Fri absence
+            consecutive_late_max = randi(0, 3)
+            early_checkout_count = randi(0, 4)
+            checkin_std_dev = randf(0.2, 0.9)
+            working_hours_avg = _add_noise(randf(6.8, 8.8), 0.5)
             is_anomaly = 1
             anomaly_type = "WEEKEND_BRIDGING"
 
-        elif anomaly_type_roll < 0.95:
-            # High absenteeism
-            attendance_rate = randf(55, 75)
-            late_count = randi(2, 6)
-            absence_count = randi(7, 14)
-            checkin_hour_avg = randf(8.5, 9.8)
-            monday_absence_rate = randf(0.1, 0.4)
-            friday_absence_rate = randf(0.1, 0.3)
-            consecutive_late_max = randi(0, 3)
-            early_checkout_count = randi(0, 4)
-            checkin_std_dev = randf(0.3, 1.0)
-            working_hours_avg = randf(5.5, 7.5)
+        elif roll < 0.94:
+            # HIGH_ABSENTEEISM — overlaps with WEEKEND_BRIDGING at mid absence
+            attendance_rate = _add_noise(randf(52, 78), 3.0)
+            late_count = randi(1, 7)            # can be late too
+            absence_count = randi(6, 14)        # overlap at 6-9 with WEEKEND
+            checkin_hour_avg = _add_noise(randf(8.3, 10.0), 0.4)
+            monday_absence_rate = randf(0.1, 0.45)
+            friday_absence_rate = randf(0.1, 0.35)
+            consecutive_late_max = randi(0, 4)
+            early_checkout_count = randi(0, 5)
+            checkin_std_dev = randf(0.2, 1.1)
+            working_hours_avg = _add_noise(randf(5.0, 7.8), 0.6)
             is_anomaly = 1
             anomaly_type = "HIGH_ABSENTEEISM"
 
         else:
-            # Early checkout pattern
-            attendance_rate = randf(82, 95)
-            late_count = randi(0, 3)
-            absence_count = randi(0, 2)
-            checkin_hour_avg = randf(8.2, 9.0)
-            monday_absence_rate = randf(0, 0.15)
-            friday_absence_rate = randf(0.2, 0.5)
-            consecutive_late_max = randi(0, 2)
-            early_checkout_count = randi(8, 18)
-            checkin_std_dev = randf(0.1, 0.4)
-            working_hours_avg = randf(5.0, 6.8)
+            # EARLY_CHECKOUT — leaves early, overlap at 3-4 early checkouts
+            attendance_rate = _add_noise(randf(80, 96), 2.0)
+            late_count = randi(0, 4)
+            absence_count = randi(0, 3)
+            checkin_hour_avg = _add_noise(randf(8.0, 9.2), 0.3)
+            monday_absence_rate = randf(0, 0.20)
+            friday_absence_rate = randf(0.15, 0.55)  # Fridays slightly elevated
+            consecutive_late_max = randi(0, 3)
+            early_checkout_count = randi(6, 18)   # key signal — many early exits
+            checkin_std_dev = randf(0.1, 0.5)
+            working_hours_avg = _add_noise(randf(4.5, 6.8), 0.6)
             is_anomaly = 1
             anomaly_type = "EARLY_CHECKOUT"
 

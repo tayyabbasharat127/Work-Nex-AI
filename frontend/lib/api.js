@@ -3,7 +3,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/a
 let inMemoryAccessToken = null;
 
 // Helper function to get auth token
-const getAuthToken = () => {
+export const getAuthToken = () => {
   return inMemoryAccessToken;
 };
 

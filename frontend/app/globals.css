@@ -140,3 +140,35 @@
     font-size: 18px;
   }
 }
+
+@layer utilities {
+  .worknex-chat-scrollbar {
+    scrollbar-color: color-mix(in oklch, var(--muted-foreground) 62%, transparent) var(--card);
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+  }
+
+  .worknex-chat-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .worknex-chat-scrollbar::-webkit-scrollbar-track {
+    background: color-mix(in oklch, var(--card) 86%, black);
+    border-radius: 999px;
+  }
+
+  .worknex-chat-scrollbar::-webkit-scrollbar-thumb {
+    background: color-mix(in oklch, var(--muted-foreground) 58%, var(--primary) 18%);
+    border: 2px solid color-mix(in oklch, var(--card) 86%, black);
+    border-radius: 999px;
+  }
+
+  .worknex-chat-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklch, var(--primary) 46%, var(--muted-foreground));
+  }
+
+  .worknex-chat-scrollbar::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}

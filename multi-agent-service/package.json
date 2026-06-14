@@ -1,0 +1,27 @@
+{
+  "name": "worknex-multi-agent-service",
+  "version": "0.1.0",
+  "description": "WorkNex multi-agent supervisor service with HR domain sub-agents",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "memory:setup": "node scripts/setup-memory-db.js"
+  },
+  "dependencies": {
+    "@langchain/anthropic": "^0.3.0",
+    "@langchain/core": "^0.3.0",
+    "@langchain/langgraph": "^0.2.0",
+    "@langchain/langgraph-checkpoint-postgres": "^0.0.5",
+    "@langchain/ollama": "^0.2.4",
+    "@langchain/openai": "^0.5.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.21.0",
+    "zod": "^3.23.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

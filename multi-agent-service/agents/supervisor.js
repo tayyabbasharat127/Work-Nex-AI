@@ -5,16 +5,20 @@ import { z } from "zod";
 import { createChatModel } from "../config/llm.js";
 import { createAttendanceAgent } from "./attendance-agent.js";
 import { createLeaveAgent } from "./leave-agent.js";
+import { createPerformanceAgent } from "./performance-agent.js";
 import { handleAttendanceRequest } from "../handlers/attendance-handler.js";
 import { handleLeaveRequest } from "../handlers/leave-handler.js";
+import { handlePerformanceRequest } from "../handlers/performance-handler.js";
 import { getShortTermCheckpointer } from "../config/memory.js";
 import { routeAttendanceRequest } from "../routing/attendance-router.js";
 import { routeLeaveRequest } from "../routing/leave-router.js";
+import { routePerformanceRequest } from "../routing/performance-router.js";
 
 export function createSupervisorAgent(requestContext = {}) {
   const llm = createChatModel({ temperature: 0.2 });
   const attendanceAgent = createAttendanceAgent(requestContext);
   const leaveAgent = createLeaveAgent(requestContext);
+  const performanceAgent = createPerformanceAgent(requestContext);
 
   const attendanceAgentTool = tool(
     async ({ request }) => {
@@ -64,7 +68,31 @@ This agent is read-only and uses the WorkNex backend API with the caller's beare
     }
   );
 
-  const supervisorTools = [attendanceAgentTool, leaveAgentTool];
+  const performanceAgentTool = tool(
+    async ({ request }) => {
+      const handledResult = await handlePerformanceRequest(request, requestContext);
+      if (handledResult.handled) return handledResult.answer;
+
+      const result = await performanceAgent.invoke({
+        messages: [{ role: "user", content: request }],
+      });
+      const lastMessage = result.messages[result.messages.length - 1];
+      return typeof lastMessage.content === "string"
+        ? lastMessage.content
+        : JSON.stringify(lastMessage.content);
+    },
+    {
+      name: "performance_agent",
+      description: `Route WorkNex performance questions to the Performance Agent.
+Use this for my performance, performance scores, team performance, employee performance records, leaderboards, rankings, and top performers.
+This agent is read-only and uses the WorkNex backend API with the caller's bearer token.`,
+      schema: z.object({
+        request: z.string().describe("The full performance question to answer."),
+      }),
+    }
+  );
+
+  const supervisorTools = [attendanceAgentTool, leaveAgentTool, performanceAgentTool];
   const modelWithTools = llm.bindTools(supervisorTools);
 
   const SUPERVISOR_SYSTEM_PROMPT = `You are the WorkNex Multi-Agent Supervisor.
@@ -74,16 +102,19 @@ Your job is to understand the user's request, choose the correct specialized Wor
 Available agents:
 1. attendance_agent - Attendance questions only. It can read today's attendance, attendance history, summaries, holidays, late/absent patterns, and manager/admin scoped attendance data through the WorkNex backend.
 2. leave_agent - Leave-management questions only. It can read leave balances, leave histories, pending approvals, policies, and request details through the WorkNex backend.
+3. performance_agent - Performance questions only. It can read personal performance, team performance, employee performance, and leaderboards through the WorkNex backend.
 
 Current implementation status:
 - The attendance_agent is available.
 - The leave_agent is available in read-only mode.
-- Performance, payroll, reports, policy/RAG, and admin agents are not implemented yet.
+- The performance_agent is available in read-only mode.
+- Payroll, reports, policy/RAG, and admin agents are not implemented yet.
 
 Routing rules:
 - Route all attendance, check-in, check-out, working hours, late, absent, half-day, attendance summary, or holiday attendance requests to attendance_agent.
 - Route all leave balance, leave history, leave request, leave status, leave approval list, pending leave, leave policy, and quota requests to leave_agent.
-- If the user asks about a non-attendance/non-leave HR topic, explain that this version supports attendance and leave only and name the agent that should be built next.
+- Route all performance score, my performance, team performance, leaderboard, ranking, top performer, overall score, attendance score, and leave score requests to performance_agent.
+- If the user asks about a non-attendance/non-leave/non-performance HR topic, explain that this version supports attendance, leave, and performance only and name the agent that should be built next.
 - Do not fabricate data. Use a sub-agent when real data is required.
 - Preserve backend authorization boundaries. If the backend denies access, explain that access is role-scoped.
 - Keep the final answer concise, useful, and grounded in the agent result.
@@ -132,6 +163,13 @@ Prompting rules:
         if (latestHumanText && toolCall.name === "leave_agent") {
           const route = await routeLeaveRequest(latestHumanText);
           if (route.domain === "leave" && route.confidence >= 0.9) {
+            toolArgs.request = latestHumanText;
+          }
+        }
+
+        if (latestHumanText && toolCall.name === "performance_agent") {
+          const route = await routePerformanceRequest(latestHumanText);
+          if (route.domain === "performance" && route.confidence >= 0.9) {
             toolArgs.request = latestHumanText;
           }
         }

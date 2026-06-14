@@ -35,7 +35,7 @@ app.get("/health", (req, res) => {
     backendApiUrl: getBackendApiUrl(),
     langsmith: getLangSmithStatus(),
     memory: getMemoryStatus(),
-    agents: ["supervisor", "attendance", "leave"],
+    agents: ["supervisor", "attendance", "leave", "performance"],
   });
 });
 
@@ -43,8 +43,8 @@ app.get("/api/capabilities", (req, res) => {
   res.json({
     supervisor: {
       description: "Routes WorkNex chat requests to specialized HR agents.",
-      implementedAgents: ["attendance_agent", "leave_agent"],
-      plannedAgents: ["performance_agent", "policy_agent", "reports_agent"],
+      implementedAgents: ["attendance_agent", "leave_agent", "performance_agent"],
+      plannedAgents: ["policy_agent", "reports_agent", "analytics_agent"],
     },
     attendance_agent: {
       mode: "read-only",
@@ -69,6 +69,17 @@ app.get("/api/capabilities", (req, res) => {
         "get_pending_leaves",
         "get_leave_by_id",
         "get_leave_policies",
+      ],
+    },
+    performance_agent: {
+      mode: "read-only",
+      dataSource: "WorkNex backend API",
+      requiresAuthorizationHeader: true,
+      tools: [
+        "get_my_performance",
+        "get_user_performance",
+        "get_team_performance",
+        "get_performance_leaderboard",
       ],
     },
   });
@@ -108,7 +119,7 @@ app.post("/api/chat", async (req, res) => {
       response: answer,
       threadId: resolvedThreadId,
       agent: "supervisor",
-      implementedAgents: ["attendance_agent", "leave_agent"],
+      implementedAgents: ["attendance_agent", "leave_agent", "performance_agent"],
       trace: {
         langsmith: getLangSmithStatus(),
       },

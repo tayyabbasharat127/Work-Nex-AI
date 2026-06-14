@@ -7,6 +7,7 @@ The first implementation includes:
 - Supervisor agent
 - Attendance sub-agent
 - Leave sub-agent
+- Performance sub-agent
 - Read-only WorkNex backend API tools
 - Authorization token passthrough from frontend to backend
 
@@ -26,15 +27,19 @@ flowchart LR
   MAS --> S[Supervisor Agent<br/>LangGraph]
   S --> AR[Attendance Router]
   S --> LR[Leave Router]
+  S --> PR[Performance Router]
 
   AR --> AH[Attendance Handler]
   LR --> LH[Leave Handler]
+  PR --> PH[Performance Handler]
 
   AH --> AT[Attendance Tools]
   LH --> LT[Leave Tools]
+  PH --> PT[Performance Tools]
 
   AT --> B[WorkNex Backend API<br/>/api/v1]
   LT --> B
+  PT --> B
 
   B --> DB[(Main WorkNex PostgreSQL<br/>HR data)]
   S <--> MEM[(Agent Memory PostgreSQL<br/>LangGraph checkpoints)]
@@ -95,7 +100,7 @@ Supervisor
   -> Supervisor final answer
 ```
 
-LLM domain agents still exist as fallbacks for wording that does not match the deterministic MVP intents, but common attendance and leave questions use routers and handlers for reliability.
+LLM domain agents still exist as fallbacks for wording that does not match the deterministic MVP intents, but common attendance, leave, and performance questions use routers and handlers for reliability.
 
 ### Service boundaries
 
@@ -172,7 +177,7 @@ Response:
   "response": "...",
   "threadId": "thread_...",
   "agent": "supervisor",
-  "implementedAgents": ["attendance_agent", "leave_agent"]
+  "implementedAgents": ["attendance_agent", "leave_agent", "performance_agent"]
 }
 ```
 
@@ -226,6 +231,32 @@ Supervisor
 ```
 
 The LLM leave agent remains as a fallback for leave-related wording that does not match the core deterministic intents.
+
+## Performance agent scope
+
+The performance agent can read:
+
+- Current user's monthly performance records
+- Overall, attendance, and leave scores
+- Present, absent, late, leave-day, and average working-hour signals
+- Manager/admin scoped team performance
+- Manager/admin scoped performance leaderboard
+- Specific employee performance when backend permissions allow it
+
+It cannot mutate data. It will not edit scores, run ETL, generate records, or update performance data in this first version.
+
+The performance flow uses the same router-style path:
+
+```text
+Supervisor
+  -> Performance router
+  -> Performance handler
+  -> Exact backend read-only tool
+  -> Deterministic formatter
+  -> Supervisor final answer
+```
+
+The LLM performance agent remains as a fallback for performance-related wording that does not match the core deterministic intents.
 
 ## Environment
 
@@ -350,13 +381,13 @@ This follows the same high-level pattern as `charlie_supervisor`:
 Client
   -> Express API
   -> Supervisor agent
-  -> Attendance or leave agent as tool
+  -> Attendance, leave, or performance agent as tool
   -> Domain read-only tools
   -> WorkNex backend API
 ```
 
 The implementation is intentionally scoped, so future agents can be added cleanly:
 
-- Performance agent
+- Analytics agent
 - Policy/RAG agent
 - Reports agent

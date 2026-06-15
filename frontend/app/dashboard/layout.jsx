@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { attendancePing } from '@/services/attendancePing';
+import MultiAgentChatWidget from '@/components/MultiAgentChatWidget';
 
 export default function DashboardLayout({ children }) {
   useEffect(() => {
@@ -16,5 +17,10 @@ export default function DashboardLayout({ children }) {
     };
   }, []);
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <MultiAgentChatWidget />
+    </>
+  );
 }

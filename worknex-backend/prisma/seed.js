@@ -794,6 +794,225 @@ async function main() {
   for (const log of etlLogs) {
     await prisma.etlSyncLog.create({ data: { ...log, organizationId: org.id } });
   }
+
+  // 12. EXTENDED CURRENT-YEAR DATA FOR MULTI-AGENT TESTING
+  console.log('Creating extended current-year attendance data for agent testing...');
+
+  const extendedYear = new Date().getFullYear();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const currentMonth = today.getFullYear() === extendedYear ? today.getMonth() + 1 : 12;
+
+  const extendedHolidayData = [
+    { name: `New Year's Day ${extendedYear}`, date: d(extendedYear, 1, 1), isRecurring: true },
+    { name: `Pakistan Day ${extendedYear}`, date: d(extendedYear, 3, 23), isRecurring: true },
+    { name: `Labour Day ${extendedYear}`, date: d(extendedYear, 5, 1), isRecurring: true },
+    { name: `Independence Day ${extendedYear}`, date: d(extendedYear, 8, 14), isRecurring: true },
+    { name: `Quaid Day ${extendedYear}`, date: d(extendedYear, 12, 25), isRecurring: true },
+  ];
+
+  for (const h of extendedHolidayData) {
+    const existing = await prisma.holiday.findFirst({
+      where: { organizationId: org.id, name: h.name, date: h.date },
+    });
+    if (!existing) await prisma.holiday.create({ data: { ...h, organizationId: org.id } });
+  }
+
+  for (const user of allUsers) {
+    for (const policy of policyList) {
+      await prisma.leaveBalance.upsert({
+        where: { userId_policyId_year: { userId: user.id, policyId: policy.id, year: extendedYear } },
+        update: {},
+        create: {
+          organizationId: org.id,
+          userId: user.id,
+          policyId: policy.id,
+          year: extendedYear,
+          totalDays: policy.totalDays,
+          usedDays: 0,
+          remainingDays: policy.totalDays,
+        },
+      });
+    }
+  }
+
+  const deterministicPercent = (seedText) => {
+    let hashValue = 0;
+    for (const char of seedText) hashValue = (hashValue * 31 + char.charCodeAt(0)) % 10000;
+    return hashValue / 10000;
+  };
+
+  const extendedHolidayDates = new Set(extendedHolidayData.map((h) => h.date.toISOString().split('T')[0]));
+  let extendedAttendanceCount = 0;
+
+  for (const user of allUsers) {
+    const pat = patterns[user.employeeId] || { late: 0.05, absent: 0.02, half: 0.02 };
+
+    for (let month = 1; month <= currentMonth; month++) {
+      const daysInMonth = new Date(extendedYear, month, 0).getDate();
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(extendedYear, month - 1, day);
+        date.setHours(0, 0, 0, 0);
+        if (date > today) continue;
+
+        const dateStr = date.toISOString().split('T')[0];
+        if (isWeekend(date) || extendedHolidayDates.has(dateStr)) continue;
+
+        const seed = `${user.employeeId}-${dateStr}`;
+        const rand = deterministicPercent(seed);
+        let status = 'PRESENT';
+        let checkInHour = 9;
+        let checkInMin = Math.floor(deterministicPercent(`${seed}-in`) * 25);
+        let checkOutHour = 17;
+        let checkOutMin = Math.floor(deterministicPercent(`${seed}-out`) * 55);
+        let workingHours = 8 + deterministicPercent(`${seed}-hours`) * 0.8;
+
+        if (rand < pat.absent) {
+          status = 'ABSENT';
+          checkInHour = null;
+          checkInMin = null;
+          checkOutHour = null;
+          checkOutMin = null;
+          workingHours = 0;
+        } else if (rand < pat.absent + pat.half) {
+          status = 'HALF_DAY';
+          checkInHour = 9;
+          checkInMin = 10;
+          checkOutHour = 13;
+          checkOutMin = 0;
+          workingHours = 4;
+        } else if (rand < pat.absent + pat.half + pat.late) {
+          status = 'LATE';
+          checkInHour = 9;
+          checkInMin = 35 + Math.floor(deterministicPercent(`${seed}-late`) * 50);
+          if (checkInMin >= 60) {
+            checkInHour = 10;
+            checkInMin -= 60;
+          }
+          workingHours = 7 + deterministicPercent(`${seed}-late-hours`) * 1.2;
+        }
+
+        const checkIn = status !== 'ABSENT' ? dt(extendedYear, month, day, checkInHour, checkInMin) : null;
+        const checkOut = status !== 'ABSENT' ? dt(extendedYear, month, day, checkOutHour, checkOutMin) : null;
+
+        await prisma.attendance.upsert({
+          where: { userId_date: { userId: user.id, date } },
+          update: {
+            organizationId: org.id,
+            checkIn,
+            checkOut,
+            status,
+            workingHours: status !== 'ABSENT' ? parseFloat(workingHours.toFixed(2)) : 0,
+            source: 'TMS_SYNC',
+          },
+          create: {
+            organizationId: org.id,
+            userId: user.id,
+            date,
+            checkIn,
+            checkOut,
+            status,
+            workingHours: status !== 'ABSENT' ? parseFloat(workingHours.toFixed(2)) : 0,
+            source: 'TMS_SYNC',
+          },
+        });
+        extendedAttendanceCount++;
+      }
+    }
+  }
+
+  const todayScenarios = [
+    { email: 'zaid.khan@novapay.pk', status: 'PRESENT', inHour: 8, inMin: 55, outHour: null, outMin: null, hours: 0 },
+    { email: 'sara.malik@novapay.pk', status: 'PRESENT', inHour: 9, inMin: 2, outHour: null, outMin: null, hours: 0 },
+    { email: 'ali.raza@novapay.pk', status: 'PRESENT', inHour: 9, inMin: 5, outHour: null, outMin: null, hours: 0 },
+    { email: 'ayesha.s@novapay.pk', status: 'LATE', inHour: 10, inMin: 12, outHour: null, outMin: null, hours: 0 },
+    { email: 'bilal.ahmed@novapay.pk', status: 'PRESENT', inHour: 9, inMin: 1, outHour: null, outMin: null, hours: 0 },
+    { email: 'kamran.iqbal@novapay.pk', status: 'ABSENT', inHour: null, inMin: null, outHour: null, outMin: null, hours: 0 },
+    { email: 'imran.malik@novapay.pk', status: 'HALF_DAY', inHour: 9, inMin: 20, outHour: 13, outMin: 15, hours: 3.9 },
+    { email: 'farah.aziz@novapay.pk', status: 'PRESENT', inHour: 8, inMin: 58, outHour: null, outMin: null, hours: 0 },
+  ];
+
+  for (const row of todayScenarios) {
+    const user = userMap[row.email];
+    if (!user) continue;
+
+    const checkIn = row.status !== 'ABSENT'
+      ? dt(today.getFullYear(), today.getMonth() + 1, today.getDate(), row.inHour, row.inMin)
+      : null;
+    const checkOut = row.outHour !== null
+      ? dt(today.getFullYear(), today.getMonth() + 1, today.getDate(), row.outHour, row.outMin)
+      : null;
+
+    await prisma.attendance.upsert({
+      where: { userId_date: { userId: user.id, date: today } },
+      update: {
+        organizationId: org.id,
+        checkIn,
+        checkOut,
+        status: row.status,
+        workingHours: row.hours,
+        source: 'MANUAL',
+      },
+      create: {
+        organizationId: org.id,
+        userId: user.id,
+        date: today,
+        checkIn,
+        checkOut,
+        status: row.status,
+        workingHours: row.hours,
+        source: 'MANUAL',
+      },
+    });
+  }
+
+  let extendedPerfCount = 0;
+  for (const user of allUsers) {
+    for (let month = 1; month <= currentMonth; month++) {
+      const start = new Date(extendedYear, month - 1, 1);
+      const end = new Date(extendedYear, month, 0, 23, 59, 59);
+      const records = await prisma.attendance.findMany({
+        where: { userId: user.id, date: { gte: start, lte: end } },
+      });
+      if (records.length === 0) continue;
+
+      const presentDays = records.filter(r => ['PRESENT', 'LATE', 'HALF_DAY'].includes(r.status)).length;
+      const absentDays = records.filter(r => r.status === 'ABSENT').length;
+      const lateDays = records.filter(r => r.status === 'LATE').length;
+      const leaveDays = records.filter(r => r.status === 'ON_LEAVE').length;
+      const totalHours = records.reduce((s, r) => s + (r.workingHours || 0), 0);
+      const avgWorkingHours = records.length > 0 ? parseFloat((totalHours / records.length).toFixed(2)) : 0;
+      const workingDays = Math.max(records.length, 1);
+      const attendanceScore = parseFloat(((presentDays / workingDays) * 100).toFixed(1));
+      const leaveScore = parseFloat((100 - (leaveDays / workingDays) * 100).toFixed(1));
+      const punctualityScore = parseFloat((100 - (lateDays / workingDays) * 100).toFixed(1));
+      const overallScore = parseFloat(((attendanceScore * 0.45) + (leaveScore * 0.25) + (punctualityScore * 0.30)).toFixed(1));
+
+      await prisma.performanceRecord.upsert({
+        where: { userId_month_year: { userId: user.id, month, year: extendedYear } },
+        update: { organizationId: org.id, presentDays, absentDays, lateDays, leaveDays, avgWorkingHours, attendanceScore, leaveScore, overallScore },
+        create: { organizationId: org.id, userId: user.id, month, year: extendedYear, presentDays, absentDays, lateDays, leaveDays, avgWorkingHours, attendanceScore, leaveScore, overallScore },
+      });
+      extendedPerfCount++;
+    }
+  }
+
+  await prisma.etlSyncLog.create({
+    data: {
+      organizationId: org.id,
+      source: 'SCHEDULED',
+      status: 'SUCCESS',
+      recordsIn: extendedAttendanceCount,
+      recordsOut: extendedAttendanceCount,
+      startedAt: new Date(),
+      completedAt: new Date(),
+    },
+  });
+
+  console.log(`   ${extendedAttendanceCount} current-year attendance records upserted`);
+  console.log(`   ${todayScenarios.length} today snapshot records upserted`);
+  console.log(`   ${extendedPerfCount} current-year performance records upserted`);
   console.log(`   ✓ ${etlLogs.length} ETL sync logs created`);
 
   // ── SUMMARY ─────────────────────────────────────────────────────────────────
@@ -802,10 +1021,10 @@ async function main() {
   console.log('  Company     : NovaPay Financial Services');
   console.log('  Employees   : 20 (1 CEO, 1 Admin, 4 Managers, 14 Employees)');
   console.log('  Departments : 7');
-  console.log('  Attendance  : Jan–Mar 2025 (3 months)');
+  console.log(`  Attendance  : Jan-Mar 2025 + Jan-${currentMonth}/${extendedYear} current-year data`);
   console.log('  Leave Reqs  : 15 (9 Approved, 2 Rejected, 3 Pending, 1 Cancelled)');
   console.log('  Notifications: 19');
-  console.log('  Perf Records: Computed for all users × 3 months');
+  console.log(`  Perf Records: 2025 demo + ${extendedYear} current-year records`);
   console.log('  Audit Logs  : 16 entries');
   console.log('  ETL Logs    : 8 sync runs');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

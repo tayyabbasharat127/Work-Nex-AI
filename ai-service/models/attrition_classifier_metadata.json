@@ -1,0 +1,43 @@
+{
+  "modelVersion": "attrition-clf-v1",
+  "modelType": "RandomForestClassifier",
+  "task": "binary_classification",
+  "features": [
+    "tenure_months",
+    "attendance_rate",
+    "late_count",
+    "absence_count",
+    "leave_days_taken",
+    "annual_leave_remaining",
+    "performance_score",
+    "dept_avg_performance",
+    "overtime_hours",
+    "half_day_count",
+    "prev_month_score",
+    "manager_change_count",
+    "warnings_issued"
+  ],
+  "rows": 3000,
+  "accuracy": 0.93,
+  "f1Score": 0.0455,
+  "rocAuc": 0.5478,
+  "cvAucMean": 0.5609,
+  "cvAucStd": 0.0329,
+  "threshold": 0.45,
+  "featureImportances": {
+    "tenure_months": 0.1105,
+    "attendance_rate": 0.1245,
+    "late_count": 0.0724,
+    "absence_count": 0.0547,
+    "leave_days_taken": 0.0556,
+    "annual_leave_remaining": 0.0586,
+    "performance_score": 0.1212,
+    "dept_avg_performance": 0.1181,
+    "overtime_hours": 0.0888,
+    "half_day_count": 0.0293,
+    "prev_month_score": 0.1255,
+    "manager_change_count": 0.0206,
+    "warnings_issued": 0.0204
+  },
+  "fallback": false
+}

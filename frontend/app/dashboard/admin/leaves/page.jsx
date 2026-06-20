@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { Check, X, Clock, Eye, Search, ChevronLeft, ChevronRight, FileText, Calendar, Users, TrendingUp, Filter } from 'lucide-react';
+import { Check, X, Clock, Eye, Search, ChevronLeft, ChevronRight, FileText, FolderOpen, Download, UploadCloud, Loader2 } from 'lucide-react';
 import { leaveAPI } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -23,6 +23,15 @@ const TYPE_COLORS = {
   OTHER:     'bg-muted/30 text-muted-foreground',
 };
 
+const ACCEPTED_POLICY_EXTENSIONS = ['txt', 'pdf', 'docx'];
+const MAX_POLICY_FILE_SIZE = 10 * 1024 * 1024;
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function getInitials(firstName, lastName) {
   return `${(firstName || '?')[0]}${(lastName || '')[0] || ''}`.toUpperCase();
 }
@@ -41,7 +50,10 @@ export default function AdminLeaves() {
   const [viewingLeave, setViewingLeave] = useState(null);
   const [policyFile, setPolicyFile] = useState(null);
   const [policyDocument, setPolicyDocument] = useState(null);
+  const [policyUploading, setPolicyUploading] = useState(false);
+  const [isDraggingPolicy, setIsDraggingPolicy] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const policyInputRef = useRef(null);
   const itemsPerPage = 8;
 
   useEffect(() => { loadLeaves(); }, []);
@@ -53,7 +65,7 @@ export default function AdminLeaves() {
       // Backend returns { leaves: [...] } or array
       const arr = Array.isArray(data) ? data : (data?.leaves || data?.data || []);
       setLeaves(arr);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load leaves');
     } finally {
       setLoading(false);
@@ -88,6 +100,7 @@ export default function AdminLeaves() {
       return;
     }
     try {
+      setPolicyUploading(true);
       const uploaded = await leaveAPI.uploadPolicyDocument(policyFile);
       const extracted = await leaveAPI.extractPolicyDocument(uploaded.id);
       const parsed = await leaveAPI.aiParsePolicyDocument(extracted.id);
@@ -95,7 +108,31 @@ export default function AdminLeaves() {
       toast.success('Policy extracted. Review rules before activation.');
     } catch (err) {
       toast.error(err.message || 'Policy upload failed');
+    } finally {
+      setPolicyUploading(false);
     }
+  };
+
+  const selectPolicyFile = (file) => {
+    if (!file) return;
+    const extension = file.name.split('.').pop()?.toLowerCase();
+
+    if (!ACCEPTED_POLICY_EXTENSIONS.includes(extension)) {
+      toast.error('Choose a TXT, PDF, or DOCX policy document');
+      return;
+    }
+    if (file.size > MAX_POLICY_FILE_SIZE) {
+      toast.error('Policy document must be 10 MB or smaller');
+      return;
+    }
+
+    setPolicyFile(file);
+    setPolicyDocument(null);
+  };
+
+  const clearPolicyFile = () => {
+    setPolicyFile(null);
+    if (policyInputRef.current) policyInputRef.current.value = '';
   };
 
   const handleApprovePolicyRules = async () => {
@@ -149,20 +186,120 @@ export default function AdminLeaves() {
         </div>
 
         <div className="px-8 py-6 space-y-6">
-          <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-            <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-              <div className="flex-1">
+          <div className="bg-card border border-border rounded-2xl p-5 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div>
                 <h2 className="font-bold">Policy Document Automation</h2>
-                <p className="text-sm text-muted-foreground">Upload .txt, .pdf, or .docx. Extracted rules require admin approval before activation.</p>
+                <p className="text-sm text-muted-foreground mt-1">Upload your leave policy and WorkNex will extract structured rules for admin review.</p>
               </div>
-              <input
-                type="file"
-                accept=".txt,.pdf,.docx"
-                onChange={(event) => setPolicyFile(event.target.files?.[0] || null)}
-                className="text-sm"
-              />
-              <button onClick={handlePolicyUpload} className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium">
-                Extract Rules
+              <a
+                href="/samples/worknex-leave-policy-sample.txt"
+                download
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-background hover:border-primary hover:text-primary transition text-sm font-medium whitespace-nowrap"
+              >
+                <Download size={16} />
+                Download Sample
+              </a>
+            </div>
+
+            <input
+              ref={policyInputRef}
+              type="file"
+              accept=".txt,.pdf,.docx"
+              onChange={(event) => selectPolicyFile(event.target.files?.[0])}
+              className="sr-only"
+            />
+
+            <div
+              onDragEnter={(event) => {
+                event.preventDefault();
+                setIsDraggingPolicy(true);
+              }}
+              onDragOver={(event) => event.preventDefault()}
+              onDragLeave={(event) => {
+                event.preventDefault();
+                if (!event.currentTarget.contains(event.relatedTarget)) setIsDraggingPolicy(false);
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                setIsDraggingPolicy(false);
+                selectPolicyFile(event.dataTransfer.files?.[0]);
+              }}
+              className={`rounded-2xl border-2 border-dashed p-6 transition ${
+                isDraggingPolicy
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border bg-background/40 hover:border-primary/60'
+              }`}
+            >
+              {policyFile ? (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                    <FileText size={24} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold truncate">{policyFile.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatFileSize(policyFile.size)} · Ready to extract
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => policyInputRef.current?.click()}
+                      disabled={policyUploading}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:border-primary hover:text-primary transition text-sm disabled:opacity-50"
+                    >
+                      <FolderOpen size={16} />
+                      Replace
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearPolicyFile}
+                      disabled={policyUploading}
+                      className="p-2 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive transition disabled:opacity-50"
+                      aria-label="Remove selected policy file"
+                      title="Remove file"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/15 text-primary flex items-center justify-center mx-auto mb-3">
+                    <UploadCloud size={28} />
+                  </div>
+                  <p className="font-semibold">Drag and drop your policy document here</p>
+                  <p className="text-sm text-muted-foreground mt-1">or choose it from your computer</p>
+                  <button
+                    type="button"
+                    onClick={() => policyInputRef.current?.click()}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 mt-4 rounded-xl bg-secondary hover:bg-secondary/80 transition text-sm font-medium"
+                  >
+                    <FolderOpen size={17} />
+                    Choose File
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span>Supported formats:</span>
+                {ACCEPTED_POLICY_EXTENSIONS.map((extension) => (
+                  <span key={extension} className="px-2 py-1 rounded-md bg-muted border border-border font-medium uppercase">
+                    {extension}
+                  </span>
+                ))}
+                <span>Maximum 10 MB</span>
+              </div>
+              <button
+                onClick={handlePolicyUpload}
+                disabled={!policyFile || policyUploading}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {policyUploading ? <Loader2 size={17} className="animate-spin" /> : <UploadCloud size={17} />}
+                {policyUploading ? 'Extracting Rules...' : 'Upload & Extract Rules'}
               </button>
             </div>
             {policyDocument?.parsedRules && (

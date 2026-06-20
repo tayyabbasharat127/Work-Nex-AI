@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { Search, Plus, Eye, Edit, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Eye, EyeOff, Edit, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
 import { departmentAPI } from '@/lib/api';
 import { getRoleName } from '@/lib/helpers';
@@ -13,6 +13,7 @@ export default function AdminUsers() {
   const [departments, setDepartments] = useState([]);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -68,6 +69,7 @@ export default function AdminUsers() {
 
   const handleOpenAddModal = () => {
     setEditingUser(null);
+    setShowPassword(false);
     setFormData({ 
       name: '', 
       email: '', 
@@ -85,6 +87,7 @@ export default function AdminUsers() {
 
   const handleOpenEditModal = (user) => {
     setEditingUser(user);
+    setShowPassword(false);
     setFormData({
       name: user.name,
       email: user.email,
@@ -377,13 +380,24 @@ export default function AdminUsers() {
                 {!editingUser && (
                   <div>
                     <label className="block text-sm font-medium mb-2">Password</label>
-                    <input
-                      type="password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
-                      placeholder="Enter password (optional)"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="w-full px-4 py-3 pr-12 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
+                        placeholder="Enter password (optional)"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((visible) => !visible)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        title={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                    </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Leave empty to auto-generate. User will receive password via email.
                     </p>

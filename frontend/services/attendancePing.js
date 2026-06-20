@@ -3,7 +3,7 @@ import { attendanceAPI } from '@/lib/api';
 class AttendancePingService {
   constructor() {
     this.intervalId = null;
-    this.pingInterval = 60000; // 1 minute
+    this.pingInterval = 5 * 60000; // 5 minutes
     this.isRunning = false;
   }
 
@@ -26,6 +26,10 @@ class AttendancePingService {
   }
 
   async ping() {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+      return;
+    }
+
     try {
       const result = await attendanceAPI.ping();
       console.log('Attendance ping:', result);
@@ -34,7 +38,7 @@ class AttendancePingService {
         console.log('✅ Auto checked-in successfully!', result);
         // You could show a toast notification here
       }
-    } catch (error) {
+    } catch {
       // Silently fail - don't spam console with errors
       // The ping will retry in 1 minute
     }

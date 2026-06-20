@@ -30,7 +30,7 @@ const getDashboardKPIs = async (requestingUser) => {
   ] = await Promise.all([
     prisma.user.count({ where: { ...userScope, isActive: true, role: 'EMPLOYEE' } }),
     prisma.attendance.count({ where: { ...attendanceScope, date: today, status: { in: ['PRESENT', 'LATE'] } } }),
-    prisma.leaveRequest.count({ where: { ...leaveScope, status: 'PENDING' } }),
+    prisma.leaveRequest.count({ where: { ...leaveScope, status: { in: ['PENDING', 'PENDING_MANAGER'] } } }),
     prisma.attendance.count({ where: { ...attendanceScope, date: today, status: 'ABSENT' } }),
   ]);
 
@@ -81,12 +81,37 @@ const getAttendanceHeatmap = async (userId, year, requestingUser) => {
   });
 };
 
+const _countWorkingDays = (start, end) => {
+  let count = 0;
+  const cur = new Date(start);
+  while (cur <= end) {
+    const d = cur.getDay();
+    if (d !== 0 && d !== 6) count++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return Math.max(count, 1);
+};
+
 const getDepartmentAttendance = async (month, year, requestingUser) => {
   const { start, end } = getMonthRange(parseInt(year), parseInt(month));
+  const workingDays = _countWorkingDays(start, end);
 
   if (!isPlatformAdmin(requestingUser)) {
+    const orgScope = getOrganizationScope(requestingUser);
+
+    // Employee count per department (used as denominator)
+    const employees = await prisma.user.findMany({
+      where: { ...orgScope, isActive: true },
+      select: { department: { select: { name: true } } },
+    });
+    const empByDept = {};
+    employees.forEach((e) => {
+      const dept = e.department?.name || 'Unassigned';
+      empByDept[dept] = (empByDept[dept] || 0) + 1;
+    });
+
     const where = await addAccessibleUserScope({
-      ...getOrganizationScope(requestingUser),
+      ...orgScope,
       date: { gte: start, lte: end },
     }, requestingUser);
     const records = await prisma.attendance.findMany({
@@ -99,6 +124,10 @@ const getDepartmentAttendance = async (month, year, requestingUser) => {
     });
 
     const departments = {};
+    // Seed all departments that have employees
+    Object.keys(empByDept).forEach((dept) => {
+      departments[dept] = { department: dept, present: 0, absent: 0, total: 0 };
+    });
     records.forEach((record) => {
       const department = record.user?.department?.name || 'Unassigned';
       if (!departments[department]) {
@@ -111,17 +140,22 @@ const getDepartmentAttendance = async (month, year, requestingUser) => {
 
     return Object.values(departments)
       .sort((a, b) => a.department.localeCompare(b.department))
-      .map((item) => ({
-        ...item,
-        rate: item.total > 0 ? parseFloat(((item.present / item.total) * 100).toFixed(1)) : 0,
-      }));
+      .map((item) => {
+        const empCount = empByDept[item.department] || 1;
+        const expected = empCount * workingDays;
+        return {
+          ...item,
+          rate: parseFloat(Math.min((item.present / expected) * 100, 100).toFixed(1)),
+        };
+      });
   }
 
   const result = await prisma.$queryRaw`
-    SELECT d.name as department, 
+    SELECT d.name as department,
            COUNT(CASE WHEN a.status IN ('PRESENT','LATE') THEN 1 END) as present,
            COUNT(CASE WHEN a.status = 'ABSENT' THEN 1 END) as absent,
-           COUNT(a.id) as total
+           COUNT(a.id) as total,
+           COUNT(DISTINCT u.id) as emp_count
     FROM "Attendance" a
     JOIN "User" u ON a."userId" = u.id
     JOIN "Department" d ON u."departmentId" = d.id
@@ -130,16 +164,18 @@ const getDepartmentAttendance = async (month, year, requestingUser) => {
     ORDER BY d.name
   `;
 
-  // Convert BigInt to Number for JSON serialization
-  return result.map(r => ({
-    department: r.department,
-    present: Number(r.present),
-    absent: Number(r.absent),
-    total: Number(r.total),
-    rate: Number(r.total) > 0
-      ? parseFloat(((Number(r.present) / Number(r.total)) * 100).toFixed(1))
-      : 0,
-  }));
+  return result.map(r => {
+    const present = Number(r.present);
+    const empCount = Number(r.emp_count) || 1;
+    const expected = empCount * workingDays;
+    return {
+      department: r.department,
+      present,
+      absent: Number(r.absent),
+      total: Number(r.total),
+      rate: parseFloat(Math.min((present / expected) * 100, 100).toFixed(1)),
+    };
+  });
 };
 
 const getLeaveSummary = async (year, requestingUser) => {
@@ -566,10 +602,94 @@ const getAuditLogs = async (requestingUser, limit = 50) => {
   });
 };
 
+/* ─── Attrition Analytics ─────────────────────────────────────────────── */
+
+const getAttritionAnalytics = async (month, year, requestingUser) => {
+  const m = parseInt(month, 10) || new Date().getMonth() + 1;
+  const y = parseInt(year, 10)  || new Date().getFullYear();
+
+  const orgScope   = getOrganizationScope(requestingUser);
+  const userIds    = await getAccessibleUserIds(requestingUser);
+  const where      = { ...orgScope, month: m, year: y };
+  if (userIds !== null) where.userId = { in: userIds };
+
+  const [records, labelCounts] = await Promise.all([
+    prisma.attritionRecord.findMany({
+      where,
+      include: {
+        user: { select: { employeeId: true, firstName: true, lastName: true, department: { select: { name: true } } } },
+      },
+      orderBy: { riskScore: 'desc' },
+    }),
+    prisma.attritionRecord.groupBy({
+      by: ['riskLabel'],
+      where,
+      _count: { riskLabel: true },
+      _avg:   { riskScore: true },
+    }),
+  ]);
+
+  const summary = Object.fromEntries(
+    labelCounts.map(l => [l.riskLabel, { count: l._count.riskLabel, avgScore: parseFloat((l._avg.riskScore || 0).toFixed(2)) }])
+  );
+
+  const atRisk = records.filter(r => ['HIGH', 'CRITICAL'].includes(r.riskLabel));
+
+  return {
+    month: m, year: y,
+    totalAnalyzed: records.length,
+    summary,
+    atRiskCount: atRisk.length,
+    atRiskEmployees: atRisk.map(r => ({
+      userId: r.userId,
+      employeeId: r.user?.employeeId,
+      name: `${r.user?.firstName || ''} ${r.user?.lastName || ''}`.trim(),
+      department: r.user?.department?.name || null,
+      riskScore: r.riskScore,
+      riskLabel: r.riskLabel,
+      willLeaveProb: r.willLeaveProb,
+      factors: r.factors,
+      source: r.source,
+    })),
+    all: records.map(r => ({
+      userId: r.userId,
+      riskScore: r.riskScore,
+      riskLabel: r.riskLabel,
+      willLeaveProb: r.willLeaveProb,
+      source: r.source,
+    })),
+  };
+};
+
+/* ─── Performance Leaderboard ─────────────────────────────────────────── */
+
+const getPerformanceLeaderboard = async (month, year, limit, requestingUser) => {
+  const performanceETL = require('../etl/jobs/performance.etl');
+  const orgScope = getOrganizationScope(requestingUser);
+  const orgId = orgScope.organizationId || null;
+  return performanceETL.getLeaderboard(
+    month  || new Date().getMonth() + 1,
+    year   || new Date().getFullYear(),
+    limit  || 10,
+    orgId,
+  );
+};
+
+const getTeamPerformance = async (month, year, requestingUser) => {
+  const performanceETL = require('../etl/jobs/performance.etl');
+  return performanceETL.getTeamPerformance(
+    requestingUser.id,
+    month || new Date().getMonth() + 1,
+    year  || new Date().getFullYear(),
+  );
+};
+
 module.exports = {
   getDashboardKPIs, getAttendanceTrends, getAttendanceHeatmap,
   getDepartmentAttendance, getLeaveSummary, getLeaveTrends, getLeaveByType,
   getHeadcount, getTurnoverRate,
   getPowerBIToken, getPowerBIEmbedToken, pushDataToPowerBI,
   runETL, getEtlLogs, getAuditLogs,
+  getAttritionAnalytics,
+  getPerformanceLeaderboard, getTeamPerformance,
 };

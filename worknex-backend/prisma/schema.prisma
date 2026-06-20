@@ -42,14 +42,15 @@ model User {
   phone          String?
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
-  attendance     Attendance[]
-  auditLogs      AuditLog[]
-  leaveBalances  LeaveBalance[]
-  approvedLeaves LeaveRequest[]      @relation("ApproverLeaves")
-  leaveRequests  LeaveRequest[]      @relation("EmployeeLeaves")
-  notifications  Notification[]
-  performance    PerformanceRecord[]
-  refreshTokens  RefreshToken[]
+  attendance       Attendance[]
+  auditLogs        AuditLog[]
+  leaveBalances    LeaveBalance[]
+  approvedLeaves   LeaveRequest[]      @relation("ApproverLeaves")
+  leaveRequests    LeaveRequest[]      @relation("EmployeeLeaves")
+  notifications    Notification[]
+  performance      PerformanceRecord[]
+  attritionRecords AttritionRecord[]
+  refreshTokens    RefreshToken[]
   uploadedPolicyDocuments PolicyDocument[] @relation("UploadedPolicyDocuments")
   approvedPolicyVersions LeavePolicyVersion[] @relation("ApprovedPolicyVersions")
   employeeLeaveDecisionLogs LeaveDecisionLog[] @relation("EmployeeLeaveDecisionLogs")
@@ -185,26 +186,53 @@ model Notification {
 }
 
 model PerformanceRecord {
-  id              String   @id @default(uuid())
-  organizationId  String
-  userId          String
-  month           Int
-  year            Int
-  presentDays     Int      @default(0)
-  absentDays      Int      @default(0)
-  lateDays        Int      @default(0)
-  leaveDays       Int      @default(0)
-  avgWorkingHours Float    @default(0)
-  attendanceScore Float    @default(0)
-  leaveScore      Float    @default(0)
-  overallScore    Float    @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization    Organization @relation(fields: [organizationId], references: [id])
+  id                String   @id @default(uuid())
+  organizationId    String
+  userId            String
+  month             Int
+  year              Int
+  presentDays       Int      @default(0)
+  absentDays        Int      @default(0)
+  lateDays          Int      @default(0)
+  leaveDays         Int      @default(0)
+  avgWorkingHours   Float    @default(0)
+  attendanceScore   Float    @default(0)
+  leaveScore        Float    @default(0)
+  punctualityScore  Float    @default(0)
+  overallScore      Float    @default(0)
+  mlPredictedScore  Float?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization      Organization @relation(fields: [organizationId], references: [id])
+  attritionRecords  AttritionRecord[]
 
   @@unique([userId, month, year])
   @@index([organizationId, year, month])
+}
+
+model AttritionRecord {
+  id                  String            @id @default(uuid())
+  organizationId      String
+  userId              String
+  month               Int
+  year                Int
+  riskScore           Float
+  riskLabel           String
+  willLeaveProb       Float             @default(0)
+  factors             Json              @default("[]")
+  modelVersion        String            @default("deterministic-v1")
+  source              String            @default("DETERMINISTIC")
+  performanceRecordId String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization        Organization      @relation(fields: [organizationId], references: [id])
+  performanceRecord   PerformanceRecord? @relation(fields: [performanceRecordId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, month, year])
+  @@index([organizationId, year, month])
+  @@index([organizationId, riskLabel])
 }
 
 model EtlSyncLog {
@@ -245,6 +273,7 @@ model Organization {
   leaveRequests LeaveRequest[]
   notifications Notification[]
   performanceRecords PerformanceRecord[]
+  attritionRecords   AttritionRecord[]
   holidays     Holiday[]
   auditLogs    AuditLog[]
   etlSyncLogs  EtlSyncLog[]

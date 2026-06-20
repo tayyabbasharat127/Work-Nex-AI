@@ -84,10 +84,30 @@ const getAuditLogs = async (req, res) => {
   apiResponse(res, 200, 'Audit logs', logs);
 };
 
+const getAttritionAnalytics = async (req, res) => {
+  const { month = new Date().getMonth() + 1, year = new Date().getFullYear() } = req.query;
+  const data = await analyticsService.getAttritionAnalytics(month, year, req.user);
+  apiResponse(res, 200, 'Attrition analytics', data);
+};
+
+const getPerformanceLeaderboard = async (req, res) => {
+  const { month, year, limit = 10 } = req.query;
+  const data = await analyticsService.getPerformanceLeaderboard(month, year, limit, req.user);
+  apiResponse(res, 200, 'Performance leaderboard', data);
+};
+
+const getTeamPerformance = async (req, res) => {
+  const { month, year } = req.query;
+  const data = await analyticsService.getTeamPerformance(month, year, req.user);
+  apiResponse(res, 200, 'Team performance', data);
+};
+
 module.exports = {
   getDashboardKPIs, getAttendanceTrends, getAttendanceHeatmap,
   getDepartmentAttendance, getLeaveSummary, getLeaveTrends, getLeaveByType,
   getHeadcount, getTurnoverRate,
   getPowerBIToken, getPowerBIEmbedToken, pushDataToPowerBI,
   runETL, getEtlLogs, getAuditLogs,
+  getAttritionAnalytics,
+  getPerformanceLeaderboard, getTeamPerformance,
 };

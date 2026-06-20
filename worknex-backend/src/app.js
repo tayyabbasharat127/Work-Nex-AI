@@ -44,7 +44,7 @@ app.use(morgan('combined', { stream: { write: (msg) => logger.info(msg.trim()) }
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200,
+  max: Number(process.env.API_RATE_LIMIT_MAX || (process.env.NODE_ENV === 'development' ? 2000 : 200)),
   message: { success: false, message: 'Too many requests, please try again later' },
 });
 

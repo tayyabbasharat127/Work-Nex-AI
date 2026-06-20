@@ -2,7 +2,11 @@ const aiService = require('./ai.service');
 const { apiResponse } = require('../../utils/ApiResponse');
 
 const chat = async (req, res) => {
-  const result = await aiService.chat(req.user.id, req.body.message);
+  // Extract the user's JWT from Authorization header and forward it to the AI service
+  // so the LangChain agent can make personal DB queries on behalf of this user
+  const authHeader = req.headers.authorization || '';
+  const authToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const result = await aiService.chat(req.user.id, req.body.message, authToken);
   apiResponse(res, 200, 'AI response', result);
 };
 

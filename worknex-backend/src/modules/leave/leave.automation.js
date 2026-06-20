@@ -1,8 +1,12 @@
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 const prisma = require('../../config/db');
 const { ApiError } = require('../../utils/ApiError');
 const { countBusinessDays } = require('../../utils/dateHelpers');
+
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const AI_TIMEOUT_MS  = 12000;
 
 const DATA_DIR = path.join(process.cwd(), 'storage', 'leave-automation');
 const DOC_DIR = path.join(DATA_DIR, 'documents');
@@ -209,7 +213,30 @@ const extractPolicyDocument = async (documentId, user) => {
 const aiParsePolicyDocument = async (documentId, user) => {
   const doc = await findDocument(documentId, user);
   const extractedText = doc.extractedText || await extractText(doc);
-  const parsedRules = validateParsedRules(deterministicParse(extractedText));
+
+  // Attempt AI service LLM extraction (Groq/OpenAI); fall back to deterministic
+  let parsedRules;
+  if (process.env.AI_SERVICE_URL || process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY) {
+    try {
+      const resp = await axios.post(
+        `${AI_SERVICE_URL}/predict/leave-policy`,
+        { text: extractedText, organization_id: doc.organizationId },
+        { timeout: AI_TIMEOUT_MS },
+      );
+      const aiResult = resp.data;
+      if (aiResult?.leavePolicies?.length) {
+        // Boost confidence when AI succeeds
+        aiResult.confidence = Math.min(1, (Number(aiResult.confidence) || 0.8) + 0.05);
+        aiResult.parser = aiResult.parser || 'ai-llm';
+        parsedRules = validateParsedRules(aiResult);
+      }
+    } catch {
+      // AI service unavailable — fall through to deterministic
+    }
+  }
+  if (!parsedRules) {
+    parsedRules = validateParsedRules(deterministicParse(extractedText));
+  }
 
   const updated = await prisma.$transaction(async (tx) => {
     await tx.extractedPolicyRule.deleteMany({ where: { policyDocumentId: doc.id, status: 'DRAFT' } });

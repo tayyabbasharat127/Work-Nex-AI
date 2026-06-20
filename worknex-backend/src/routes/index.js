@@ -12,5 +12,6 @@ router.use('/performance', require('../modules/performance/performance.routes'))
 router.use('/ai', require('../modules/ai/ai.routes'));
 router.use('/reports', require('../modules/reports/reports.routes'));
 router.use('/settings', require('../modules/settings/settings.routes'));
+router.use('/alerts',   require('../modules/alerts/alerts.routes'));
 
 module.exports = router;

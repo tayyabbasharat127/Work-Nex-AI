@@ -739,6 +739,15 @@ export const analyticsAPI = {
     return response.data || response;
   },
 
+  getAttritionAnalytics: async (month, year) => {
+    const params = new URLSearchParams();
+    if (month) params.set('month', month);
+    if (year) params.set('year', year);
+    const qs = params.toString();
+    const response = await apiFetch(`/analytics/attrition${qs ? `?${qs}` : ''}`);
+    return response.data || response;
+  },
+
   getPowerBIEmbedToken: async () => {
     const response = await apiFetch('/analytics/powerbi/embed-token');
     return response.data || response;
@@ -871,12 +880,18 @@ export const aiAPI = {
 
 // Organization Settings API
 export const organizationSettingsAPI = {
-  get: () => apiFetch('/settings/organization'),
+  get: async () => {
+    const response = await apiFetch('/settings/organization');
+    return response.data || response;
+  },
   
-  update: (settings) => apiFetch('/settings/organization', {
-    method: 'PUT',
-    body: JSON.stringify(settings),
-  }),
+  update: async (settings) => {
+    const response = await apiFetch('/settings/organization', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+    return response.data || response;
+  },
 };
 
 // Notifications API (if you have notification routes)
@@ -934,6 +949,15 @@ export const performanceAPI = {
     const queryString = new URLSearchParams(params).toString();
     const response = await apiFetch(`/performance/leaderboard${queryString ? `?${queryString}` : ''}`);
     return response.data || response;
+  },
+};
+
+// Alerts API (SSE stream URL builder + REST)
+export const alertsAPI = {
+  getStreamURL: () => {
+    const token = getAuthToken();
+    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+    return `${base}/alerts/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
   },
 };
 

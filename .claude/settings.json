@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"c:/Users/TECHXCESS/Desktop/Work-Nex-AI\" diff --name-only)",
+      "PowerShell(cd \"C:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\Work-Nex-AI\\\\ai-service\" ; $env:PYTHONIOENCODING = \"utf-8\" ; python -m pytest tests/ -v 2>&1)",
+      "Bash(git rm *)",
+      "Bash(echo \"backend/node_modules/\")",
+      "Bash(git restore *)"
+    ]
+  }
+}

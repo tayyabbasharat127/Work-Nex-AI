@@ -12,11 +12,34 @@ const defaultSettings = {
   timezone: 'Asia/Karachi',
   workingHours: { start: '09:00', end: '17:00' },
   lateThreshold: { hour: 9, minute: 30 },
-  officeIpRanges: [],
+  officeIpRanges: '',
   wifiVerificationEnabled: false,
   attendancePolicy: { halfDayHours: 4 },
   leaveAutomationEnabled: true,
 };
+
+const normalizeIpRanges = (value) => {
+  if (Array.isArray(value)) return value.filter((item) => typeof item === 'string').join(', ');
+  return typeof value === 'string' ? value : '';
+};
+
+const normalizeSettings = (value = {}) => ({
+  ...defaultSettings,
+  ...value,
+  workingHours: {
+    ...defaultSettings.workingHours,
+    ...(value.workingHours && typeof value.workingHours === 'object' ? value.workingHours : {}),
+  },
+  lateThreshold: {
+    ...defaultSettings.lateThreshold,
+    ...(value.lateThreshold && typeof value.lateThreshold === 'object' ? value.lateThreshold : {}),
+  },
+  attendancePolicy: {
+    ...defaultSettings.attendancePolicy,
+    ...(value.attendancePolicy && typeof value.attendancePolicy === 'object' ? value.attendancePolicy : {}),
+  },
+  officeIpRanges: normalizeIpRanges(value.officeIpRanges),
+});
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState(defaultSettings);
@@ -27,7 +50,7 @@ export default function AdminSettings() {
     try {
       setLoading(true);
       const data = await organizationSettingsAPI.get();
-      setSettings({ ...defaultSettings, ...data });
+      setSettings(normalizeSettings(data));
     } catch {
       toast.error('Failed to load organization settings');
     } finally {
@@ -47,12 +70,13 @@ export default function AdminSettings() {
       setSaving(true);
       const payload = {
         ...settings,
-        officeIpRanges: Array.isArray(settings.officeIpRanges)
-          ? settings.officeIpRanges
-          : String(settings.officeIpRanges || '').split(',').map((item) => item.trim()).filter(Boolean),
+        officeIpRanges: settings.officeIpRanges
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean),
       };
       const saved = await organizationSettingsAPI.update(payload);
-      setSettings({ ...defaultSettings, ...saved });
+      setSettings(normalizeSettings(saved));
       toast.success('Settings saved');
     } catch (error) {
       toast.error(error.message || 'Failed to save settings');
@@ -109,7 +133,7 @@ export default function AdminSettings() {
                       </Field>
                     </div>
                     <Field label="Office IP Ranges">
-                      <input value={(settings.officeIpRanges || []).join(', ')} onChange={(event) => update('officeIpRanges', event.target.value)} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                      <input value={settings.officeIpRanges} onChange={(event) => update('officeIpRanges', event.target.value)} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
                     </Field>
                     <label className="flex items-center gap-3">
                       <input type="checkbox" checked={Boolean(settings.wifiVerificationEnabled)} onChange={(event) => update('wifiVerificationEnabled', event.target.checked)} />

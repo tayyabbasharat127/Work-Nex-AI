@@ -9,24 +9,43 @@ import { Download, FileText, RefreshCw, BarChart3, Users, Calendar } from 'lucid
 export default function AdminReports() {
   const [activeTab, setActiveTab] = useState('attendance');
   const [reports, setReports] = useState({ attendance: null, leave: null, performance: null, department: null });
+  const [reportErrors, setReportErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
 
   const loadReports = async () => {
     setLoading(true);
-    try {
-      const [attendance, leave, performance, department] = await Promise.all([
-        reportsAPI.attendance({ month, year }),
-        reportsAPI.leave({ year }),
-        reportsAPI.performance({ month, year }),
-        reportsAPI.department({ year }),
-      ]);
-      setReports({ attendance, leave, performance, department });
-    } catch {
-      toast.error('Failed to load reports');
-    } finally {
-      setLoading(false);
+    const startDate = new Date(Date.UTC(year, month - 1, 1)).toISOString();
+    const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)).toISOString();
+    const requests = {
+      attendance: reportsAPI.attendance({ startDate, endDate }),
+      leave: reportsAPI.leave({ startDate, endDate }),
+      performance: reportsAPI.performance({ month, year }),
+      department: reportsAPI.department({ year }),
+    };
+    const entries = Object.entries(requests);
+    const results = await Promise.allSettled(entries.map(([, request]) => request));
+    const nextReports = {};
+    const nextErrors = {};
+
+    results.forEach((result, index) => {
+      const type = entries[index][0];
+      if (result.status === 'fulfilled') {
+        nextReports[type] = result.value;
+      } else {
+        nextReports[type] = null;
+        nextErrors[type] = result.reason?.message || `Failed to load ${type} report`;
+      }
+    });
+
+    setReports(nextReports);
+    setReportErrors(nextErrors);
+    setLoading(false);
+
+    const failedCount = Object.keys(nextErrors).length;
+    if (failedCount) {
+      toast.error(`${failedCount} report${failedCount === 1 ? '' : 's'} failed to load`);
     }
   };
 
@@ -64,6 +83,7 @@ export default function AdminReports() {
   ];
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const currentReport = reports[activeTab];
+  const currentError = reportErrors[activeTab];
 
   return (
     <div className="flex h-screen bg-background">
@@ -113,17 +133,28 @@ export default function AdminReports() {
             </button>
           </div>
 
-          <ReportTable loading={loading} report={currentReport} />
+          <ReportTable loading={loading} report={currentReport} error={currentError} onRetry={loadReports} />
         </div>
       </main>
     </div>
   );
 }
 
-function ReportTable({ loading, report }) {
+function ReportTable({ loading, report, error, onRetry }) {
   const rows = report?.rows || [];
   if (loading) {
     return <div className="h-48 flex items-center justify-center border border-dashed border-border rounded-xl text-muted-foreground">Loading...</div>;
+  }
+  if (error) {
+    return (
+      <div className="h-48 flex flex-col gap-3 items-center justify-center border border-dashed border-destructive/50 bg-destructive/5 rounded-xl text-center px-6">
+        <p className="font-medium text-destructive">Could not load this report</p>
+        <p className="text-sm text-muted-foreground">{error}</p>
+        <button onClick={onRetry} className="px-4 py-2 rounded-lg border border-border hover:bg-muted transition text-sm">
+          Try Again
+        </button>
+      </div>
+    );
   }
   if (!rows.length) {
     return <div className="h-48 flex items-center justify-center border border-dashed border-border rounded-xl text-muted-foreground">No report rows found</div>;

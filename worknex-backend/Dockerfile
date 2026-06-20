@@ -1,7 +1,7 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 FROM node:20-alpine AS builder
 WORKDIR /app
@@ -10,6 +10,12 @@ RUN npm ci
 COPY prisma ./prisma
 RUN npx prisma generate
 COPY src ./src
+
+FROM builder AS development
+ENV NODE_ENV=development
+RUN apk add --no-cache openssl
+EXPOSE 5000
+CMD ["node", "src/app.js"]
 
 FROM node:20-alpine AS runner
 WORKDIR /app

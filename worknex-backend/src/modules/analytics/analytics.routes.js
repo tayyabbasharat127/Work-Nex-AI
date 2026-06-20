@@ -23,6 +23,13 @@ router.get('/leave/by-type', analyticsController.getLeaveByType);
 router.get('/workforce/headcount', analyticsController.getHeadcount);
 router.get('/workforce/turnover', analyticsController.getTurnoverRate);
 
+// Attrition analytics
+router.get('/attrition', analyticsController.getAttritionAnalytics);
+
+// Performance analytics
+router.get('/performance/leaderboard', analyticsController.getPerformanceLeaderboard);
+router.get('/performance/team', authorize('ADMIN', 'MANAGER', 'SUPER_ADMIN'), analyticsController.getTeamPerformance);
+
 // Power BI — service-principal token (no RLS)
 router.get('/powerbi/token', authorize('SUPER_ADMIN', 'ADMIN'), analyticsController.getPowerBIToken);
 // Power BI — per-user embed token with RLS identity

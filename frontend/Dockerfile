@@ -3,6 +3,13 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
+FROM deps AS development
+WORKDIR /app
+ENV NODE_ENV=development
+COPY . .
+EXPOSE 3000
+CMD ["node_modules/.bin/next", "dev", "--hostname", "0.0.0.0"]
+
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules

@@ -177,26 +177,92 @@ def _static_patterns(user_id: Optional[str]) -> list[dict]:
     ]
 
 
+def _compute_features_from_trend(trend_data: list[dict]) -> list[float]:
+    """
+    Derive all 10 ML features from daily trend data.
+    Features: attendanceRate30Days, lateCountThisMonth, absenceCountThisMonth,
+              checkInHourAvg, checkInStdDev, mondayAbsenceRate, fridayAbsenceRate,
+              consecutiveLateMax, earlyCheckoutCount, avgWorkingHours
+    """
+    if not trend_data:
+        return [100, 0, 0, 9.0, 0.0, 0.0, 0.0, 0, 0, 8.0]
+
+    absent_vals  = [int(d.get("ABSENT", 0))  for d in trend_data]
+    late_vals    = [int(d.get("LATE", 0))    for d in trend_data]
+    present_vals = [int(d.get("PRESENT", 0)) for d in trend_data]
+
+    total_late    = sum(late_vals)
+    total_absent  = sum(absent_vals)
+    total_present = sum(present_vals)
+    total         = total_present + total_absent + total_late
+    att_rate      = (total_present + total_late) / max(total, 1) * 100
+
+    # Day-of-week absence rates
+    mon_absents, fri_absents, mon_total, fri_total = 0, 0, 0, 0
+    for d in trend_data:
+        date_str = d.get("date", "")
+        try:
+            from datetime import datetime as _dt
+            dow = _dt.strptime(date_str, "%Y-%m-%d").weekday() if date_str else -1
+        except ValueError:
+            dow = -1
+        absent_count = int(d.get("ABSENT", 0))
+        day_total    = int(d.get("PRESENT", 0)) + int(d.get("LATE", 0)) + absent_count + 1
+        if dow == 0:  # Monday
+            mon_absents += absent_count
+            mon_total   += day_total
+        elif dow == 4:  # Friday
+            fri_absents += absent_count
+            fri_total   += day_total
+
+    mon_rate = mon_absents / max(mon_total, 1)
+    fri_rate = fri_absents / max(fri_total, 1)
+
+    # Consecutive late max
+    max_consec_late, cur_streak = 0, 0
+    for l in late_vals:
+        if l > 0:
+            cur_streak   += 1
+            max_consec_late = max(max_consec_late, cur_streak)
+        else:
+            cur_streak = 0
+
+    # Estimate checkIn hour avg — more lates → later average
+    late_rate         = total_late / max(len(trend_data), 1)
+    check_in_hour_avg = round(9.0 + min(late_rate * 0.5, 1.5), 2)
+
+    # Estimate checkIn std dev — from variance in late arrivals per day
+    if len(late_vals) >= 2:
+        try:
+            check_in_std = round(statistics.pstdev(late_vals) * 0.25, 2)
+        except Exception:
+            check_in_std = 0.25
+    else:
+        check_in_std = 0.25
+
+    avg_working_hrs = 8.0  # not available in trend data; use org default
+
+    return [
+        round(att_rate, 2),
+        total_late,
+        total_absent,
+        check_in_hour_avg,
+        check_in_std,
+        round(mon_rate, 4),
+        round(fri_rate, 4),
+        max_consec_late,
+        0,              # earlyCheckoutCount — not in trend data
+        avg_working_hrs,
+    ]
+
+
 def _ml_anomaly_check(trend_data: list[dict]) -> list[dict] | None:
     """Run ML anomaly classifier if model is available."""
     clf, type_clf, le = _load_anomaly_model()
-    if clf is None or not trend_data:
+    if clf is None or not trend_data or len(trend_data) < 3:
         return None
 
-    absent_vals = [int(d.get("ABSENT", 0)) for d in trend_data]
-    late_vals   = [int(d.get("LATE", 0))   for d in trend_data]
-    present_vals= [int(d.get("PRESENT", 0)) for d in trend_data]
-
-    if len(absent_vals) < 3:
-        return None
-
-    import statistics as _stats
-    att_rate = (_stats.mean(present_vals) / max(_stats.mean([sum(x) for x in zip(absent_vals, late_vals, present_vals)]), 1)) * 100
-    late_count = sum(late_vals)
-    absence_count = sum(absent_vals)
-    working_hrs = 8.0
-
-    fv = [att_rate, late_count, absence_count, 9.0, 0.5, 0.1, 0.1, max(late_vals), 0, working_hrs]
+    fv = _compute_features_from_trend(trend_data)
 
     try:
         is_anomaly = int(clf.predict([fv])[0])
@@ -216,26 +282,34 @@ def _ml_anomaly_check(trend_data: list[dict]) -> list[dict] | None:
             "zScore": None,
             "severity": "HIGH" if anomaly_type == "HIGH_ABSENTEEISM" else "MEDIUM",
             "recommendation": {
-                "FREQUENT_LATE": "Review shift times and commute policies.",
+                "FREQUENT_LATE":    "Review shift times and commute policies.",
                 "WEEKEND_BRIDGING": "Investigate Monday/Friday absence patterns.",
                 "HIGH_ABSENTEEISM": "Schedule wellness check-in with HR.",
-                "EARLY_CHECKOUT": "Verify flexible-hours policy compliance.",
+                "EARLY_CHECKOUT":   "Verify flexible-hours policy compliance.",
             }.get(anomaly_type, "Review attendance records with manager."),
             "detectedBy": "ml-model",
+            "features": {k: v for k, v in zip(ANOMALY_FEATURES, fv)},
         }]
     except Exception as exc:
         logger.warning("ML anomaly prediction failed: %s", exc)
         return None
 
 
-async def detect_anomalies(user_id: Optional[str] = None) -> dict:
+async def detect_anomalies(
+    user_id: Optional[str] = None,
+    organizationId: Optional[str] = None,
+    date: Optional[str] = None,
+) -> dict:
     now = datetime.now()
     month, year = now.month, now.year
 
+    # Build fetch URL — org-scoped if called from alerts service
+    qs = f"month={month}&year={year}"
+    if organizationId:
+        qs += f"&organizationId={organizationId}"
+
     # Try real trend data
-    trend_data = await _fetch(
-        f"/analytics/attendance/trends?month={month}&year={year}"
-    )
+    trend_data = await _fetch(f"/analytics/attendance/trends?{qs}")
 
     fallback = False
     ml_used = False

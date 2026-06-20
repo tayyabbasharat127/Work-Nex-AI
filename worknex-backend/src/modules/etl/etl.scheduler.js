@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const etlOrchestrator = require('./etl.orchestrator');
 const logger = require('../../config/logger');
+const prisma = require('../../config/db');
 
 /**
  * ETL Scheduler
@@ -68,15 +69,14 @@ class ETLScheduler {
       const result = await etlOrchestrator.runAll(month, year);
 
       if (result.success) {
-        logger.info(`[ETL Scheduler] Nightly ETL completed successfully - ${result.totalRecords} records processed`);
+        logger.info(`[ETL Scheduler] Nightly ETL completed — ${result.totalRecords} records processed`);
       } else {
-        logger.error(`[ETL Scheduler] Nightly ETL failed: ${result.error || 'Unknown error'}`);
-        // TODO: Send notification to admin
+        logger.error(`[ETL Scheduler] Nightly ETL partial/failed: ${result.error || 'see logs'}`);
+        await this._notifyAdmins('Nightly ETL Warning', `ETL pipeline finished with status ${result.status}. Check ETL logs for details.`);
       }
-
     } catch (error) {
       logger.error('[ETL Scheduler] Nightly ETL error:', error);
-      // TODO: Send notification to admin
+      await this._notifyAdmins('Nightly ETL Failed', `ETL pipeline threw an error: ${error.message}`);
     } finally {
       this.isRunning = false;
     }
@@ -96,24 +96,50 @@ class ETLScheduler {
 
     try {
       const now = new Date();
-      // Get previous month
       const month = now.getMonth() === 0 ? 12 : now.getMonth();
       const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
 
       const result = await etlOrchestrator.runAll(month, year);
 
       if (result.success) {
-        logger.info(`[ETL Scheduler] Monthly ETL completed successfully - ${result.totalRecords} records processed`);
+        logger.info(`[ETL Scheduler] Monthly ETL completed — ${result.totalRecords} records processed`);
       } else {
-        logger.error(`[ETL Scheduler] Monthly ETL failed: ${result.error || 'Unknown error'}`);
-        // TODO: Send notification to admin
+        logger.error(`[ETL Scheduler] Monthly ETL partial/failed: ${result.error || 'see logs'}`);
+        await this._notifyAdmins('Monthly ETL Warning', `Monthly ETL finished with status ${result.status}. Check ETL logs for details.`);
       }
-
     } catch (error) {
       logger.error('[ETL Scheduler] Monthly ETL error:', error);
-      // TODO: Send notification to admin
+      await this._notifyAdmins('Monthly ETL Failed', `Monthly ETL threw an error: ${error.message}`);
     } finally {
       this.isRunning = false;
+    }
+  }
+
+  /**
+   * Notify all ADMIN users in all orgs of an ETL failure.
+   */
+  async _notifyAdmins(title, message) {
+    try {
+      const admins = await prisma.user.findMany({
+        where:  { role: { in: ['ADMIN', 'SUPER_ADMIN'] }, isActive: true },
+        select: { id: true, organizationId: true },
+      });
+      await Promise.allSettled(
+        admins.map(admin =>
+          prisma.notification.create({
+            data: {
+              userId:         admin.id,
+              organizationId: admin.organizationId,
+              type:           'SYSTEM',
+              title,
+              message,
+              metadata:       { source: 'ETL_SCHEDULER', timestamp: new Date().toISOString() },
+            },
+          })
+        )
+      );
+    } catch (err) {
+      logger.error('[ETL Scheduler] Failed to send admin notifications:', err.message);
     }
   }
 

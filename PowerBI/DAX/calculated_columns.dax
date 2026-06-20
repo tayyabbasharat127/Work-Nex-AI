@@ -1,0 +1,123 @@
+// ============================================================
+// WorkNex AI — Power BI Calculated Columns
+// Add these to the respective tables in Power BI Desktop
+// ============================================================
+
+
+// ─── Table: PerformanceRecord ──────────────────────────────────────────────────
+
+// Composite date column for time-intelligence (month 1 = Jan)
+PerformanceRecord[_periodDate] =
+DATE(PerformanceRecord[year], PerformanceRecord[month], 1)
+
+// Human-readable period label
+PerformanceRecord[_periodLabel] =
+FORMAT(DATE(PerformanceRecord[year], PerformanceRecord[month], 1), "MMM YYYY")
+
+// Performance band
+PerformanceRecord[_scoreBand] =
+SWITCH(
+    TRUE(),
+    PerformanceRecord[overallScore] >= 85, "Excellent",
+    PerformanceRecord[overallScore] >= 70, "Good",
+    PerformanceRecord[overallScore] >= 55, "Average",
+    "Needs Improvement"
+)
+
+// Highlight at-risk employees
+PerformanceRecord[_atRisk] =
+IF(PerformanceRecord[overallScore] < 60, "At Risk", "Stable")
+
+
+// ─── Table: Attendance ─────────────────────────────────────────────────────────
+
+// Day of week (1=Monday)
+Attendance[_dayOfWeek] =
+WEEKDAY(Attendance[date], 2)
+
+// Day name
+Attendance[_dayName] =
+FORMAT(Attendance[date], "dddd")
+
+// Week number (ISO)
+Attendance[_weekNum] =
+WEEKNUM(Attendance[date], 2)
+
+// Is Monday or Friday (bridge-day leave detection)
+Attendance[_isBridgeDay] =
+IF(
+    WEEKDAY(Attendance[date], 2) IN {1, 5},
+    "Bridge Day",
+    "Mid-Week"
+)
+
+// Attendance type simplification
+Attendance[_isPresent] =
+IF(Attendance[status] IN {"PRESENT", "LATE", "HALF_DAY"}, 1, 0)
+
+Attendance[_isAbsent] =
+IF(Attendance[status] = "ABSENT", 1, 0)
+
+
+// ─── Table: LeaveRequest ───────────────────────────────────────────────────────
+
+// Duration bucket
+LeaveRequest[_durationBucket] =
+SWITCH(
+    TRUE(),
+    LeaveRequest[totalDays] = 1,       "Single Day",
+    LeaveRequest[totalDays] <= 3,      "Short (2-3d)",
+    LeaveRequest[totalDays] <= 7,      "Medium (4-7d)",
+    LeaveRequest[totalDays] <= 14,     "Long (1-2w)",
+    "Extended (>2w)"
+)
+
+// Quarter when leave was applied
+LeaveRequest[_applyQuarter] =
+"Q" & CEILING(MONTH(LeaveRequest[createdAt]) / 3, 1)
+
+// Auto vs manual flag
+LeaveRequest[_decisionMode] =
+IF(
+    LeaveRequest[isAutoApproved] = TRUE(),
+    "Auto",
+    "Manual"
+)
+
+
+// ─── Table: User ───────────────────────────────────────────────────────────────
+
+// Tenure band
+User[_tenureBand] =
+VAR Months = DATEDIFF(User[joiningDate], TODAY(), MONTH)
+RETURN
+SWITCH(
+    TRUE(),
+    Months < 3,   "Probation (<3m)",
+    Months < 12,  "Junior (3-12m)",
+    Months < 36,  "Mid (1-3y)",
+    Months < 72,  "Senior (3-6y)",
+    "Veteran (6y+)"
+)
+
+// Full name
+User[_fullName] =
+User[firstName] & " " & User[lastName]
+
+
+// ─── Table: AttritionRecord ────────────────────────────────────────────────────
+
+// Risk tier
+AttritionRecord[_riskTier] =
+SWITCH(
+    AttritionRecord[riskLabel],
+    "CRITICAL", 4,
+    "HIGH",     3,
+    "MEDIUM",   2,
+    "LOW",      1,
+    0
+)
+
+// Period date for time intelligence
+AttritionRecord[_periodDate] =
+DATE(AttritionRecord[year], AttritionRecord[month], 1)

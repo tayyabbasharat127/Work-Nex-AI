@@ -6,9 +6,12 @@ scikit-learn
 joblib
 chromadb
 langchain
+langchain-groq
 langchain-openai
 langchain-google-genai
 langchain-anthropic
 langchain-community
 langchain-ollama
 httpx
+pytest>=8.0
+pytest-asyncio>=0.23

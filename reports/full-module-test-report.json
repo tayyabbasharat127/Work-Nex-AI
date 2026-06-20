@@ -1,11 +1,11 @@
 {
   "title": "FULL MODULE TEST REPORT",
-  "generatedAt": "2026-05-28T11:47:32.769Z",
+  "generatedAt": "2026-05-28T12:05:51.164Z",
   "backendUrl": "http://localhost:5000",
   "frontendUrl": "http://localhost:3000",
   "aiUrl": "http://localhost:8000",
-  "testPrefix": "worknex_e2e_1779968844197",
-  "overall": "FAIL",
+  "testPrefix": "worknex_e2e_1779969941731",
+  "overall": "PASS",
   "modules": [
     {
       "module": "Health",
@@ -19,7 +19,7 @@
       "passed": 8,
       "failed": 0,
       "skipped": 0,
-      "notes": "orgId=ef875ed2-8ca7-4a25-8e19-081f6d60b2b5; present; {\"id\":\"38500df3-88dc-4d94-8c59-b79bd8d4bd57\",\"email\":\"worknex_e2e_1779968844197.owner.1779968844336@example.com\",\"role\":\"ADMIN\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"employeeId\":\"OWNER-MPPFHQKQ-2243D4\",\"organizationId\":\"ef875ed2-8ca7-4a25-8e19-081f6d60b2b5\"}"
+      "notes": "orgId=f009229e-e844-406b-85a4-b445c67f650f; present; {\"id\":\"4a5ae645-13c3-4baa-8b3b-b480882c1f6e\",\"email\":\"worknex_e2e_1779969941731.owner.1779969942271@example.com\",\"role\":\"ADMIN\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"employeeId\":\"OWNER-MPPG59RM-9A8D62\",\"organizationId\":\"f009229e-e844-406b-85a4-b445c67f650f\"}"
     },
     {
       "module": "Auth",
@@ -54,7 +54,7 @@
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "notes": "ef875ed2-8ca7-4a25-8e19-081f6d60b2b5; admin=ef875ed2-8ca7-4a25-8e19-081f6d60b2b5 manager=ef875ed2-8ca7-4a25-8e19-081f6d60b2b5 employee=ef875ed2-8ca7-4a25-8e19-081f6d60b2b5; HTTP 200"
+      "notes": "f009229e-e844-406b-85a4-b445c67f650f; admin=f009229e-e844-406b-85a4-b445c67f650f manager=f009229e-e844-406b-85a4-b445c67f650f employee=f009229e-e844-406b-85a4-b445c67f650f; HTTP 200"
     },
     {
       "module": "Security",
@@ -157,19 +157,12 @@
     {
       "module": "Cleanup",
       "passed": 4,
-      "failed": 1,
-      "skipped": 1,
+      "failed": 0,
+      "skipped": 2,
       "notes": "cleanup cancel attempted; HTTP 200 {\"success\":true,\"message\":\"User deactivated\"}; HTTP 200 {\"success\":true,\"message\":\"User deactivated\"}"
     }
   ],
-  "failed": [
-    {
-      "module": "Cleanup",
-      "test": "delete billing signup test organization",
-      "status": "FAIL",
-      "notes": "organization missing or prefix safety check failed"
-    }
-  ],
+  "failed": [],
   "rows": [
     {
       "module": "Health",
@@ -202,7 +195,7 @@
       "module": "Public Registration",
       "test": "POST /billing/register returns 201",
       "status": "PASS",
-      "notes": "orgId=ef875ed2-8ca7-4a25-8e19-081f6d60b2b5"
+      "notes": "orgId=f009229e-e844-406b-85a4-b445c67f650f"
     },
     {
       "module": "Public Registration",
@@ -214,13 +207,13 @@
       "module": "Public Registration",
       "test": "response includes tenant ADMIN owner",
       "status": "PASS",
-      "notes": "{\"id\":\"38500df3-88dc-4d94-8c59-b79bd8d4bd57\",\"email\":\"worknex_e2e_1779968844197.owner.1779968844336@example.com\",\"role\":\"ADMIN\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"employeeId\":\"OWNER-MPPFHQKQ-2243D4\",\"organizationId\":\"ef875ed2-8ca7-4a25-8e19-081f6d60b2b5\"}"
+      "notes": "{\"id\":\"4a5ae645-13c3-4baa-8b3b-b480882c1f6e\",\"email\":\"worknex_e2e_1779969941731.owner.1779969942271@example.com\",\"role\":\"ADMIN\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"employeeId\":\"OWNER-MPPG59RM-9A8D62\",\"organizationId\":\"f009229e-e844-406b-85a4-b445c67f650f\"}"
     },
     {
       "module": "Public Registration",
       "test": "public signup does not create SUPER_ADMIN",
       "status": "PASS",
-      "notes": "{\"id\":\"38500df3-88dc-4d94-8c59-b79bd8d4bd57\",\"email\":\"worknex_e2e_1779968844197.owner.1779968844336@example.com\",\"role\":\"ADMIN\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"employeeId\":\"OWNER-MPPFHQKQ-2243D4\",\"organizationId\":\"ef875ed2-8ca7-4a25-8e19-081f6d60b2b5\"}"
+      "notes": "{\"id\":\"4a5ae645-13c3-4baa-8b3b-b480882c1f6e\",\"email\":\"worknex_e2e_1779969941731.owner.1779969942271@example.com\",\"role\":\"ADMIN\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"employeeId\":\"OWNER-MPPG59RM-9A8D62\",\"organizationId\":\"f009229e-e844-406b-85a4-b445c67f650f\"}"
     },
     {
       "module": "Public Registration",
@@ -238,7 +231,7 @@
       "module": "Public Registration",
       "test": "new public org owner login role is ADMIN",
       "status": "PASS",
-      "notes": "{\"id\":\"38500df3-88dc-4d94-8c59-b79bd8d4bd57\",\"email\":\"worknex_e2e_1779968844197.owner.1779968844336@example.com\",\"role\":\"ADMIN\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"organizationId\":\"ef875ed2-8ca7-4a25-8e19-081f6d60b2b5\"}"
+      "notes": "{\"id\":\"4a5ae645-13c3-4baa-8b3b-b480882c1f6e\",\"email\":\"worknex_e2e_1779969941731.owner.1779969942271@example.com\",\"role\":\"ADMIN\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"organizationId\":\"f009229e-e844-406b-85a4-b445c67f650f\"}"
     },
     {
       "module": "Public Registration",
@@ -300,7 +293,7 @@
       "module": "Auth",
       "test": "admin login",
       "status": "PASS",
-      "notes": "worknex_e2e_1779968844197.owner.1779968844336@example.com",
+      "notes": "worknex_e2e_1779969941731.owner.1779969942271@example.com",
       "endpoint": "http://localhost:5000/api/v1/auth/login",
       "expected": "200",
       "actualStatus": 200
@@ -309,7 +302,7 @@
       "module": "Auth",
       "test": "admin re-login after logout succeeds",
       "status": "PASS",
-      "notes": "worknex_e2e_1779968844197.owner.1779968844336@example.com"
+      "notes": "worknex_e2e_1779969941731.owner.1779969942271@example.com"
     },
     {
       "module": "Auth",
@@ -355,7 +348,7 @@
       "module": "Auth",
       "test": "testManager login",
       "status": "PASS",
-      "notes": "worknex_e2e_1779968844197.manager@example.com",
+      "notes": "worknex_e2e_1779969941731.manager@example.com",
       "endpoint": "http://localhost:5000/api/v1/auth/login",
       "expected": "200",
       "actualStatus": 200
@@ -364,7 +357,7 @@
       "module": "Auth",
       "test": "testEmployee login",
       "status": "PASS",
-      "notes": "worknex_e2e_1779968844197.employee@example.com",
+      "notes": "worknex_e2e_1779969941731.employee@example.com",
       "endpoint": "http://localhost:5000/api/v1/auth/login",
       "expected": "200",
       "actualStatus": 200
@@ -374,7 +367,7 @@
       "test": "admin list includes created employee",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/users?search=worknex_e2e_1779968844197",
+      "endpoint": "http://localhost:5000/api/v1/users?search=worknex_e2e_1779969941731",
       "role": "admin",
       "expected": "200",
       "actualStatus": 200
@@ -383,14 +376,14 @@
       "module": "Users",
       "test": "created employee visible to admin",
       "status": "PASS",
-      "notes": "49a4f00b-b002-489c-87d6-e0ef1401ada4"
+      "notes": "e7e28598-2901-4bee-a510-ca207832669b"
     },
     {
       "module": "Users",
       "test": "admin updates test employee",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/users/49a4f00b-b002-489c-87d6-e0ef1401ada4",
+      "endpoint": "http://localhost:5000/api/v1/users/e7e28598-2901-4bee-a510-ca207832669b",
       "role": "admin",
       "expected": "200",
       "actualStatus": 200
@@ -426,7 +419,7 @@
       "test": "admin updates department",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/users/departments/74a58c45-b5c2-4275-b1ff-4cf6bf691c0d",
+      "endpoint": "http://localhost:5000/api/v1/users/departments/ac453db1-d6a2-4d3c-a6cb-0222c0265a2c",
       "role": "admin",
       "expected": "200",
       "actualStatus": 200
@@ -445,14 +438,14 @@
       "module": "Departments",
       "test": "created department visible",
       "status": "PASS",
-      "notes": "74a58c45-b5c2-4275-b1ff-4cf6bf691c0d"
+      "notes": "ac453db1-d6a2-4d3c-a6cb-0222c0265a2c"
     },
     {
       "module": "Departments",
       "test": "manager cannot update department",
       "status": "PASS",
       "notes": "HTTP 403",
-      "endpoint": "http://localhost:5000/api/v1/users/departments/74a58c45-b5c2-4275-b1ff-4cf6bf691c0d",
+      "endpoint": "http://localhost:5000/api/v1/users/departments/ac453db1-d6a2-4d3c-a6cb-0222c0265a2c",
       "role": "testManager",
       "expected": "403",
       "actualStatus": 403
@@ -462,7 +455,7 @@
       "test": "manager cannot delete department",
       "status": "PASS",
       "notes": "HTTP 403",
-      "endpoint": "http://localhost:5000/api/v1/users/departments/74a58c45-b5c2-4275-b1ff-4cf6bf691c0d",
+      "endpoint": "http://localhost:5000/api/v1/users/departments/ac453db1-d6a2-4d3c-a6cb-0222c0265a2c",
       "role": "testManager",
       "expected": "403",
       "actualStatus": 403
@@ -471,13 +464,13 @@
       "module": "Tenant",
       "test": "admin has organizationId",
       "status": "PASS",
-      "notes": "ef875ed2-8ca7-4a25-8e19-081f6d60b2b5"
+      "notes": "f009229e-e844-406b-85a4-b445c67f650f"
     },
     {
       "module": "Tenant",
       "test": "created users share admin organizationId",
       "status": "PASS",
-      "notes": "admin=ef875ed2-8ca7-4a25-8e19-081f6d60b2b5 manager=ef875ed2-8ca7-4a25-8e19-081f6d60b2b5 employee=ef875ed2-8ca7-4a25-8e19-081f6d60b2b5"
+      "notes": "admin=f009229e-e844-406b-85a4-b445c67f650f manager=f009229e-e844-406b-85a4-b445c67f650f employee=f009229e-e844-406b-85a4-b445c67f650f"
     },
     {
       "module": "Tenant",
@@ -611,7 +604,7 @@
       "test": "manager cannot read non-subordinate attendance",
       "status": "PASS",
       "notes": "HTTP 403",
-      "endpoint": "http://localhost:5000/api/v1/attendance/user/38500df3-88dc-4d94-8c59-b79bd8d4bd57",
+      "endpoint": "http://localhost:5000/api/v1/attendance/user/4a5ae645-13c3-4baa-8b3b-b480882c1f6e",
       "role": "testManager",
       "expected": "403",
       "actualStatus": 403
@@ -677,7 +670,7 @@
       "test": "decision explanation fetch works",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/leave/87407b07-28cf-4fec-9f24-7cc3d29769d4/decision-explanation",
+      "endpoint": "http://localhost:5000/api/v1/leave/ba726d07-65a5-41d3-aeb9-9e833bb4ecac/decision-explanation",
       "role": "testEmployee",
       "expected": "200",
       "actualStatus": 200
@@ -697,7 +690,7 @@
       "test": "manager can evaluate subordinate leave",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/leave/87407b07-28cf-4fec-9f24-7cc3d29769d4/evaluate",
+      "endpoint": "http://localhost:5000/api/v1/leave/ba726d07-65a5-41d3-aeb9-9e833bb4ecac/evaluate",
       "role": "testManager",
       "expected": "200",
       "actualStatus": 200
@@ -707,7 +700,7 @@
       "test": "manager approves direct subordinate leave",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/leave/87407b07-28cf-4fec-9f24-7cc3d29769d4/approve",
+      "endpoint": "http://localhost:5000/api/v1/leave/ba726d07-65a5-41d3-aeb9-9e833bb4ecac/approve",
       "role": "testManager",
       "expected": "200",
       "actualStatus": 200
@@ -753,7 +746,7 @@
       "test": "admin gets user balances",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/leave/balances/49a4f00b-b002-489c-87d6-e0ef1401ada4",
+      "endpoint": "http://localhost:5000/api/v1/leave/balances/e7e28598-2901-4bee-a510-ca207832669b",
       "role": "admin",
       "expected": "200",
       "actualStatus": 200
@@ -783,7 +776,7 @@
       "test": "extract policy document",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/1779968851293-zes6u3o2/extract",
+      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/1779969949364-om89jwxs/extract",
       "role": "admin",
       "expected": "200",
       "actualStatus": 200
@@ -793,7 +786,7 @@
       "test": "AI parse policy document",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/1779968851293-zes6u3o2/ai-parse",
+      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/1779969949364-om89jwxs/ai-parse",
       "role": "admin",
       "expected": "200",
       "actualStatus": 200
@@ -803,7 +796,7 @@
       "test": "approve parsed policy rules",
       "status": "PASS",
       "notes": "400 is acceptable when deterministic parse produced no approvable rule IDs",
-      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/1779968851293-zes6u3o2/approve-rules",
+      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/1779969949364-om89jwxs/approve-rules",
       "role": "admin",
       "expected": "200/400",
       "actualStatus": 200
@@ -1133,7 +1126,7 @@
       "test": "employee marks one notification read",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/notifications/066fb6a8-ffa2-473e-98b6-b9b5c3762c58/read",
+      "endpoint": "http://localhost:5000/api/v1/notifications/edf904f6-c6b8-419b-83d5-59bae992e6cd/read",
       "role": "testEmployee",
       "expected": "200",
       "actualStatus": 200
@@ -1189,7 +1182,7 @@
       "test": "admin gets employee performance",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/performance/user/49a4f00b-b002-489c-87d6-e0ef1401ada4",
+      "endpoint": "http://localhost:5000/api/v1/performance/user/e7e28598-2901-4bee-a510-ca207832669b",
       "role": "admin",
       "expected": "200",
       "actualStatus": 200
@@ -1224,7 +1217,7 @@
       "module": "AI Backend",
       "test": "prediction has score/risk/reasons",
       "status": "PASS",
-      "notes": "{\"employeeId\":\"49a4f00b-b002-489c-87d6-e0ef1401ada4\",\"predictedScore\":69.28,\"riskLevel\":\"MEDIUM\",\"confidence\":0.82,\"reasons\":[\"Prediction is primarily driven by stable attendance and performance history.\",\"Projected score falls in the medium risk band.\"],\"featuresUsed\":{\"attendanceRate\":100,\"lateCount\":0,\"absenceCount\":0,\"leaveCount\":0,\"averageWorkingHours\":8,\"previousPerformanceScore\":75,\"departmentAverage\":75,\"overtimeHours\":0,\"halfDayCount\":1},\"modelVersion\":\"performance-rf-v1\",\"fallback\":fal"
+      "notes": "{\"employeeId\":\"e7e28598-2901-4bee-a510-ca207832669b\",\"predictedScore\":69.28,\"riskLevel\":\"MEDIUM\",\"confidence\":0.82,\"reasons\":[\"Prediction is primarily driven by stable attendance and performance history.\",\"Projected score falls in the medium risk band.\"],\"featuresUsed\":{\"attendanceRate\":100,\"lateCount\":0,\"absenceCount\":0,\"leaveCount\":0,\"averageWorkingHours\":8,\"previousPerformanceScore\":75,\"departmentAverage\":75,\"overtimeHours\":0,\"halfDayCount\":1},\"modelVersion\":\"performance-rf-v1\",\"fallback\":fal"
     },
     {
       "module": "AI Direct",
@@ -1263,7 +1256,7 @@
       "module": "AI Direct",
       "test": "direct prediction has expected fields",
       "status": "PASS",
-      "notes": "{\"employeeId\":\"49a4f00b-b002-489c-87d6-e0ef1401ada4\",\"predictedScore\":71.06,\"riskLevel\":\"MEDIUM\",\"confidence\":0.82,\"reasons\":[\"Prediction is primarily driven by stable attendance and performance history.\",\"Projected score falls in the medium risk band.\"],\"featuresUsed\":{\"attendanceRate\":95,\"lateCount\":1,\"absenceCount\":0,\"leaveCount\":1,\"averageWorkingHours\":8,\"previousPerformanceScore\":82,\"departmentAverage\":78,\"overtimeHours\":2,\"halfDayCount\":0},\"modelVersion\":\"performance-rf-v1\",\"fallback\":fals"
+      "notes": "{\"employeeId\":\"e7e28598-2901-4bee-a510-ca207832669b\",\"predictedScore\":71.06,\"riskLevel\":\"MEDIUM\",\"confidence\":0.82,\"reasons\":[\"Prediction is primarily driven by stable attendance and performance history.\",\"Projected score falls in the medium risk band.\"],\"featuresUsed\":{\"attendanceRate\":95,\"lateCount\":1,\"absenceCount\":0,\"leaveCount\":1,\"averageWorkingHours\":8,\"previousPerformanceScore\":82,\"departmentAverage\":78,\"overtimeHours\":2,\"halfDayCount\":0},\"modelVersion\":\"performance-rf-v1\",\"fallback\":fals"
     },
     {
       "module": "Power BI",
@@ -1426,10 +1419,10 @@
     },
     {
       "module": "Cleanup",
-      "test": "cancel test leave 87407b07-28cf-4fec-9f24-7cc3d29769d4",
+      "test": "cancel test leave ba726d07-65a5-41d3-aeb9-9e833bb4ecac",
       "status": "PASS",
       "notes": "cleanup cancel attempted",
-      "endpoint": "http://localhost:5000/api/v1/leave/87407b07-28cf-4fec-9f24-7cc3d29769d4/cancel",
+      "endpoint": "http://localhost:5000/api/v1/leave/ba726d07-65a5-41d3-aeb9-9e833bb4ecac/cancel",
       "role": "testEmployee",
       "expected": "200/400/403",
       "actualStatus": 200
@@ -1461,8 +1454,8 @@
     {
       "module": "Cleanup",
       "test": "delete billing signup test organization",
-      "status": "FAIL",
-      "notes": "organization missing or prefix safety check failed"
+      "status": "SKIPPED",
+      "notes": "organization f009229e-e844-406b-85a4-b445c67f650f already absent; cleanup appears complete"
     }
   ],
   "cleanup": [
@@ -1493,8 +1486,8 @@
     {
       "module": "Cleanup",
       "test": "delete billing signup test organization",
-      "status": "FAIL",
-      "notes": "organization missing or prefix safety check failed"
+      "status": "SKIPPED",
+      "notes": "organization f009229e-e844-406b-85a4-b445c67f650f already absent; cleanup appears complete"
     }
   ]
 }

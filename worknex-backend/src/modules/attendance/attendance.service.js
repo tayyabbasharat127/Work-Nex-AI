@@ -525,13 +525,22 @@ const syncFromTMS = async (date, requestingUser = null) => {
 
   try {
     let records;
-    let mode = 'external';
-    if (process.env.TMS_API_URL && process.env.TMS_API_KEY) {
+    let mode;
+
+    if (process.env.TMS_MODE || process.env.TMS_API_URL) {
+      // Use the full real TMS service (retry backoff + SFTP fallback + normalisation)
+      const tmsReal = require('./tms.real.service');
+      const tmsResult = await tmsReal.fetchAttendance(dateStr);
+      records = tmsResult.records || [];
+      mode = tmsResult.source || 'real-tms';
+    } else if (process.env.TMS_API_KEY && !process.env.TMS_MODE) {
+      // Legacy simple HTTP path (kept for backwards compat)
       const response = await axios.get(`${process.env.TMS_API_URL}/attendance`, {
         headers: { 'x-api-key': process.env.TMS_API_KEY },
         params: { date: dateStr },
       });
       records = response.data?.records || [];
+      mode = 'external-legacy';
     } else {
       mode = 'demo-fallback';
       records = await buildMockTmsRecords(syncDate, requestingUser);

@@ -15,10 +15,13 @@ const normalizeChatResponse = (data) => ({
   data: data.data || {},
 });
 
-const chat = async (userId, message) => {
+const chat = async (userId, message, authToken = '') => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, firstName: true, lastName: true, role: true, departmentId: true, organizationId: true },
+    select: {
+      id: true, firstName: true, lastName: true,
+      role: true, departmentId: true, organizationId: true,
+    },
   });
 
   try {
@@ -26,6 +29,7 @@ const chat = async (userId, message) => {
       userId,
       userContext: user,
       message,
+      authToken,   // forward user's JWT → enables personal DB queries in agent
     }, { timeout: 30000 });
     return normalizeChatResponse(response.data);
   } catch {

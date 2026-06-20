@@ -165,18 +165,19 @@ export default function ETLManagementPage() {
               <div className="mt-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
                 <div className="flex items-center gap-2 text-blue-400">
                   <Activity size={16} className="animate-pulse" />
-                  <span className="text-sm">Processing attendance → leave → performance data...</span>
+                  <span className="text-sm">Processing attendance → leave → performance → attrition ML scoring…</span>
                 </div>
               </div>
             )}
           </div>
 
           {/* ETL Pipeline Info */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {[
               { title: 'Step 1: Attendance ETL', desc: 'Aggregates daily attendance records, calculates present/absent/late counts and working hours per employee.', color: 'border-blue-500/30 bg-blue-500/5' },
               { title: 'Step 2: Leave ETL', desc: 'Processes approved leave requests, calculates leave days used and updates leave scores per employee.', color: 'border-green-500/30 bg-green-500/5' },
               { title: 'Step 3: Performance ETL', desc: 'Combines attendance and leave data to compute overall performance scores for each employee.', color: 'border-purple-500/30 bg-purple-500/5' },
+              { title: 'Step 4: Attrition ML Scoring', desc: 'Runs the RandomForest attrition classifier and GradientBoosting regressor to assign risk scores and labels per employee.', color: 'border-red-500/30 bg-red-500/5' },
             ].map((step, i) => (
               <div key={i} className={`rounded-xl p-5 border ${step.color}`}>
                 <h3 className="font-semibold mb-2">{step.title}</h3>

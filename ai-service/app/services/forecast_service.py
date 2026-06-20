@@ -2,12 +2,18 @@
 from __future__ import annotations
 
 import logging
+import os
 import statistics
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
+import httpx
+
 logger = logging.getLogger(__name__)
+
+BACKEND_INTERNAL_URL = os.getenv("BACKEND_URL", "http://localhost:5000/api/v1")
+BACKEND_INTERNAL_KEY = os.getenv("AI_SERVICE_SECRET", "")
 
 ROOT = Path(__file__).resolve().parents[2]
 MODEL_PATH = ROOT / "models" / "leave_forecast_model.pkl"
@@ -37,6 +43,28 @@ def _load_model():
     return None
 
 
+async def _fetch_holiday_dates(start: datetime, end: datetime) -> set[str]:
+    """Fetch public holiday dates from backend. Returns a set of 'YYYY-MM-DD' strings."""
+    try:
+        headers: dict = {}
+        if BACKEND_INTERNAL_KEY:
+            headers["X-Internal-Key"] = BACKEND_INTERNAL_KEY
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            r = await client.get(f"{BACKEND_INTERNAL_URL}/attendance/holidays", headers=headers)
+            if r.status_code == 200:
+                payload = r.json()
+                holidays = payload.get("data") or payload if isinstance(payload, list) else []
+                dates: set[str] = set()
+                for h in holidays:
+                    raw = h.get("date") or h.get("holidayDate") or ""
+                    if raw:
+                        dates.add(raw[:10])  # keep 'YYYY-MM-DD'
+                return dates
+    except Exception as exc:
+        logger.debug("Holiday fetch failed (using empty set): %s", exc)
+    return set()
+
+
 def _is_eid(d: datetime) -> int:
     m, day = d.month, d.day
     return 1 if (m == 4 and 8 <= day <= 13) or (m == 6 and 15 <= day <= 20) else 0
@@ -47,14 +75,15 @@ def _is_ramadan(d: datetime) -> int:
     return 1 if (m == 3 and day >= 11) or (m == 4 and day <= 9) else 0
 
 
-def _build_feature_vector(d: datetime, rolling_avg: float) -> list[float]:
+def _build_feature_vector(d: datetime, rolling_avg: float, holiday_dates: set[str] | None = None) -> list[float]:
     dow = d.weekday()
     month = d.month
     week = d.isocalendar()[1]
+    is_holiday = 1 if (holiday_dates and d.strftime("%Y-%m-%d") in holiday_dates) else 0
     return [
         dow, month, week,
         1 if dow >= 5 else 0,
-        0,                                   # isPublicHoliday
+        is_holiday,                          # isPublicHoliday (real from backend)
         _is_eid(d),
         _is_ramadan(d),
         1 if month in (6, 7, 8) else 0,     # isSummer
@@ -73,6 +102,10 @@ async def generate_leave_forecast(department_id: Optional[str] = None) -> dict:
     use_ml = model is not None
     algorithm = "ml-gradient-boosting-v1" if use_ml else "statistical-moving-average"
 
+    # Fetch real public holidays from backend (30-day window)
+    end_date = today + timedelta(days=30)
+    holiday_dates = await _fetch_holiday_dates(today, end_date)
+
     rolling_avg = 2.5
     forecast = []
 
@@ -81,7 +114,7 @@ async def generate_leave_forecast(department_id: Optional[str] = None) -> dict:
         dow = d.weekday()
 
         if use_ml:
-            fv = _build_feature_vector(d, rolling_avg)
+            fv = _build_feature_vector(d, rolling_avg, holiday_dates)
             try:
                 raw = float(model.predict([fv])[0])
                 predicted = round(max(0, raw), 1)

@@ -29,6 +29,21 @@ const normalizeLateThreshold = (data) => {
   return undefined;
 };
 
+const normalizeOfficeIpRanges = (value) => {
+  const ranges = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(',')
+      : [];
+
+  return [...new Set(
+    ranges
+      .filter((range) => typeof range === 'string')
+      .map((range) => range.trim())
+      .filter(Boolean),
+  )];
+};
+
 const ensureSettings = (organizationId) => prisma.organizationSettings.upsert({
   where: { organizationId },
   update: {},
@@ -58,7 +73,7 @@ const serializeSettings = (org, settings) => {
     workingHours: { start: workingHoursStart, end: workingHoursEnd },
     lateThresholdMinutes,
     lateThreshold: { hour: thresholdHour, minute: thresholdMinute },
-    officeIpRanges: settings.officeIpRanges || [],
+    officeIpRanges: normalizeOfficeIpRanges(settings.officeIpRanges),
     wifiVerificationEnabled: settings.wifiVerificationEnabled,
     attendancePolicyJson: settings.attendancePolicyJson || defaults.attendancePolicyJson,
     attendancePolicy: settings.attendancePolicyJson || defaults.attendancePolicyJson,
@@ -86,7 +101,9 @@ const updateOrganizationSettings = async (user, data) => {
     workingHoursStart: data.workingHours?.start || data.workingHoursStart,
     workingHoursEnd: data.workingHours?.end || data.workingHoursEnd,
     lateThresholdMinutes: normalizeLateThreshold(data),
-    officeIpRanges: data.officeIpRanges,
+    officeIpRanges: data.officeIpRanges === undefined
+      ? undefined
+      : normalizeOfficeIpRanges(data.officeIpRanges),
     wifiVerificationEnabled: data.wifiVerificationEnabled,
     leaveAutomationEnabled: data.leaveAutomationEnabled,
     attendancePolicyJson: data.attendancePolicyJson || data.attendancePolicy,

@@ -4,6 +4,9 @@
   "scripts": {
     "health": "powershell -ExecutionPolicy Bypass -File scripts/health-check.ps1",
     "start:dev": "powershell -ExecutionPolicy Bypass -File scripts/start-dev.ps1",
+    "agents:dev": "cd multi-agent-service && npm.cmd run dev",
+    "agents:start": "cd multi-agent-service && npm.cmd run start",
+    "agents:memory:setup": "cd multi-agent-service && npm.cmd run memory:setup",
     "smoke": "powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1",
     "test:full": "powershell -ExecutionPolicy Bypass -File scripts/full-module-test.ps1",
     "db:validate": "cd worknex-backend && npm.cmd run db:validate",

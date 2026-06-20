@@ -29,6 +29,7 @@ app.use(helmet());
 app.use(cors({
   origin: [
     'http://localhost:3000',
+    'http://127.0.0.1:3000',
     process.env.FRONTEND_URL,
     'http://192.168.100.7:3000',
     /^http:\/\/192\.168\./,  // Allow all LAN IPs

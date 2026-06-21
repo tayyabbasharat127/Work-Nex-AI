@@ -1,0 +1,39 @@
+{
+  "modelVersion": "attrition-reg-v1",
+  "modelType": "GradientBoostingRegressor",
+  "task": "risk_regression",
+  "features": [
+    "tenure_months",
+    "attendance_rate",
+    "late_count",
+    "absence_count",
+    "leave_days_taken",
+    "annual_leave_remaining",
+    "performance_score",
+    "dept_avg_performance",
+    "overtime_hours",
+    "half_day_count",
+    "prev_month_score",
+    "manager_change_count",
+    "warnings_issued"
+  ],
+  "rows": 3000,
+  "r2Score": 0.6394,
+  "mae": 2.4,
+  "featureImportances": {
+    "tenure_months": 0.06,
+    "attendance_rate": 0.3151,
+    "late_count": 0.0763,
+    "absence_count": 0.1673,
+    "leave_days_taken": 0.0328,
+    "annual_leave_remaining": 0.0192,
+    "performance_score": 0.1094,
+    "dept_avg_performance": 0.0488,
+    "overtime_hours": 0.0313,
+    "half_day_count": 0.0083,
+    "prev_month_score": 0.0503,
+    "manager_change_count": 0.0379,
+    "warnings_issued": 0.0432
+  },
+  "fallback": false
+}

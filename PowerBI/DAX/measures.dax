@@ -1,0 +1,235 @@
+// ============================================================
+// WorkNex AI — Power BI DAX Measures
+// ============================================================
+// Table dependencies:
+//   Attendance, LeaveRequest, LeaveBalance, PerformanceRecord,
+//   User, Department, Organization, AttritionRecord
+// ============================================================
+
+
+// ─── Attendance Measures ───────────────────────────────────────────────────────
+
+[Total Present Days] =
+CALCULATE(
+    COUNTROWS(Attendance),
+    Attendance[status] = "PRESENT"
+)
+
+[Total Late Days] =
+CALCULATE(
+    COUNTROWS(Attendance),
+    Attendance[status] = "LATE"
+)
+
+[Total Absent Days] =
+CALCULATE(
+    COUNTROWS(Attendance),
+    Attendance[status] = "ABSENT"
+)
+
+[Total On Leave Days] =
+CALCULATE(
+    COUNTROWS(Attendance),
+    Attendance[status] = "ON_LEAVE"
+)
+
+[Total Working Days] =
+CALCULATE(
+    COUNTROWS(Attendance),
+    Attendance[status] IN { "PRESENT", "LATE", "HALF_DAY" }
+)
+
+[Attendance Rate %] =
+DIVIDE(
+    [Total Present Days] + [Total Late Days],
+    [Total Present Days] + [Total Late Days] + [Total Absent Days],
+    0
+) * 100
+
+[On-Time Rate %] =
+DIVIDE(
+    [Total Present Days],
+    [Total Present Days] + [Total Late Days],
+    1
+) * 100
+
+[Punctuality Score] =
+MAX(0, 100 - [Total Late Days] * 10)
+
+// ─── Leave Measures ────────────────────────────────────────────────────────────
+
+[Total Leave Requests] =
+COUNTROWS(LeaveRequest)
+
+[Approved Leaves] =
+CALCULATE(
+    COUNTROWS(LeaveRequest),
+    LeaveRequest[status] = "APPROVED"
+)
+
+[Pending Leaves] =
+CALCULATE(
+    COUNTROWS(LeaveRequest),
+    LeaveRequest[status] = "PENDING"
+)
+
+[Rejected Leaves] =
+CALCULATE(
+    COUNTROWS(LeaveRequest),
+    LeaveRequest[status] = "REJECTED"
+)
+
+[Leave Approval Rate %] =
+DIVIDE([Approved Leaves], [Total Leave Requests], 0) * 100
+
+[Avg Leave Duration Days] =
+AVERAGEX(
+    FILTER(LeaveRequest, LeaveRequest[status] = "APPROVED"),
+    LeaveRequest[totalDays]
+)
+
+[Leave Days Taken This Month] =
+CALCULATE(
+    SUM(LeaveRequest[totalDays]),
+    LeaveRequest[status] = "APPROVED",
+    DATESMTD(LeaveRequest[startDate])
+)
+
+[Leave Balance Remaining] =
+SUM(LeaveBalance[remaining])
+
+[Leave Utilization %] =
+DIVIDE(
+    SUM(LeaveBalance[used]),
+    SUM(LeaveBalance[used]) + SUM(LeaveBalance[remaining]),
+    0
+) * 100
+
+// ─── Performance Measures ─────────────────────────────────────────────────────
+
+[Avg Attendance Score] =
+AVERAGE(PerformanceRecord[attendanceScore])
+
+[Avg Leave Score] =
+AVERAGE(PerformanceRecord[leaveScore])
+
+[Avg Overall Score] =
+AVERAGE(PerformanceRecord[overallScore])
+
+[High Performers Count] =
+CALCULATE(
+    COUNTROWS(PerformanceRecord),
+    PerformanceRecord[overallScore] >= 85
+)
+
+[Low Performers Count] =
+CALCULATE(
+    COUNTROWS(PerformanceRecord),
+    PerformanceRecord[overallScore] < 60
+)
+
+[Performance Score Band] =
+SWITCH(
+    TRUE(),
+    AVERAGE(PerformanceRecord[overallScore]) >= 85, "Excellent",
+    AVERAGE(PerformanceRecord[overallScore]) >= 70, "Good",
+    AVERAGE(PerformanceRecord[overallScore]) >= 55, "Average",
+    "Needs Improvement"
+)
+
+[Month-over-Month Performance Change] =
+VAR CurrentScore = AVERAGE(PerformanceRecord[overallScore])
+VAR PreviousScore =
+    CALCULATE(
+        AVERAGE(PerformanceRecord[overallScore]),
+        DATEADD(PerformanceRecord[_periodDate], -1, MONTH)
+    )
+RETURN
+    IF(
+        NOT ISBLANK(PreviousScore),
+        CurrentScore - PreviousScore,
+        BLANK()
+    )
+
+// ─── Attrition / Turnover Measures ────────────────────────────────────────────
+
+[High Risk Employees] =
+CALCULATE(
+    COUNTROWS(AttritionRecord),
+    AttritionRecord[riskLabel] IN { "HIGH", "CRITICAL" }
+)
+
+[Medium Risk Employees] =
+CALCULATE(
+    COUNTROWS(AttritionRecord),
+    AttritionRecord[riskLabel] = "MEDIUM"
+)
+
+[Avg Attrition Risk Score] =
+AVERAGE(AttritionRecord[riskScore])
+
+[Attrition Risk % of Workforce] =
+DIVIDE([High Risk Employees], COUNTROWS(User), 0) * 100
+
+[Predicted Turnover Rate] =
+DIVIDE(
+    CALCULATE(
+        COUNTROWS(AttritionRecord),
+        AttritionRecord[willLeaveProb] >= 0.5
+    ),
+    COUNTROWS(User),
+    0
+) * 100
+
+// ─── Workforce / Headcount Measures ───────────────────────────────────────────
+
+[Total Active Employees] =
+CALCULATE(
+    COUNTROWS(User),
+    User[isActive] = TRUE()
+)
+
+[Headcount by Department] =
+COUNTROWS(
+    FILTER(User, User[isActive] = TRUE())
+)
+
+[Avg Tenure Months] =
+AVERAGEX(
+    FILTER(User, User[isActive] = TRUE()),
+    DATEDIFF(User[joiningDate], TODAY(), MONTH)
+)
+
+[New Hires Last 30 Days] =
+CALCULATE(
+    COUNTROWS(User),
+    User[joiningDate] >= TODAY() - 30,
+    User[isActive] = TRUE()
+)
+
+// ─── Time Intelligence Measures ───────────────────────────────────────────────
+
+[YTD Attendance Rate %] =
+CALCULATE(
+    [Attendance Rate %],
+    DATESYTD(Attendance[date])
+)
+
+[Rolling 3-Month Avg Performance] =
+CALCULATE(
+    AVERAGE(PerformanceRecord[overallScore]),
+    DATESINPERIOD(PerformanceRecord[_periodDate], LASTDATE(PerformanceRecord[_periodDate]), -3, MONTH)
+)
+
+[Leave Trend (vs Last Month)] =
+VAR ThisMonth = CALCULATE(SUM(LeaveRequest[totalDays]), DATESMTD(LeaveRequest[startDate]), LeaveRequest[status] = "APPROVED")
+VAR LastMonth = CALCULATE(SUM(LeaveRequest[totalDays]), DATEADD(DATESMTD(LeaveRequest[startDate]), -1, MONTH), LeaveRequest[status] = "APPROVED")
+RETURN DIVIDE(ThisMonth - LastMonth, LastMonth, 0) * 100
+
+// ─── Dynamic KPI Measures ─────────────────────────────────────────────────────
+
+[Workforce Health Score] =
+VAR AttScore   = [Attendance Rate %] * 0.40
+VAR PerfScore  = [Avg Overall Score] * 0.35
+VAR RetentScore = (100 - [Attrition Risk % of Workforce]) * 0.25
+RETURN ROUND(AttScore + PerfScore + RetentScore, 1)

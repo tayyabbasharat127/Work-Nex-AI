@@ -1,0 +1,623 @@
+
+> worknex-backend@1.0.0 dev
+> nodemon src/app.js
+
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node src/app.js`[39m
+2026-06-13 22:05:37 [[32minfo[39m]: [CRON] All scheduled jobs registered
+2026-06-13 22:05:37 [[32minfo[39m]: [ETL Scheduler] Starting ETL scheduler...
+2026-06-13 22:05:37 [[32minfo[39m]: [ETL Scheduler] Nightly ETL scheduled: 0 0 * * *
+2026-06-13 22:05:37 [[32minfo[39m]: [ETL Scheduler] Monthly ETL scheduled: 0 0 1 * *
+2026-06-13 22:05:37 [[32minfo[39m]: [ETL Scheduler] All ETL jobs scheduled successfully
+2026-06-13 22:05:38 [[32minfo[39m]: Database connected successfully
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+2026-06-13 22:05:38 [[32minfo[39m]: Database migration check passed
+2026-06-13 22:05:38 [[32minfo[39m]: WorkNex AI Backend running on http://0.0.0.0:5000 [development]
+2026-06-13 22:05:38 [[32minfo[39m]: Network access: http://192.168.100.7:5000
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/app.js`[39m
+2026-06-13 22:17:43 [[32minfo[39m]: [CRON] All scheduled jobs registered
+2026-06-13 22:17:43 [[32minfo[39m]: [ETL Scheduler] Starting ETL scheduler...
+2026-06-13 22:17:43 [[32minfo[39m]: [ETL Scheduler] Nightly ETL scheduled: 0 0 * * *
+2026-06-13 22:17:43 [[32minfo[39m]: [ETL Scheduler] Monthly ETL scheduled: 0 0 1 * *
+2026-06-13 22:17:43 [[32minfo[39m]: [ETL Scheduler] All ETL jobs scheduled successfully
+2026-06-13 22:17:43 [[32minfo[39m]: Database connected successfully
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+2026-06-13 22:17:43 [[32minfo[39m]: Database migration check passed
+2026-06-13 22:17:43 [[32minfo[39m]: WorkNex AI Backend running on http://0.0.0.0:5000 [development]
+2026-06-13 22:17:43 [[32minfo[39m]: Network access: http://192.168.100.7:5000
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/app.js`[39m
+2026-06-14 04:20:25 [[32minfo[39m]: [CRON] All scheduled jobs registered
+2026-06-14 04:20:25 [[32minfo[39m]: [ETL Scheduler] Starting ETL scheduler...
+2026-06-14 04:20:25 [[32minfo[39m]: [ETL Scheduler] Nightly ETL scheduled: 0 0 * * *
+2026-06-14 04:20:25 [[32minfo[39m]: [ETL Scheduler] Monthly ETL scheduled: 0 0 1 * *
+2026-06-14 04:20:25 [[32minfo[39m]: [ETL Scheduler] All ETL jobs scheduled successfully
+2026-06-14 04:20:25 [[32minfo[39m]: Database connected successfully
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+2026-06-14 04:20:25 [[32minfo[39m]: Database migration check passed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/app.js`[39m
+2026-06-14 04:21:06 [[32minfo[39m]: [CRON] All scheduled jobs registered
+2026-06-14 04:21:06 [[32minfo[39m]: [ETL Scheduler] Starting ETL scheduler...
+2026-06-14 04:21:06 [[32minfo[39m]: [ETL Scheduler] Nightly ETL scheduled: 0 0 * * *
+2026-06-14 04:21:06 [[32minfo[39m]: [ETL Scheduler] Monthly ETL scheduled: 0 0 1 * *
+2026-06-14 04:21:06 [[32minfo[39m]: [ETL Scheduler] All ETL jobs scheduled successfully
+2026-06-14 04:21:06 [[32minfo[39m]: Database connected successfully
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+2026-06-14 04:21:06 [[32minfo[39m]: Database migration check passed
+2026-06-14 04:21:06 [[32minfo[39m]: WorkNex AI Backend running on http://0.0.0.0:5000 [development]
+2026-06-14 04:21:06 [[32minfo[39m]: Network access: http://192.168.100.7:5000
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:21:38 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:21:38 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:22:38 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:22:38 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:23:37 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:23:37 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:24:37 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:24:37 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:25:37 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:25:37 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:26:38 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:26:38 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:27:37 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:27:37 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:28:37 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:28:37 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:29:37 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:29:37 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:30:37 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:30:37 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:31:38 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:31:38 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:32:38 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:32:38 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:33:37 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:33:37 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:34:37 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:34:37 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:35:37 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:35:37 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:36:37 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:36:37 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:37:20 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:37:20 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:38:21 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:38:21 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:39:21 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:39:21 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:40:22 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:40:22 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:41:23 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:41:23 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:42:24 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:42:24 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:43:26 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:43:26 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:44:26 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:44:26 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 04:45:27 [[32minfo[39m]: 127.0.0.1 - - [13/Jun/2026:23:45:27 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/app.js`[39m
+2026-06-14 20:52:13 [[32minfo[39m]: [CRON] All scheduled jobs registered
+2026-06-14 20:52:13 [[32minfo[39m]: [ETL Scheduler] Starting ETL scheduler...
+2026-06-14 20:52:13 [[32minfo[39m]: [ETL Scheduler] Nightly ETL scheduled: 0 0 * * *
+2026-06-14 20:52:13 [[32minfo[39m]: [ETL Scheduler] Monthly ETL scheduled: 0 0 1 * *
+2026-06-14 20:52:13 [[32minfo[39m]: [ETL Scheduler] All ETL jobs scheduled successfully
+2026-06-14 20:52:13 [[32minfo[39m]: Database connected successfully
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+2026-06-14 20:52:13 [[32minfo[39m]: Database migration check passed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/app.js`[39m
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/app.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+2026-06-14 21:18:42 [[32minfo[39m]: [CRON] All scheduled jobs registered
+2026-06-14 21:18:42 [[32minfo[39m]: [ETL Scheduler] Starting ETL scheduler...
+2026-06-14 21:18:42 [[32minfo[39m]: [ETL Scheduler] Nightly ETL scheduled: 0 0 * * *
+2026-06-14 21:18:42 [[32minfo[39m]: [ETL Scheduler] Monthly ETL scheduled: 0 0 1 * *
+2026-06-14 21:18:42 [[32minfo[39m]: [ETL Scheduler] All ETL jobs scheduled successfully
+2026-06-14 21:18:42 [[32minfo[39m]: Database connected successfully
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+2026-06-14 21:18:42 [[32minfo[39m]: Database migration check passed
+2026-06-14 21:18:42 [[32minfo[39m]: WorkNex AI Backend running on http://0.0.0.0:5000 [development]
+2026-06-14 21:18:42 [[32minfo[39m]: Network access: http://192.168.100.7:5000
+[32m[nodemon] starting `node src/app.js`[39m
+2026-06-14 21:18:45 [[32minfo[39m]: [CRON] All scheduled jobs registered
+2026-06-14 21:18:45 [[32minfo[39m]: [ETL Scheduler] Starting ETL scheduler...
+2026-06-14 21:18:45 [[32minfo[39m]: [ETL Scheduler] Nightly ETL scheduled: 0 0 * * *
+2026-06-14 21:18:45 [[32minfo[39m]: [ETL Scheduler] Monthly ETL scheduled: 0 0 1 * *
+2026-06-14 21:18:45 [[32minfo[39m]: [ETL Scheduler] All ETL jobs scheduled successfully
+2026-06-14 21:18:45 [[32minfo[39m]: Database connected successfully
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+2026-06-14 21:18:45 [[32minfo[39m]: Database migration check passed
+2026-06-14 21:18:45 [[32minfo[39m]: WorkNex AI Backend running on http://0.0.0.0:5000 [development]
+2026-06-14 21:18:45 [[32minfo[39m]: Network access: http://192.168.100.7:5000
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 21:18:58 [[32minfo[39m]: 127.0.0.1 - - [14/Jun/2026:16:18:58 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 21:19:15 [[32minfo[39m]: 127.0.0.1 - - [14/Jun/2026:16:19:15 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 21:19:59 [[32minfo[39m]: 127.0.0.1 - - [14/Jun/2026:16:19:59 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 21:20:15 [[32minfo[39m]: 127.0.0.1 - - [14/Jun/2026:16:20:15 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/app.js`[39m
+2026-06-14 21:20:30 [[32minfo[39m]: [CRON] All scheduled jobs registered
+2026-06-14 21:20:30 [[32minfo[39m]: [ETL Scheduler] Starting ETL scheduler...
+2026-06-14 21:20:30 [[32minfo[39m]: [ETL Scheduler] Nightly ETL scheduled: 0 0 * * *
+2026-06-14 21:20:30 [[32minfo[39m]: [ETL Scheduler] Monthly ETL scheduled: 0 0 1 * *
+2026-06-14 21:20:30 [[32minfo[39m]: [ETL Scheduler] All ETL jobs scheduled successfully
+2026-06-14 21:20:30 [[32minfo[39m]: Database connected successfully
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+prisma:query 
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS "exists"
+    
+2026-06-14 21:20:30 [[32minfo[39m]: Database migration check passed
+2026-06-14 21:20:30 [[32minfo[39m]: WorkNex AI Backend running on http://0.0.0.0:5000 [development]
+2026-06-14 21:20:30 [[32minfo[39m]: Network access: http://192.168.100.7:5000
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 21:21:00 [[32minfo[39m]: 127.0.0.1 - - [14/Jun/2026:16:21:00 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 21:21:15 [[32minfo[39m]: 127.0.0.1 - - [14/Jun/2026:16:21:15 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 21:22:01 [[32minfo[39m]: 127.0.0.1 - - [14/Jun/2026:16:22:01 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 21:22:15 [[32minfo[39m]: 127.0.0.1 - - [14/Jun/2026:16:22:15 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 21:23:02 [[32minfo[39m]: 127.0.0.1 - - [14/Jun/2026:16:23:02 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 21:48:46 [[32minfo[39m]: 127.0.0.1 - - [14/Jun/2026:16:48:46 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 21:48:46 [[32minfo[39m]: 127.0.0.1 - - [14/Jun/2026:16:48:46 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 21:48:52 [[32minfo[39m]: 127.0.0.1 - - [14/Jun/2026:16:48:52 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 21:49:42 [[32minfo[39m]: 127.0.0.1 - - [14/Jun/2026:16:49:42 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."role"::text, "public"."User"."isActive", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."employeeId", "public"."User"."departmentId", "public"."User"."managerId", "public"."User"."organizationId" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Attendance"."id", "public"."Attendance"."organizationId", "public"."Attendance"."userId", "public"."Attendance"."date", "public"."Attendance"."checkIn", "public"."Attendance"."checkOut", "public"."Attendance"."status"::text, "public"."Attendance"."workingHours", "public"."Attendance"."source", "public"."Attendance"."latitude", "public"."Attendance"."longitude", "public"."Attendance"."ipAddress", "public"."Attendance"."notes", "public"."Attendance"."createdAt", "public"."Attendance"."updatedAt" FROM "public"."Attendance" WHERE (("public"."Attendance"."userId" = $1 AND "public"."Attendance"."date" = $2) AND 1=1) LIMIT $3 OFFSET $4
+2026-06-14 21:49:51 [[32minfo[39m]: 127.0.0.1 - - [14/Jun/2026:16:49:51 +0000] "POST /api/v1/attendance/ping HTTP/1.1" 200 98 "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m

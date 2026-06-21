@@ -1,0 +1,195 @@
+name: Build & Deploy to Google Cloud Run
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  GCP_REGION: asia-south1
+  GCP_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+  REGISTRY: asia-south1-docker.pkg.dev
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      # ── Backend ──────────────────────────────────────────────────────────────
+      - name: Build & push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./worknex-backend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT }}/worknex/backend:${{ github.sha }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Deploy backend to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: worknex-backend
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT }}/worknex/backend:${{ github.sha }}
+          flags: --allow-unauthenticated --min-instances=1
+          env_vars: |
+            NODE_ENV=production
+            PORT=5000
+            JWT_EXPIRES_IN=7d
+            JWT_REFRESH_EXPIRES_IN=30d
+            SMTP_HOST=smtp.gmail.com
+            SMTP_PORT=587
+            EMAIL_FROM=noreply@worknexai.com
+            ETL_ENABLED=true
+            ETL_CRON_SCHEDULE=0 2 * * *
+            ETL_MONTHLY_SCHEDULE=0 3 1 * *
+            ETL_TIMEZONE=Asia/Karachi
+            TZ_OFFSET_HOURS=5
+            LATE_THRESHOLD_HOUR=9
+            LATE_THRESHOLD_MIN=30
+          secrets: |
+            DATABASE_URL=DATABASE_URL:latest
+            JWT_SECRET=JWT_SECRET:latest
+            JWT_REFRESH_SECRET=JWT_REFRESH_SECRET:latest
+            SMTP_USER=SMTP_USER:latest
+            SMTP_PASS=SMTP_PASS:latest
+            POWERBI_CLIENT_ID=POWERBI_CLIENT_ID:latest
+            POWERBI_CLIENT_SECRET=POWERBI_CLIENT_SECRET:latest
+            POWERBI_TENANT_ID=POWERBI_TENANT_ID:latest
+            POWERBI_WORKSPACE_ID=POWERBI_WORKSPACE_ID:latest
+            POWERBI_REPORT_ID=POWERBI_REPORT_ID:latest
+            POWERBI_DATASET_ID=POWERBI_DATASET_ID:latest
+            POWERBI_EMBED_URL=POWERBI_EMBED_URL:latest
+
+      # ── AI Service ────────────────────────────────────────────────────────────
+      - name: Build & push AI service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ai-service
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT }}/worknex/ai-service:${{ github.sha }}
+          cache-from: type=gha,scope=ai-service
+          cache-to: type=gha,mode=max,scope=ai-service
+
+      - name: Deploy AI service to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: worknex-ai
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT }}/worknex/ai-service:${{ github.sha }}
+          flags: --allow-unauthenticated --min-instances=1
+          env_vars: |
+            DEBUG=false
+            HOST=0.0.0.0
+            PORT=8000
+            AI_PROVIDER=statistical
+            EMBEDDING_PROVIDER=deterministic
+          secrets: |
+            GEMINI_API_KEY=GEMINI_API_KEY:latest
+            OPENAI_API_KEY=OPENAI_API_KEY:latest
+            ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest
+
+      # ── Multi-Agent Service ───────────────────────────────────────────────────
+      - name: Build & push multi-agent service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./multi-agent-service
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT }}/worknex/multi-agent:${{ github.sha }}
+          cache-from: type=gha,scope=multi-agent
+          cache-to: type=gha,mode=max,scope=multi-agent
+
+      - name: Get backend URL for multi-agent
+        id: backend-url
+        run: |
+          URL=$(gcloud run services describe worknex-backend --region=${{ env.GCP_REGION }} --format='value(status.url)')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+      - name: Get frontend URL for multi-agent CORS
+        id: frontend-url
+        run: |
+          # Use known frontend URL or get it from existing deployment
+          URL=$(gcloud run services describe worknex-frontend --region=${{ env.GCP_REGION }} --format='value(status.url)' 2>/dev/null || echo "${{ secrets.FRONTEND_URL }}")
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+      - name: Deploy multi-agent to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: worknex-multi-agent
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT }}/worknex/multi-agent:${{ github.sha }}
+          flags: --allow-unauthenticated --min-instances=1
+          env_vars: |
+            NODE_ENV=production
+            PORT=8080
+            WORKNEX_BACKEND_API_URL=${{ steps.backend-url.outputs.url }}/api/v1
+            CORS_ORIGINS=${{ steps.frontend-url.outputs.url }}
+            AGENT_MEMORY_PROVIDER=postgres
+            AGENT_MEMORY_ALLOW_IN_MEMORY_FALLBACK=true
+            LLM_PROVIDER=openrouter
+            LANGSMITH_TRACING=false
+          secrets: |
+            AGENT_MEMORY_DATABASE_URL=AGENT_MEMORY_DATABASE_URL:latest
+            OPENROUTER_API_KEY=OPENROUTER_API_KEY:latest
+            OPENAI_API_KEY=OPENAI_API_KEY:latest
+            ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest
+
+      # ── Frontend ──────────────────────────────────────────────────────────────
+      - name: Get service URLs for frontend build
+        id: service-urls
+        run: |
+          BACKEND=$(gcloud run services describe worknex-backend --region=${{ env.GCP_REGION }} --format='value(status.url)')
+          AI=$(gcloud run services describe worknex-ai --region=${{ env.GCP_REGION }} --format='value(status.url)')
+          AGENTS=$(gcloud run services describe worknex-multi-agent --region=${{ env.GCP_REGION }} --format='value(status.url)')
+          echo "backend=$BACKEND" >> $GITHUB_OUTPUT
+          echo "ai=$AI" >> $GITHUB_OUTPUT
+          echo "agents=$AGENTS" >> $GITHUB_OUTPUT
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT }}/worknex/frontend:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ steps.service-urls.outputs.backend }}/api/v1
+            NEXT_PUBLIC_AI_URL=${{ steps.service-urls.outputs.ai }}
+            NEXT_PUBLIC_MULTI_AGENT_API_URL=${{ steps.service-urls.outputs.agents }}
+            NEXT_PUBLIC_APP_NAME=WorkNex AI
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Deploy frontend to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: worknex-frontend
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.REGISTRY }}/${{ env.GCP_PROJECT }}/worknex/frontend:${{ github.sha }}
+          flags: --allow-unauthenticated --min-instances=1
+
+      # ── Summary ───────────────────────────────────────────────────────────────
+      - name: Print deployed URLs
+        run: |
+          echo ""
+          echo "╔══════════════════════════════════════════════╗"
+          echo "║          WorkNex AI — Deployed URLs          ║"
+          echo "╠══════════════════════════════════════════════╣"
+          echo "║ Backend  : $(gcloud run services describe worknex-backend --region=${{ env.GCP_REGION }} --format='value(status.url)')"
+          echo "║ AI       : $(gcloud run services describe worknex-ai --region=${{ env.GCP_REGION }} --format='value(status.url)')"
+          echo "║ Agents   : $(gcloud run services describe worknex-multi-agent --region=${{ env.GCP_REGION }} --format='value(status.url)')"
+          echo "║ Frontend : $(gcloud run services describe worknex-frontend --region=${{ env.GCP_REGION }} --format='value(status.url)')"
+          echo "╚══════════════════════════════════════════════╝"

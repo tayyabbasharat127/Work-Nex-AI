@@ -1,0 +1,37 @@
+[
+  {
+    "id": "ff2e5ee7988563585622d857b325c99e516039f5",
+    "source": "attendance_policy.md",
+    "text": "# Attendance Policy Attendance check-in and check-out use the configured attendance timezone. Duplicate check-ins or check-outs are blocked. Late status is based on the configured late threshold. Working hours are calculated from check-in and check-out. Records below the configured half-day threshold can be marked as half-day. Admin manual corrections are organization-scoped and audited. Managers can view only direct subordinate attendance inside their organization. Employees can view only their own attendance."
+  },
+  {
+    "id": "1d4f44172c9c9e7fba1cb979b0305301c77f69dd",
+    "source": "faq.md",
+    "text": "# FAQ ## Can the chatbot submit leave automatically? No. The chatbot can draft a leave request and explain the required fields, but submission requires user confirmation through the leave workflow. ## Why does Power BI show a setup message? Power BI embedding requires backend credentials and report configuration. If those are missing, the frontend shows a setup message instead of a fake report. ## What happens without an LLM key? The RAG chatbot uses deterministic grounded fallback. It retrieves relevant local knowledge chunks and answers from those chunks with source names. ## What happens without the AI service? The Node backend returns deterministic fallback responses and marks them with "
+  },
+  {
+    "id": "ac96384b1be8752b2cbac352e9394f282082ba77",
+    "source": "faq.md",
+    "text": ". ## What happens without the AI service? The Node backend returns deterministic fallback responses and marks them with `fallback: true`."
+  },
+  {
+    "id": "aae520bcebcf5bd1a76b02a0027951d24c0fa22b",
+    "source": "leave_policy.md",
+    "text": "# Leave Policy Employees can apply for leave from the My Leaves page. Leave requests are checked against active leave policies, role eligibility, date validity, overlapping pending or approved leave, and available balance. Managers can approve or reject requests only for direct subordinates in the same organization. Admins can approve organization-scoped requests. Missing or insufficient leave balance blocks a request. AI may parse policy documents, but parsed policy rules stay inactive until an admin approves them. The deterministic rule engine makes final leave decisions."
+  },
+  {
+    "id": "cd10e530ffaedcdf312c50e2be714e603f1fdf27",
+    "source": "roles_permissions.md",
+    "text": "# Roles And Permissions SUPER_ADMIN is the platform-level role and can access platform-wide routes only where explicitly allowed. ADMIN can access organization-wide data inside the user's organization. MANAGER can access only direct subordinates inside the same organization for users, attendance, leave, analytics, performance, and reports. EMPLOYEE can access only self-scoped profile, attendance, leave, performance, and notification data. The chatbot must not bypass these permissions. It can explain policies and suggest navigation, but protected data must come from scoped backend APIs."
+  },
+  {
+    "id": "fc42767004096bdd49434e49a689c42d33996eec",
+    "source": "roles_permissions.md",
+    "text": "ackend APIs."
+  },
+  {
+    "id": "c9ca841a7728fc17672ab7976f203e3ae495a866",
+    "source": "system_help.md",
+    "text": "# System Help WorkNex includes dashboards for admin, manager, and employee roles. Dashboards use real backend APIs and show scoped workforce data. Employees can check in, check out, view attendance history, apply for leave, inspect balances, and view performance. Managers can view direct team attendance, pending team leave, team performance, and subordinate lists. Admins can manage users, departments, settings, reports, notifications, and audit logs. Power BI embedding requires backend environment variables for tenant, client, secret, workspace, report, and embed URL."
+  }
+]

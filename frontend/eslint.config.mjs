@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Archived duplicate route tree with stale API contracts.
+    "_archive_src_duplicate/**",
   ]),
 ]);
 

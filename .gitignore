@@ -4,9 +4,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Env files
+# Env files (keep .env.example and .env.production committed)
 .env
 .env.local
+.env.*.local
+!.env.example
+!.env.production
 
 # Build output
 dist/
@@ -20,3 +23,4 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+backend/node_modules/

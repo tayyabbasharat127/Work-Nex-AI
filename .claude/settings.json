@@ -14,7 +14,8 @@
       "Bash(grep -v \"//.*localhost\")",
       "PowerShell(if \\(Test-Path \"C:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\cloudflared.exe\"\\) { Write-Host \"EXISTS - Size: $\\(\\(Get-Item 'C:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\cloudflared.exe'\\).Length / 1MB\\) MB\"; & \"C:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\cloudflared.exe\" --version } else { Write-Host \"NOT FOUND - still downloading or failed\" })",
       "PowerShell(if \\(Test-Path \"C:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\cloudflared.exe\"\\) { $size = \\(Get-Item 'C:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\cloudflared.exe'\\).Length / 1MB; Write-Host \"File size: $size MB\"; & \"C:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\cloudflared.exe\" --version } else { Write-Host \"NOT FOUND\" })",
-      "PowerShell(& \"C:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\cloudflared.exe\" --version)"
+      "PowerShell(& \"C:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\cloudflared.exe\" --version)",
+      "Bash(grep -v \"^$\")"
     ]
   }
 }

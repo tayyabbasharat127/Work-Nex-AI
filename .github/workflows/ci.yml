@@ -1,0 +1,84 @@
+name: CI — Build & Validate
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+    branches: [main, Development_RevampedFrontend]
+
+jobs:
+  build:
+    name: Build Docker images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./worknex-backend
+          push: false
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Build AI service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ai-service
+          push: false
+          cache-from: type=gha,scope=ai-service
+          cache-to: type=gha,mode=max,scope=ai-service
+
+      - name: Build multi-agent service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./multi-agent-service
+          push: false
+          cache-from: type=gha,scope=multi-agent
+          cache-to: type=gha,mode=max,scope=multi-agent
+
+      - name: Build frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: false
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://api.worknexai.com/api/v1
+            NEXT_PUBLIC_AI_URL=https://api.worknexai.com
+            NEXT_PUBLIC_MULTI_AGENT_API_URL=https://agents.worknexai.com
+            NEXT_PUBLIC_APP_NAME=WorkNex AI
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+  lint-backend:
+    name: Lint backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: worknex-backend/package-lock.json
+      - run: npm ci
+        working-directory: worknex-backend
+      - run: npx prisma generate
+        working-directory: worknex-backend
+
+  lint-multi-agent:
+    name: Lint multi-agent
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: multi-agent-service/package-lock.json
+      - run: npm ci
+        working-directory: multi-agent-service

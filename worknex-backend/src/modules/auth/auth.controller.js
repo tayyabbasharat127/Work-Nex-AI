@@ -20,8 +20,14 @@ const clearRefreshCookie = (res) => {
 
 const publicTokens = (result) => {
   if (!result || !result.refreshToken) return result;
-  const { refreshToken, ...safeResult } = result;
-  return safeResult;
+  // In production the refresh token lives only in the HttpOnly cookie.
+  // In development the cookie is SameSite=Lax which cross-origin fetch won't send,
+  // so we include it in the body so the frontend can store and resend it.
+  if (process.env.NODE_ENV === 'production') {
+    const { refreshToken, ...safeResult } = result;
+    return safeResult;
+  }
+  return result;
 };
 
 const register = async (req, res) => {

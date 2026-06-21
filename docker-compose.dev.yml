@@ -1,5 +1,5 @@
 # WorkNex AI — DEVELOPMENT Docker Compose
-# Hot-reload for all 3 services. Code changes apply instantly.
+# Hot-reload for all services. Code changes apply instantly.
 #
 # First time / after adding packages:
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
@@ -14,15 +14,12 @@ services:
       context: ./worknex-backend
       dockerfile: Dockerfile
       target: development
-    # Use node directly — no nodemon needed, volume mount covers hot reload
     command: sh -c "npx prisma migrate deploy && node src/app.js"
     environment:
       NODE_ENV: development
     volumes:
-      # Mount only source — node_modules stays from image (nodemon/prisma intact)
       - ./worknex-backend/src:/app/src
       - ./worknex-backend/prisma:/app/prisma
-      # NO anonymous /app/node_modules — that was emptying the image's node_modules
 
   ai-service:
     build:
@@ -42,26 +39,48 @@ services:
       BACKEND_TOKEN: ${BACKEND_TOKEN:-}
       BACKEND_URL: http://backend:5000/api/v1
     volumes:
-      # Mount source only — Python packages stay from image
       - ./ai-service/app:/app/app
       - ./ai-service/knowledge:/app/knowledge
       - ./ai-service/models:/app/models
       - ./ai-service/vector_store:/app/vector_store
+
+  multi-agent:
+    build:
+      context: ./multi-agent-service
+      dockerfile: Dockerfile
+    command: node --watch server.js
+    environment:
+      NODE_ENV: development
+      PORT: 8010
+      WORKNEX_BACKEND_API_URL: http://backend:5000/api/v1
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      AGENT_MEMORY_ALLOW_IN_MEMORY_FALLBACK: "true"
+      LLM_PROVIDER: ${LLM_PROVIDER:-openrouter}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4o-mini}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - ./multi-agent-service/agents:/app/agents
+      - ./multi-agent-service/config:/app/config
+      - ./multi-agent-service/handlers:/app/handlers
+      - ./multi-agent-service/routing:/app/routing
+      - ./multi-agent-service/tools:/app/tools
+      - ./multi-agent-service/server.js:/app/server.js
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       target: development
-    # Use full path to avoid PATH issues in alpine
     command: sh -c "node_modules/.bin/next dev"
     environment:
       NODE_ENV: development
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000/api/v1}
       NEXT_PUBLIC_AI_URL: ${NEXT_PUBLIC_AI_URL:-http://localhost:8000}
+      NEXT_PUBLIC_MULTI_AGENT_API_URL: ${NEXT_PUBLIC_MULTI_AGENT_API_URL:-http://localhost:8010}
       NEXT_PUBLIC_APP_NAME: WorkNex AI
     volumes:
-      # Mount source only — node_modules stays from image
       - ./frontend/app:/app/app
       - ./frontend/components:/app/components
       - ./frontend/lib:/app/lib

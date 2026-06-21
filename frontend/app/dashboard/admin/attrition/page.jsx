@@ -69,7 +69,7 @@ export default function AttritionPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const riskChartData = data?.summary
-    ? ['HIGH', 'MEDIUM', 'LOW'].map((label) => ({ label, count: data.summary[label] || 0 }))
+    ? ['HIGH', 'MEDIUM', 'LOW'].map((label) => ({ label, count: data.summary[label]?.count || 0 }))
     : [];
 
   const avgRisk = data?.all?.length
@@ -120,6 +120,31 @@ export default function AttritionPage() {
             </select>
           </div>
 
+          {/* Risk Level Legend */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="flex items-start gap-3 p-4 rounded-xl border border-red-500/30 bg-red-500/5">
+              <div className="w-3 h-3 rounded-full bg-red-500 mt-1 shrink-0" />
+              <div>
+                <p className="font-semibold text-red-400 text-sm">HIGH Risk (&gt;60%)</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Likely to leave within 3 months. Immediate manager intervention recommended.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/5">
+              <div className="w-3 h-3 rounded-full bg-yellow-500 mt-1 shrink-0" />
+              <div>
+                <p className="font-semibold text-yellow-400 text-sm">MEDIUM Risk (30–60%)</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Early warning signs detected. Monitor attendance, leaves, and performance closely.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-4 rounded-xl border border-green-500/30 bg-green-500/5">
+              <div className="w-3 h-3 rounded-full bg-green-500 mt-1 shrink-0" />
+              <div>
+                <p className="font-semibold text-green-400 text-sm">LOW Risk (&lt;30%)</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Employee appears stable. Low probability of leaving in the near term.</p>
+              </div>
+            </div>
+          </div>
+
           {loading ? (
             <div className="flex items-center justify-center py-24">
               <RefreshCw size={32} className="animate-spin text-muted-foreground" />
@@ -155,7 +180,7 @@ export default function AttritionPage() {
                     <ShieldAlert size={16} className="text-red-400" />
                     <p className="text-sm text-muted-foreground">Critical (HIGH)</p>
                   </div>
-                  <p className="text-3xl font-bold text-red-400">{data.summary?.HIGH ?? 0}</p>
+                  <p className="text-3xl font-bold text-red-400">{data.summary?.HIGH?.count ?? 0}</p>
                 </div>
 
                 <div className="bg-card border border-border rounded-xl p-5">
@@ -237,40 +262,34 @@ export default function AttritionPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
-                          {(data.atRiskEmployees || []).map((emp) => {
-                            const name = emp.user
-                              ? `${emp.user.firstName} ${emp.user.lastName}`
-                              : emp.userId;
-                            const dept = emp.user?.department?.name || '—';
-                            return (
-                              <tr key={emp.userId} className="hover:bg-muted/30 transition">
-                                <td className="py-3 px-4">
-                                  <p className="font-medium">{name}</p>
-                                  <p className="text-xs text-muted-foreground">{dept}</p>
-                                </td>
-                                <td className="py-3 px-4">
-                                  <ScoreBar score={emp.riskScore} label={emp.riskLabel} />
-                                </td>
-                                <td className="py-3 px-4">
-                                  <RiskBadge label={emp.riskLabel} />
-                                </td>
-                                <td className="py-3 px-4 font-mono text-sm">
-                                  {emp.willLeaveProbability != null
-                                    ? `${Math.round(emp.willLeaveProbability * 100)}%`
-                                    : '—'}
-                                </td>
-                                <td className="py-3 px-4">
-                                  <div className="flex flex-wrap gap-1">
-                                    {(emp.riskFactors || []).slice(0, 3).map((f) => (
-                                      <span key={f} className="px-2 py-0.5 rounded bg-muted text-xs font-mono">
-                                        {f}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
+                          {(data.atRiskEmployees || []).map((emp) => (
+                            <tr key={emp.userId} className="hover:bg-muted/30 transition">
+                              <td className="py-3 px-4">
+                                <p className="font-medium">{emp.name || emp.userId}</p>
+                                <p className="text-xs text-muted-foreground">{emp.department || '—'}</p>
+                              </td>
+                              <td className="py-3 px-4">
+                                <ScoreBar score={emp.riskScore} label={emp.riskLabel} />
+                              </td>
+                              <td className="py-3 px-4">
+                                <RiskBadge label={emp.riskLabel} />
+                              </td>
+                              <td className="py-3 px-4 font-mono text-sm">
+                                {emp.willLeaveProb != null
+                                  ? `${Math.round(emp.willLeaveProb * 100)}%`
+                                  : '—'}
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="flex flex-wrap gap-1">
+                                  {(emp.factors || []).slice(0, 3).map((f) => (
+                                    <span key={f} className="px-2 py-0.5 rounded bg-muted text-xs font-mono">
+                                      {f}
+                                    </span>
+                                  ))}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
@@ -289,27 +308,24 @@ export default function AttritionPage() {
                       <thead className="bg-muted/50">
                         <tr>
                           <th className="text-left py-2.5 px-4 font-semibold">Employee</th>
+                          <th className="text-left py-2.5 px-4 font-semibold">Department</th>
                           <th className="text-left py-2.5 px-4 font-semibold w-36">Risk Score</th>
                           <th className="text-left py-2.5 px-4 font-semibold">Level</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {data.all.map((emp) => {
-                          const name = emp.user
-                            ? `${emp.user.firstName} ${emp.user.lastName}`
-                            : emp.userId;
-                          return (
-                            <tr key={emp.userId} className="hover:bg-muted/20 transition">
-                              <td className="py-2.5 px-4">{name}</td>
-                              <td className="py-2.5 px-4">
-                                <ScoreBar score={emp.riskScore} label={emp.riskLabel} />
-                              </td>
-                              <td className="py-2.5 px-4">
-                                <RiskBadge label={emp.riskLabel} />
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {data.all.map((emp) => (
+                          <tr key={emp.userId} className="hover:bg-muted/20 transition">
+                            <td className="py-2.5 px-4 font-medium">{emp.name || emp.userId}</td>
+                            <td className="py-2.5 px-4 text-sm text-muted-foreground">{emp.department || '—'}</td>
+                            <td className="py-2.5 px-4">
+                              <ScoreBar score={emp.riskScore} label={emp.riskLabel} />
+                            </td>
+                            <td className="py-2.5 px-4">
+                              <RiskBadge label={emp.riskLabel} />
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>

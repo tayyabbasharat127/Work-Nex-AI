@@ -8,6 +8,7 @@ services:
       POSTGRES_DB: worknex_prod
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/postgres/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh:ro
     ports:
       - "5432:5432"
     healthcheck:
@@ -40,7 +41,6 @@ services:
       AI_SERVICE_URL: http://ai-service:8000
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       TMS_API_URL: http://backend:5000/tms-mock
-      # Power BI
       POWERBI_CLIENT_ID: ${POWERBI_CLIENT_ID:-}
       POWERBI_CLIENT_SECRET: ${POWERBI_CLIENT_SECRET:-}
       POWERBI_TENANT_ID: ${POWERBI_TENANT_ID:-}
@@ -48,7 +48,6 @@ services:
       POWERBI_REPORT_ID: ${POWERBI_REPORT_ID:-}
       POWERBI_DATASET_ID: ${POWERBI_DATASET_ID:-}
       POWERBI_EMBED_URL: ${POWERBI_EMBED_URL:-}
-      # ETL
       ETL_ENABLED: "true"
       ETL_CRON_SCHEDULE: "0 2 * * *"
       ETL_MONTHLY_SCHEDULE: "0 3 1 * *"
@@ -71,7 +70,6 @@ services:
       PORT: "8000"
       BACKEND_URL: http://backend:5000/api/v1
       BACKEND_TOKEN: ${BACKEND_TOKEN:-}
-      # LangChain — set AI_PROVIDER=langchain to activate Gemini agent
       AI_PROVIDER: ${AI_PROVIDER:-statistical}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -84,6 +82,33 @@ services:
       - "8000:8000"
     restart: unless-stopped
 
+  multi-agent:
+    build:
+      context: ./multi-agent-service
+      dockerfile: Dockerfile
+    container_name: worknex-multi-agent
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 8010
+      NODE_ENV: production
+      WORKNEX_BACKEND_API_URL: http://backend:5000/api/v1
+      CORS_ORIGINS: ${FRONTEND_URL:-http://localhost:3000}
+      AGENT_MEMORY_PROVIDER: postgres
+      AGENT_MEMORY_DATABASE_URL: postgresql://worknex:worknex_pass@postgres:5432/worknex_agent_memory
+      AGENT_MEMORY_ALLOW_IN_MEMORY_FALLBACK: "true"
+      LLM_PROVIDER: ${LLM_PROVIDER:-openrouter}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4o-mini}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LANGSMITH_TRACING: ${LANGSMITH_TRACING:-false}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+    ports:
+      - "8010:8010"
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./frontend
@@ -91,10 +116,12 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000/api/v1}
         NEXT_PUBLIC_AI_URL: ${NEXT_PUBLIC_AI_URL:-http://localhost:8000}
+        NEXT_PUBLIC_MULTI_AGENT_API_URL: ${NEXT_PUBLIC_MULTI_AGENT_API_URL:-http://localhost:8010}
         NEXT_PUBLIC_APP_NAME: WorkNex AI
     container_name: worknex-frontend
     depends_on:
       - backend
+      - multi-agent
     ports:
       - "3000:3000"
     restart: unless-stopped

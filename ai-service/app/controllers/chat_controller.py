@@ -18,25 +18,28 @@ async def chat(req: ChatRequest) -> ChatResponse:
     intent     = detect_intent(req.message)
 
     if is_langchain_mode():
-        from app.services.langchain_agent import run_agent, is_langchain_ready
-        if is_langchain_ready():
-            response = await run_agent(
-                message=req.message,
-                role=role,
-                user_id=user_id,
-                user_name=user_name,
-                auth_token=auth_token,
-            )
-            return ChatResponse(
-                message=response["answer"],
-                answer=response["answer"],
-                intent=intent,
-                data={"mode": "langchain", "actions": response.get("actions", [])},
-                sources=response.get("sources", []),
-                confidence=response.get("confidence", 0.92),
-                actions=response.get("actions", []),
-                fallback=response.get("fallback", False),
-            )
+        try:
+            from app.services.langchain_agent import run_agent, is_langchain_ready
+            if is_langchain_ready():
+                response = await run_agent(
+                    message=req.message,
+                    role=role,
+                    user_id=user_id,
+                    user_name=user_name,
+                    auth_token=auth_token,
+                )
+                return ChatResponse(
+                    message=response["answer"],
+                    answer=response["answer"],
+                    intent=intent,
+                    data={"mode": "langchain", "actions": response.get("actions", [])},
+                    sources=response.get("sources", []),
+                    confidence=response.get("confidence", 0.92),
+                    actions=response.get("actions", []),
+                    fallback=response.get("fallback", False),
+                )
+        except ImportError:
+            pass  # langchain not installed — fall through to statistical mode
 
     # Statistical + RAG fallback
     response = await generate_response(intent, req.message, role, user_id)

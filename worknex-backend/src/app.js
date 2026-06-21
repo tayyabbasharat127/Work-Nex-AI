@@ -32,7 +32,8 @@ app.use(cors({
     'http://127.0.0.1:3000',
     process.env.FRONTEND_URL,
     'http://192.168.100.7:3000',
-    /^http:\/\/192\.168\./,  // Allow all LAN IPs
+    /^http:\/\/192\.168\./,
+    /\.trycloudflare\.com$/,  // Allow all Cloudflare tunnels
   ].filter(Boolean),
   credentials: true,
 }));

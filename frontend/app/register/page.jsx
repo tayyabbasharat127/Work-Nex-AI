@@ -1,22 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { signup } = useAuth();
+
+  const planFromUrl = searchParams.get('plan');
+  const defaultPlan = planFromUrl === 'basic' ? 'Basic' : planFromUrl === 'enterprise' ? 'Enterprise' : 'Pro';
+
   const [formData, setFormData] = useState({
     admin_name: '',
     admin_email: '',
     password: '',
     confirmPassword: '',
     organization_name: '',
-    subscription_plan: 'Pro',
+    subscription_plan: defaultPlan,
     industry: '',
     company_domain: '',
     city: '',
@@ -212,10 +217,11 @@ export default function RegisterPage() {
               onChange={handleChange}
               className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
             >
-              <option value="Basic">Basic</option>
-              <option value="Pro">Pro</option>
-              <option value="Enterprise">Enterprise</option>
+              <option value="Basic">Basic — $19/month (up to 25 employees)</option>
+              <option value="Pro">Pro — $49/month (up to 200 employees + AI)</option>
+              <option value="Enterprise">Enterprise — Custom pricing (unlimited)</option>
             </select>
+            <p className="text-xs text-muted-foreground mt-1.5">14-day free trial included. No credit card required.</p>
           </div>
 
           {/* Password */}
@@ -311,5 +317,13 @@ export default function RegisterPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }

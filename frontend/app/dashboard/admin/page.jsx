@@ -54,7 +54,7 @@ function EmptyState({ label, loading }) {
 }
 
 export default function AdminDashboard() {
-  const [user] = useState(getStoredUser);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [kpis, setKpis] = useState(null);
@@ -102,13 +102,14 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (!user) {
+    const storedUser = getStoredUser();
+    if (!storedUser) {
       window.location.href = '/login';
       return;
     }
-    const timer = setTimeout(loadDashboard, 0);
-    return () => clearTimeout(timer);
-  }, [user]);
+    setUser(storedUser);
+    loadDashboard();
+  }, []);
 
   if (!user) return null;
 

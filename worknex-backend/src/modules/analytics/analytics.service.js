@@ -30,7 +30,7 @@ const getDashboardKPIs = async (requestingUser) => {
   ] = await Promise.all([
     prisma.user.count({ where: { ...userScope, isActive: true, role: 'EMPLOYEE' } }),
     prisma.attendance.count({ where: { ...attendanceScope, date: today, status: { in: ['PRESENT', 'LATE'] } } }),
-    prisma.leaveRequest.count({ where: { ...leaveScope, status: { in: ['PENDING', 'PENDING_MANAGER'] } } }),
+    prisma.leaveRequest.count({ where: { ...leaveScope, status: 'PENDING' } }),
     prisma.attendance.count({ where: { ...attendanceScope, date: today, status: 'ABSENT' } }),
   ]);
 
@@ -653,6 +653,8 @@ const getAttritionAnalytics = async (month, year, requestingUser) => {
     })),
     all: records.map(r => ({
       userId: r.userId,
+      name: `${r.user?.firstName || ''} ${r.user?.lastName || ''}`.trim() || r.userId,
+      department: r.user?.department?.name || '—',
       riskScore: r.riskScore,
       riskLabel: r.riskLabel,
       willLeaveProb: r.willLeaveProb,

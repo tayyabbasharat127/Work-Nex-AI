@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { aiAPI } from '@/lib/api';
 import { toast } from 'sonner';
-import { TrendingUp, TrendingDown, AlertTriangle, Brain, RefreshCw, MessageSquare, Send, Users, Calendar } from 'lucide-react';
+import { AlertTriangle, Brain, RefreshCw, Users, Calendar } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis } from 'recharts';
 
 export default function AdminForecast() {
@@ -13,11 +13,6 @@ export default function AdminForecast() {
   const [attritionRisk, setAttritionRisk] = useState(null);
   const [performancePrediction, setPerformancePrediction] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [chatMessages, setChatMessages] = useState([
-    { role: 'assistant', content: 'Hello! I\'m your AI HR assistant. Ask me anything about workforce analytics, leave forecasts, or attendance patterns.' }
-  ]);
-  const [chatInput, setChatInput] = useState('');
-  const [chatLoading, setChatLoading] = useState(false);
 
   useEffect(() => {
     loadForecasts();
@@ -45,24 +40,6 @@ export default function AdminForecast() {
       toast.error('Failed to load forecasts');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const sendChat = async () => {
-    if (!chatInput.trim() || chatLoading) return;
-    const userMsg = chatInput.trim();
-    setChatInput('');
-    setChatMessages(prev => [...prev, { role: 'user', content: userMsg }]);
-    setChatLoading(true);
-    try {
-      const res = await aiAPI.chat(userMsg);
-      const reply = res?.answer || res?.message || res?.response || res?.content || 'I received your message but could not generate a response.';
-      const meta = res?.sources?.length ? `\n\nSources: ${res.sources.join(', ')}${res.fallback ? ' (fallback)' : ''}` : '';
-      setChatMessages(prev => [...prev, { role: 'assistant', content: `${reply}${meta}` }]);
-    } catch (err) {
-      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }]);
-    } finally {
-      setChatLoading(false);
     }
   };
 
@@ -237,50 +214,6 @@ export default function AdminForecast() {
             </div>
           )}
 
-          {/* AI Chat */}
-          <div className="bg-card border border-border rounded-xl p-6">
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <MessageSquare size={20} className="text-purple-400" />
-              AI HR Assistant
-            </h2>
-            <div className="h-64 overflow-y-auto space-y-3 mb-4 p-3 bg-background rounded-lg border border-border">
-              {chatMessages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl text-sm ${
-                    msg.role === 'user'
-                      ? 'bg-primary text-primary-foreground rounded-br-sm'
-                      : 'bg-muted text-foreground rounded-bl-sm'
-                  }`}>
-                    {msg.content}
-                  </div>
-                </div>
-              ))}
-              {chatLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-muted px-4 py-2 rounded-2xl rounded-bl-sm text-sm text-muted-foreground">
-                    Thinking...
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendChat()}
-                placeholder="Ask about attendance, leaves, performance..."
-                className="flex-1 px-4 py-2 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary text-sm"
-              />
-              <button
-                onClick={sendChat}
-                disabled={chatLoading || !chatInput.trim()}
-                className="px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition disabled:opacity-50"
-              >
-                <Send size={16} />
-              </button>
-            </div>
-          </div>
         </div>
       </main>
     </div>

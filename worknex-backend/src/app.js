@@ -51,7 +51,7 @@ const globalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: Number(process.env.AUTH_RATE_LIMIT_MAX || (process.env.NODE_ENV === 'development' ? 500 : 20)),
   message: { success: false, message: 'Too many auth attempts, please try again later' },
 });
 

@@ -74,6 +74,13 @@ const registerOrganization = async (data) => {
     const organization = await tx.organization.create({
       data: { name: orgName, slug, industry, country, phone, website },
     });
+    const adminDepartment = await tx.department.create({
+      data: {
+        organizationId: organization.id,
+        name: 'Administration',
+        description: 'Default department for organization administrators',
+      },
+    });
     const owner = await tx.user.create({
       data: {
         organizationId: organization.id,
@@ -87,6 +94,7 @@ const registerOrganization = async (data) => {
         phone: phone || null,
         joiningDate: new Date(),
         isActive: true,
+        departmentId: adminDepartment.id,
       },
       select: {
         id: true,

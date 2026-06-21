@@ -37,7 +37,6 @@ const ADMIN_MENU = [
   { label: 'Reports', href: '/dashboard/admin/reports', icon: TrendingUp },
   { label: 'Forecast', href: '/dashboard/admin/forecast', icon: Zap },
   { label: 'Attrition Risk', href: '/dashboard/admin/attrition', icon: TrendingDown },
-  { label: 'AI Assistant', href: '/dashboard/admin/ai-chat', icon: Brain },
   { label: 'ETL Pipeline', href: '/dashboard/admin/etl', icon: Database },
   { label: 'Power BI', href: '/dashboard/admin/powerbi', icon: Monitor },
   { label: 'Notifications', href: '/dashboard/admin/notifications', icon: Bell },
@@ -61,7 +60,6 @@ const EMPLOYEE_MENU = [
   { label: 'Analytics', href: '/dashboard/employee/analytics', icon: BarChart3 },
   { label: 'Performance', href: '/dashboard/employee/performance', icon: TrendingUp },
   { label: 'Forecast', href: '/dashboard/employee/forecast', icon: Sparkles },
-  { label: 'AI Assistant', href: '/dashboard/employee/assistant', icon: Brain },
   { label: 'Settings', href: '/dashboard/employee/settings', icon: Settings },
 ];
 
@@ -109,7 +107,7 @@ export default function Sidebar({ role = 'admin' }) {
       </button>
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border transition-all duration-300 ${
+      <aside className={`fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border transition-all duration-300 flex flex-col ${
         isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       } z-40`}>
         {/* Logo */}

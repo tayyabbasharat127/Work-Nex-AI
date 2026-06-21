@@ -347,14 +347,14 @@ export default function AdminUsers() {
         {/* Add/Edit Modal */}
         {showModal && (
           <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl">
-              <div className="flex items-center justify-between p-6 border-b border-border">
+            <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
+              <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
                 <h2 className="text-xl font-bold">{editingUser ? 'Edit User' : 'Add New User'}</h2>
                 <button onClick={() => setShowModal(false)} className="p-2 hover:bg-muted rounded-lg transition">
                   <X size={20} />
                 </button>
               </div>
-              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
                 <div>
                   <label className="block text-sm font-medium mb-2">Full Name</label>
                   <input
@@ -455,6 +455,7 @@ export default function AdminUsers() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
+                  {formData.role_id !== 2 && (
                   <div>
                     <label className="block text-sm font-medium mb-2">Manager</label>
                     <select
@@ -464,7 +465,7 @@ export default function AdminUsers() {
                     >
                       <option value="">No Manager</option>
                       {Array.isArray(users) && users
-                        .filter(u => [0, 1, 2].includes(u.role_id) && u.id !== editingUser?.id)
+                        .filter(u => u.role_id === 2 && u.id !== editingUser?.id)
                         .map(manager => (
                           <option key={manager.id} value={manager.id}>
                             {manager.name} ({getRoleName(manager.role_id)})
@@ -472,6 +473,7 @@ export default function AdminUsers() {
                         ))}
                     </select>
                   </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium mb-2">Joining Date</label>
                     <input

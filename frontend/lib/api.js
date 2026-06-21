@@ -1,17 +1,23 @@
 // API Configuration and Base Setup
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
-let inMemoryAccessToken = null;
+
+// Restore access token from localStorage so page refreshes don't wipe the session
+let inMemoryAccessToken = typeof window !== 'undefined'
+  ? localStorage.getItem('accessToken') || null
+  : null;
 
 // Helper function to get auth token
 export const getAuthToken = () => {
   return inMemoryAccessToken;
 };
 
-// Helper function to set tokens
-const setTokens = (token) => {
-  inMemoryAccessToken = token || null;
+// Persist both tokens so they survive page refreshes
+const setTokens = (accessToken, refreshToken) => {
+  inMemoryAccessToken = accessToken || null;
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('token');
+    if (accessToken) localStorage.setItem('accessToken', accessToken);
+    else localStorage.removeItem('accessToken');
+    if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
   }
 };
 
@@ -38,7 +44,8 @@ const clearPending2FA = () => {
 const clearTokens = () => {
   inMemoryAccessToken = null;
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     localStorage.removeItem('pending2FAUserId');
   }
@@ -62,47 +69,39 @@ async function apiFetch(endpoint, options = {}) {
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
     
-    // Handle 401 Unauthorized - try to refresh token
+    // Handle 401 — attempt silent token refresh then retry
     if (response.status === 401 && !skipAuthRefresh && endpoint !== '/auth/refresh-token') {
-      {
-        try {
-          const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-          });
-          
-          if (refreshResponse.ok) {
-            const refreshJson = await refreshResponse.json();
-            const newToken = refreshJson.data?.accessToken || refreshJson.accessToken || refreshJson.token;
-            if (!newToken) {
-              throw new Error('Token refresh response missing access token');
-            }
-            setTokens(newToken);
-            
-            // Retry original request with new token
-            config.headers.Authorization = `Bearer ${newToken}`;
-            const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, config);
-            const retryData = await retryResponse.json();
-            
-            if (!retryResponse.ok) {
-              throw new Error(retryData.message || 'Request failed');
-            }
-            
-            return retryData;
-          } else {
-            clearTokens();
-            if (typeof window !== 'undefined') {
-              window.location.href = '/login';
-            }
-          }
-        } catch (error) {
+      try {
+        const storedRefreshToken = typeof window !== 'undefined'
+          ? localStorage.getItem('refreshToken')
+          : null;
+        const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ refreshToken: storedRefreshToken }),
+        });
+
+        if (refreshResponse.ok) {
+          const refreshJson = await refreshResponse.json();
+          const newAccessToken = refreshJson.data?.accessToken || refreshJson.accessToken;
+          const newRefreshToken = refreshJson.data?.refreshToken || refreshJson.refreshToken;
+          if (!newAccessToken) throw new Error('Token refresh missing access token');
+          setTokens(newAccessToken, newRefreshToken);
+
+          config.headers.Authorization = `Bearer ${newAccessToken}`;
+          const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, config);
+          const retryData = await retryResponse.json();
+          if (!retryResponse.ok) throw new Error(retryData.message || 'Request failed');
+          return retryData;
+        } else {
           clearTokens();
-          if (typeof window !== 'undefined') {
-            window.location.href = '/login';
-          }
-          throw error;
+          if (typeof window !== 'undefined') window.location.href = '/login';
         }
+      } catch (error) {
+        clearTokens();
+        if (typeof window !== 'undefined') window.location.href = '/login';
+        throw error;
       }
     }
 
@@ -194,7 +193,7 @@ export const authAPI = {
       setPending2FAUserId(data.data.userId);
     } else if (data.data && data.data.accessToken) {
       clearPending2FA();
-      setTokens(data.data.accessToken);
+      setTokens(data.data.accessToken, data.data.refreshToken);
       if (typeof window !== 'undefined') {
         localStorage.setItem('user', JSON.stringify(data.data.user));
       }
@@ -283,14 +282,15 @@ export const authAPI = {
   },
   
   logout: async () => {
-    const token = getAuthToken();
+    const storedRefreshToken = typeof window !== 'undefined'
+      ? localStorage.getItem('refreshToken')
+      : null;
     try {
-      if (token) {
-        await apiFetch('/auth/logout', {
-          method: 'POST',
-          skipAuthRefresh: true,
-        });
-      }
+      await apiFetch('/auth/logout', {
+        method: 'POST',
+        skipAuthRefresh: true,
+        body: JSON.stringify({ refreshToken: storedRefreshToken }),
+      });
     } catch {
       // Local logout should still complete if the server session is already invalid.
     } finally {
@@ -516,7 +516,7 @@ export const userAPI = {
   create: async (userData) => {
     // Transform frontend data to backend format
     const [firstName, ...lastNameParts] = (userData.name || '').split(' ');
-    const lastName = lastNameParts.join(' ') || 'User';
+    const lastName = lastNameParts.join(' ') || '';
     
     // Map role_id to role string
     const roleMap = {
@@ -544,7 +544,7 @@ export const userAPI = {
     
     const backendData = {
       email: userData.email.trim(),
-      firstName: userData.firstName || firstName || 'User',
+      firstName: userData.firstName || firstName || '',
       lastName: userData.lastName || lastName,
       employeeId: employeeId,
       role: userData.role || roleMap[userData.role_id] || 'EMPLOYEE',

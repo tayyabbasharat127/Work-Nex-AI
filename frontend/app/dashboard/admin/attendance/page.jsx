@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { Search, Download, Calendar, UserCheck, UserX, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { attendanceAPI } from '@/lib/api';
+import { attendanceAPI, organizationSettingsAPI } from '@/lib/api';
 import { toast } from 'sonner';
+import { Settings } from 'lucide-react';
 
 const localDateInputValue = (date = new Date()) => {
   const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
@@ -27,6 +28,7 @@ export default function AdminAttendance() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [ipConfigured, setIpConfigured] = useState(true);
   const itemsPerPage = 8;
 
   const statusLabel = (status) => (status || '').replace('_', ' ');
@@ -45,6 +47,11 @@ export default function AdminAttendance() {
 
   useEffect(() => {
     loadAttendance();
+    organizationSettingsAPI.get().then((settings) => {
+      const ranges = settings?.officeIpRanges;
+      const hasRanges = Array.isArray(ranges) ? ranges.length > 0 : !!ranges;
+      setIpConfigured(settings?.wifiVerificationEnabled === true && hasRanges);
+    }).catch(() => setIpConfigured(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
@@ -160,6 +167,25 @@ export default function AdminAttendance() {
         </div>
 
         <div className="p-6 space-y-6">
+          {!ipConfigured && (
+            <div className="flex items-start gap-3 px-5 py-4 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-400">
+              <AlertTriangle size={20} className="flex-shrink-0 mt-0.5" />
+              <div className="flex-1 text-sm">
+                <p className="font-semibold">IP-based attendance is not configured</p>
+                <p className="text-amber-400/80 mt-0.5">
+                  Attendance is being recorded without network verification. Configure your office IP ranges to enforce location-based check-in.
+                </p>
+              </div>
+              <a
+                href="/dashboard/admin/settings"
+                className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-medium transition"
+              >
+                <Settings size={13} />
+                Configure Now
+              </a>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {stats.map((stat, index) => {
               const Icon = stat.icon;

@@ -1,3 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+*.egg-info/
+
 # Node
 node_modules/
 npm-debug.log*
@@ -15,6 +25,13 @@ yarn-error.log*
 dist/
 build/
 .next/
+
+# Log files
+*.log
+*.err.log
+*.out.log
+logs/
+reports/*.log
 
 # OS
 .DS_Store

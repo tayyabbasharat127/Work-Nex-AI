@@ -4,3 +4,4 @@ logs/*.log
 gcp-key.json
 dist/
 .DS_Store
+exports/

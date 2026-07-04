@@ -1,0 +1,18 @@
+{
+  "modelVersion": "performance-rf-v1",
+  "modelType": "RandomForestRegressor",
+  "features": [
+    "attendanceRate",
+    "lateCount",
+    "absenceCount",
+    "leaveCount",
+    "averageWorkingHours",
+    "previousPerformanceScore",
+    "departmentAverage",
+    "overtimeHours",
+    "halfDayCount"
+  ],
+  "rows": 350,
+  "r2Score": 0.7272,
+  "fallback": false
+}

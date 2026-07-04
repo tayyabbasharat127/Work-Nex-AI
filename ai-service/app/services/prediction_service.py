@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import joblib
 import pickle
 from pathlib import Path
 from typing import Any
@@ -87,7 +88,6 @@ def predict_performance(employee_id: str, features: dict[str, Any]) -> dict[str,
     if MODEL_PATH.exists():
         try:
             try:
-                import joblib
                 artifact = joblib.load(MODEL_PATH)
             except Exception:
                 with open(MODEL_PATH, "rb") as handle:

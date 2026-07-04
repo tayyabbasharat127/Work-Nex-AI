@@ -17,15 +17,10 @@ class Settings:
     # AI Provider: "statistical" | "langchain"
     AI_PROVIDER: str = os.getenv("AI_PROVIDER", "statistical")
 
-    # LLM API keys — priority order: Groq → OpenAI → Gemini → Anthropic → Ollama
-    GROK_API_KEY: str = os.getenv("GROK_API_KEY", "").strip()   # Groq (fast + free)
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "").strip()
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "").strip()
-    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "").strip()
-
-    # Ollama (local, free)
-    OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.2")
+    # LLM API key — OpenRouter (gpt-4o-mini) only
+    OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "").strip()
+    OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip()
+    OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini").strip()
 
     # LangChain config
     LANGCHAIN_VERBOSE: bool = os.getenv("LANGCHAIN_VERBOSE", "false").lower() == "true"

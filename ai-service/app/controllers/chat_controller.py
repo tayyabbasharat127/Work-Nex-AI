@@ -63,13 +63,7 @@ async def chat_status():
     from app.services.langchain_agent import is_langchain_ready
     from app.core.config import settings
     lc_ready = is_langchain_mode() and is_langchain_ready()
-    provider = (
-        "groq"      if settings.GROK_API_KEY       else
-        "openai"    if settings.OPENAI_API_KEY      else
-        "gemini"    if settings.GEMINI_API_KEY      else
-        "anthropic" if settings.ANTHROPIC_API_KEY   else
-        "ollama"    if settings.OLLAMA_BASE_URL      else "none"
-    )
+    provider = "openrouter" if settings.OPENROUTER_API_KEY else "none"
     return {
         "mode": "langchain" if lc_ready else "statistical",
         "langchainReady": lc_ready,

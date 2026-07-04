@@ -17,7 +17,31 @@
       "Bash(Test-Path \"c:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\Work-Nex-AI\\\\frontend\\\\node_modules\")",
       "Bash(Test-Path \"c:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\Work-Nex-AI\\\\worknex-backend\\\\.env\")",
       "Bash(Test-Path \"c:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\Work-Nex-AI\\\\ai-service\\\\.env\")",
-      "Bash(Get-Content \"c:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\Work-Nex-AI\\\\ai-service\\\\run.py\" -TotalCount 10)"
+      "Bash(Get-Content \"c:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\Work-Nex-AI\\\\ai-service\\\\run.py\" -TotalCount 10)",
+      "Bash(npm install *)",
+      "Bash(npx prisma *)",
+      "PowerShell(Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -eq 5432 } | Select-Object LocalAddress, LocalPort, OwningProcess)",
+      "PowerShell(Get-Process -Name postgres -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-NetTCPConnection -State Listen)",
+      "Bash(npm run *)",
+      "Bash(test -d venv -o -d .venv)",
+      "Bash(python -m venv venv)",
+      "Bash(\"venv/Scripts/pip.exe\" install *)",
+      "Bash(timeout 15 node server.js)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 8010 -State Listen -ErrorAction SilentlyContinue)",
+      "Bash(netstat -ano)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 8010 -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Process node -ErrorAction SilentlyContinue)",
+      "Bash(npx eslint *)",
+      "Bash(curl -s -X POST http://localhost:8000/chat -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(taskkill //F //IM python.exe //FI \"WINDOWTITLE eq *uvicorn*\")",
+      "Bash(awk '{print $5}')",
+      "PowerShell(Stop-Process -Id 18960 -Force -ErrorAction SilentlyContinue)",
+      "Bash(timeout 8 \"venv/Scripts/python.exe\" -m uvicorn app.main:app --port 8000)",
+      "Bash(curl -s http://localhost:8000/chat/status)",
+      "Bash(curl -s -X POST http://localhost:5000/api/v1/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"zaid.khan@novapay.pk\",\"password\":\"NovaPay@2025\"}' -c /tmp/cookies.txt)",
+      "Bash(curl -s http://localhost:5000/api/v1/analytics/powerbi/embed-token -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI0NTM4ZmQzNy04MWMxLTQ3OGYtYTE1ZC1iZGEwZTZiZWNlYTgiLCJyb2xlIjoiU1VQRVJfQURNSU4iLCJvcmdhbml6YXRpb25JZCI6Im9yZy11dWlkLW5vdmFwYXkiLCJpYXQiOjE3ODMxODAzMjEsImV4cCI6MTc4Mzc4NTEyMX0.c93lxx2VUz6OV3by3il98EBrKtlUf6ch5SnEjXP5RiQ')",
+      "Bash(npm test *)"
     ]
   }
 }

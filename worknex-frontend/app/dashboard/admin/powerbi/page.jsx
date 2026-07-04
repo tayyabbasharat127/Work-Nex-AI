@@ -1,10 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Sidebar from '@/components/Sidebar';
 import { analyticsAPI } from '@/lib/api';
 import { AlertCircle, BarChart3, RefreshCw, TrendingUp, Users, CalendarX, Clock } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+
+const PowerBIEmbed = dynamic(
+  () => import('powerbi-client-react').then((module) => module.PowerBIEmbed),
+  { ssr: false }
+);
 
 const demoKpis = [
   { label: 'Headcount', value: '128', detail: '+12 this quarter', icon: Users },
@@ -38,7 +44,6 @@ const departmentPerformance = [
 ];
 
 export default function PowerBIPage() {
-  const reportRef = useRef(null);
   const [config, setConfig] = useState(null);
   const [status, setStatus] = useState('loading');
   const [message, setMessage] = useState('');
@@ -47,29 +52,15 @@ export default function PowerBIPage() {
     setStatus('loading');
     setMessage('');
     try {
-      const data = await analyticsAPI.getPowerBIToken();
+      const data = await analyticsAPI.getPowerBIEmbedToken();
       setConfig(data);
-      if (!data?.accessToken || !data?.embedUrl || !data?.reportId) {
+      if (!data?.embedToken || !data?.embedUrl || !data?.reportId) {
         setStatus('setup');
         setMessage('Power BI credentials are present, but POWERBI_REPORT_ID or POWERBI_EMBED_URL is missing.');
         return;
       }
 
-      const powerbi = typeof window !== 'undefined' ? window.powerbi : null;
-      if (powerbi?.embed && powerbi?.models) {
-        powerbi.embed(reportRef.current, {
-          type: 'report',
-          id: data.reportId,
-          embedUrl: data.embedUrl,
-          accessToken: data.accessToken,
-          tokenType: powerbi.models.TokenType.Embed,
-          settings: { panes: { filters: { visible: false }, pageNavigation: { visible: true } } },
-        });
-        setStatus('embedded');
-      } else {
-        setStatus('setup');
-        setMessage('Install/load powerbi-client in the frontend to render the embedded report. The backend token route is configured.');
-      }
+      setStatus('embedded');
     } catch (err) {
       setConfig(null);
       setStatus('setup');
@@ -128,9 +119,23 @@ export default function PowerBIPage() {
             </div>
           )}
 
-          <div className={status === 'embedded' ? 'h-[720px] rounded-xl border border-border bg-card overflow-hidden' : 'hidden'}>
-            <div ref={reportRef} className="w-full h-full" />
-          </div>
+          {status === 'embedded' && config && (
+            <div className="h-[70dvh] min-h-[420px] rounded-xl border border-border bg-card overflow-hidden">
+              <PowerBIEmbed
+                embedConfig={{
+                  type: 'report',
+                  id: config.reportId,
+                  embedUrl: config.embedUrl,
+                  accessToken: config.embedToken,
+                  tokenType: 1,
+                  settings: {
+                    panes: { filters: { visible: false }, pageNavigation: { visible: true } },
+                  },
+                }}
+                cssClassName="w-full h-full"
+              />
+            </div>
+          )}
 
           {status !== 'embedded' && status !== 'loading' && (
             <>

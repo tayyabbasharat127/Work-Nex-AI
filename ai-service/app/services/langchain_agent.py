@@ -16,7 +16,7 @@ How it works:
     → Agent picks get_my_leave_balances
     → Calls GET /leave/balances/me with Ahmed's JWT
     → Returns Ahmed's exact remaining balances
-    → Gemini formats: "You have 17 Annual, 8 Sick, 10 Casual days remaining."
+    → GPT-4o-mini formats: "You have 17 Annual, 8 Sick, 10 Casual days remaining."
 """
 from __future__ import annotations
 
@@ -49,41 +49,16 @@ _user_role:  ContextVar[str] = ContextVar("user_role",  default="EMPLOYEE")
 # LLM factory — first available provider wins
 # ---------------------------------------------------------------------------
 def build_llm() -> Optional[BaseChatModel]:
-    # Groq — fastest free LLM, checked first
-    if settings.GROK_API_KEY:
-        from langchain_groq import ChatGroq
-        model = settings.LANGCHAIN_MODEL or "llama-3.3-70b-versatile"
-        logger.info("LLM: Groq %s", model)
-        return ChatGroq(model=model, api_key=settings.GROK_API_KEY, temperature=0.2)
-
-    if settings.OPENAI_API_KEY:
+    if settings.OPENROUTER_API_KEY:
         from langchain_openai import ChatOpenAI
-        model = settings.LANGCHAIN_MODEL or "gpt-4o-mini"
-        logger.info("LLM: OpenAI %s", model)
-        return ChatOpenAI(model=model, api_key=settings.OPENAI_API_KEY, temperature=0.2)
-
-    if settings.GEMINI_API_KEY:
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        model = settings.LANGCHAIN_MODEL or "gemini-1.5-flash"
-        logger.info("LLM: Gemini %s", model)
-        return ChatGoogleGenerativeAI(
-            model=model, google_api_key=settings.GEMINI_API_KEY, temperature=0.2,
+        model = settings.LANGCHAIN_MODEL or settings.OPENROUTER_MODEL
+        logger.info("LLM: OpenRouter %s", model)
+        return ChatOpenAI(
+            model=model,
+            api_key=settings.OPENROUTER_API_KEY,
+            base_url=settings.OPENROUTER_BASE_URL,
+            temperature=0.2,
         )
-
-    if settings.ANTHROPIC_API_KEY:
-        from langchain_anthropic import ChatAnthropic
-        model = settings.LANGCHAIN_MODEL or "claude-haiku-4-5-20251001"
-        logger.info("LLM: Anthropic %s", model)
-        return ChatAnthropic(model=model, api_key=settings.ANTHROPIC_API_KEY, temperature=0.2)
-
-    if settings.OLLAMA_BASE_URL:
-        try:
-            from langchain_ollama import ChatOllama
-            model = settings.LANGCHAIN_MODEL or settings.OLLAMA_MODEL
-            logger.info("LLM: Ollama %s", model)
-            return ChatOllama(model=model, base_url=settings.OLLAMA_BASE_URL, temperature=0.2)
-        except ImportError:
-            logger.warning("langchain-ollama not installed")
     return None
 
 
@@ -370,7 +345,7 @@ async def run_agent(
         return {
             "answer": (
                 "LangChain agent not configured. "
-                "Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY in ai-service/.env"
+                "Set OPENROUTER_API_KEY in ai-service/.env"
             ),
             "sources": [], "confidence": 0.0, "actions": [], "fallback": True,
         }
@@ -414,8 +389,4 @@ async def run_agent(
 
 
 def is_langchain_ready() -> bool:
-    return bool(
-        settings.GROK_API_KEY or settings.OPENAI_API_KEY
-        or settings.GEMINI_API_KEY or settings.ANTHROPIC_API_KEY
-        or settings.OLLAMA_BASE_URL
-    )
+    return bool(settings.OPENROUTER_API_KEY)

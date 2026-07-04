@@ -71,7 +71,9 @@ export default function Sidebar({ role = 'admin' }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem('user');
-      if (raw) setUser(JSON.parse(raw));
+      if (!raw) return;
+      const storedUser = JSON.parse(raw);
+      queueMicrotask(() => setUser(storedUser));
     } catch {
       // ignore corrupt data
     }
@@ -100,13 +102,14 @@ export default function Sidebar({ role = 'admin' }) {
       {/* Mobile Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-primary text-primary-foreground"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-primary text-primary-foreground shadow-lg shadow-black/20"
+        aria-label={isOpen ? 'Close navigation' : 'Open navigation'}
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border transition-all duration-300 ${
+      <aside className={`fixed left-0 top-0 flex h-dvh w-[min(18rem,82vw)] md:w-64 flex-col overflow-hidden bg-sidebar border-r border-sidebar-border transition-all duration-300 ${
         isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       } z-40`}>
         {/* Logo */}
@@ -137,7 +140,7 @@ export default function Sidebar({ role = 'admin' }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-4">
+        <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 scrollbar-subtle">
           <ul className="space-y-2">
             {menuItems.map((item) => {
               const Icon = item.icon;

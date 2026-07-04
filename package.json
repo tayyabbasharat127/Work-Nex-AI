@@ -15,7 +15,7 @@
     "db:reset": "cd worknex-backend && npm.cmd run db:reset",
     "db:seed": "cd worknex-backend && npm.cmd run db:seed",
     "db:preflight": "cd worknex-backend && npm.cmd run db:preflight",
-    "lint": "cd frontend && npm.cmd run lint",
-    "build": "cd frontend && npm.cmd run build"
+    "lint": "cd worknex-frontend && npm.cmd run lint",
+    "build": "cd worknex-frontend && npm.cmd run build"
   }
 }

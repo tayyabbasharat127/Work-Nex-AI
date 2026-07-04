@@ -94,7 +94,7 @@ export default function AIChatPage() {
         </div>
 
         {/* Quick Prompts */}
-        <div className="px-4 py-3 border-b border-border bg-card/50 overflow-x-auto">
+        <div className="px-4 py-3 border-b border-border bg-card/50 overflow-x-auto scrollbar-none">
           <div className="flex gap-2 min-w-max">
             {QUICK_PROMPTS.map((prompt, i) => (
               <button key={i} onClick={() => sendMessage(prompt)}
@@ -106,7 +106,7 @@ export default function AIChatPage() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-none">
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'assistant' && (

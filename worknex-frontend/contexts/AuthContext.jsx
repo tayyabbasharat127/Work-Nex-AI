@@ -29,38 +29,51 @@ export function AuthProvider({ children }) {
   //    closed/reopened — use the HttpOnly refresh cookie to get a fresh token.
   // 4. If refresh also fails the session truly expired → send to login.
   useEffect(() => {
-    const storedUser = readStoredUser();
+    let active = true;
 
-    if (!storedUser) {
-      // No stored session at all — nothing to restore.
-      setInit(true);
-      return;
-    }
+    async function restoreSession() {
+      await Promise.resolve();
+      if (!active) return;
 
-    const hasToken = Boolean(
-      typeof window !== 'undefined' && sessionStorage.getItem('wn_access_token')
-    );
+      const storedUser = readStoredUser();
 
-    if (hasToken) {
-      // Token is already in sessionStorage (same tab refresh) — restore immediately.
-      setUser(storedUser);
-      setInit(true);
-      return;
-    }
-
-    // Tab was reopened or token missing — try the refresh cookie.
-    authAPI.refreshToken()
-      .then(() => {
-        setUser(storedUser);
-      })
-      .catch(() => {
-        // Refresh cookie expired or missing — true session expiry.
-        localStorage.removeItem('user');
-        setUser(null);
-      })
-      .finally(() => {
+      if (!storedUser) {
+        // No stored session at all — nothing to restore.
         setInit(true);
-      });
+        return;
+      }
+
+      const hasToken = Boolean(
+        typeof window !== 'undefined' && sessionStorage.getItem('wn_access_token')
+      );
+
+      if (hasToken) {
+        // Token is already in sessionStorage (same tab refresh) — restore immediately.
+        setUser(storedUser);
+        setInit(true);
+        return;
+      }
+
+      // Tab was reopened or token missing — try the refresh cookie.
+      authAPI.refreshToken()
+        .then(() => {
+          if (active) setUser(storedUser);
+        })
+        .catch(() => {
+          // Refresh cookie expired or missing — true session expiry.
+          localStorage.removeItem('user');
+          if (active) setUser(null);
+        })
+        .finally(() => {
+          if (active) setInit(true);
+        });
+    }
+
+    restoreSession();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   // ── Auth actions ───────────────────────────────────────────────────────────

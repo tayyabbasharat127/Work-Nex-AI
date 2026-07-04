@@ -417,7 +417,7 @@ function Testimonials() {
               <div className="flex gap-1 mb-4">
                 {[...Array(5)].map((_, j) => <Star key={j} size={12} className="text-amber-400 fill-amber-400" />)}
               </div>
-              <p className="text-white/60 text-sm leading-relaxed mb-5">"{quote}"</p>
+              <p className="text-white/60 text-sm leading-relaxed mb-5">&quot;{quote}&quot;</p>
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
                   <span className="text-white text-xs font-bold">{avatar}</span>

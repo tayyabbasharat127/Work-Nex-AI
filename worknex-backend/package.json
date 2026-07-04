@@ -20,9 +20,11 @@
     "db:setup": "prisma validate && prisma generate && prisma migrate deploy",
     "db:seed": "node prisma/seed.js",
     "db:preflight": "node scripts/db-preflight.js",
+    "powerbi:demo:sara": "node scripts/update-sara-powerbi-demo.js",
+    "powerbi:export": "node scripts/export-powerbi-csv.js",
     "leave:backfill-defaults": "node scripts/backfill-default-leave-policies.js",
-    "test": "node_modules/.bin/jest --testPathPattern=src/__tests__ --forceExit",
-    "test:watch": "node_modules/.bin/jest --testPathPattern=src/__tests__ --watch"
+    "test": "jest --testPathPattern=src/__tests__ --forceExit",
+    "test:watch": "jest --testPathPattern=src/__tests__ --watch"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

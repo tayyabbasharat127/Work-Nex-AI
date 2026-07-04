@@ -133,10 +133,268 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-size: 18px;
+    font-size: clamp(16px, 1.8vw, 18px);
     line-height: 1.6;
+    overflow-x: hidden;
   }
   html {
-    font-size: 18px;
+    font-size: clamp(16px, 1.8vw, 18px);
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-subtle {
+    scrollbar-color: color-mix(in oklch, var(--sidebar-foreground) 28%, transparent) transparent;
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-thumb {
+    background: color-mix(in oklch, var(--sidebar-foreground) 28%, transparent);
+    border-radius: 999px;
+  }
+}
+
+@layer components {
+  .dashboard-shell {
+    min-width: 0;
+    overflow-x: clip;
+  }
+
+  .dashboard-shell main {
+    min-width: 0;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .dashboard-shell img,
+  .dashboard-shell video,
+  .dashboard-shell canvas,
+  .dashboard-shell svg {
+    max-width: 100%;
+  }
+
+  .dashboard-shell table {
+    border-collapse: collapse;
+  }
+
+  @supports selector(:has(*)) {
+    .dashboard-shell [class*="overflow-hidden"]:has(table) {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-shell [class~="h-screen"] {
+    height: 100dvh;
+  }
+
+  .dashboard-shell main {
+    width: 100%;
+  }
+
+  .dashboard-shell main > [class*="sticky"][class*="top-0"] {
+    padding: 1rem 1rem 1rem 4.25rem;
+  }
+
+  .dashboard-shell main > [class*="sticky"][class*="top-0"] > [class*="flex"] {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-shell main > [class*="p-6"],
+  .dashboard-shell main [class*=" p-6"],
+  .dashboard-shell main [class^="p-6"] {
+    padding: 1rem;
+  }
+
+  .dashboard-shell main [class*="px-6"] {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .dashboard-shell main [class*="py-6"] {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .dashboard-shell main [class*="gap-6"] {
+    gap: 1rem;
+  }
+
+  .dashboard-shell main [class*="gap-4"] {
+    gap: 0.875rem;
+  }
+
+  .dashboard-shell main [class*="space-y-6"] > :not([hidden]) ~ :not([hidden]) {
+    --tw-space-y-reverse: 0;
+    margin-top: calc(1rem * calc(1 - var(--tw-space-y-reverse)));
+    margin-bottom: calc(1rem * var(--tw-space-y-reverse));
+  }
+
+  .dashboard-shell h1,
+  .dashboard-shell [class*="text-3xl"] {
+    font-size: clamp(1.35rem, 8vw, 1.875rem);
+    line-height: 1.16;
+  }
+
+  .dashboard-shell h2,
+  .dashboard-shell [class*="text-2xl"] {
+    font-size: clamp(1.15rem, 6vw, 1.5rem);
+    line-height: 1.2;
+  }
+
+  .dashboard-shell p,
+  .dashboard-shell span,
+  .dashboard-shell label,
+  .dashboard-shell input,
+  .dashboard-shell select,
+  .dashboard-shell textarea,
+  .dashboard-shell button {
+    min-width: 0;
+  }
+
+  .dashboard-shell button,
+  .dashboard-shell a,
+  .dashboard-shell input,
+  .dashboard-shell select,
+  .dashboard-shell textarea {
+    max-width: 100%;
+  }
+
+  .dashboard-shell input,
+  .dashboard-shell select,
+  .dashboard-shell textarea {
+    font-size: 16px;
+  }
+
+  .dashboard-shell [class*="flex"] > input,
+  .dashboard-shell [class*="flex"] > select,
+  .dashboard-shell [class*="flex"] > textarea,
+  .dashboard-shell [class*="flex"] > button {
+    min-width: 0;
+  }
+
+  .dashboard-shell [class*="flex"][class*="gap-3"] > select,
+  .dashboard-shell [class*="flex"][class*="gap-4"] > select,
+  .dashboard-shell [class*="flex"][class*="gap-3"] > input,
+  .dashboard-shell [class*="flex"][class*="gap-4"] > input {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .dashboard-shell [class*="grid-cols-2"],
+  .dashboard-shell [class*="grid-cols-3"],
+  .dashboard-shell [class*="grid-cols-4"],
+  .dashboard-shell [class*="md:grid-cols-2"],
+  .dashboard-shell [class*="md:grid-cols-3"],
+  .dashboard-shell [class*="md:grid-cols-4"],
+  .dashboard-shell [class*="lg:grid-cols-2"],
+  .dashboard-shell [class*="lg:grid-cols-3"],
+  .dashboard-shell [class*="lg:grid-cols-4"],
+  .dashboard-shell [class*="xl:grid-cols-3"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-shell [class*="md:flex-row"],
+  .dashboard-shell [class*="lg:flex-row"] {
+    flex-direction: column;
+  }
+
+  .dashboard-shell [class*="justify-between"] {
+    gap: 0.875rem;
+  }
+
+  .dashboard-shell [class*="max-w-"],
+  .dashboard-shell [class*="max-w-lg"],
+  .dashboard-shell [class*="max-w-xl"],
+  .dashboard-shell [class*="max-w-2xl"],
+  .dashboard-shell [class*="max-w-3xl"],
+  .dashboard-shell [class*="max-w-4xl"],
+  .dashboard-shell [class*="max-w-5xl"] {
+    max-width: 100%;
+  }
+
+  .dashboard-shell [class*="min-w-["] {
+    min-width: 0;
+  }
+
+  .dashboard-shell [class*="overflow-x-auto"],
+  .dashboard-shell [class*="overflow-auto"] {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dashboard-shell [class*="overflow-hidden"]:has(table) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dashboard-shell table {
+    min-width: 680px;
+    font-size: 0.875rem;
+  }
+
+  .dashboard-shell th,
+  .dashboard-shell td {
+    padding: 0.75rem 1rem;
+    white-space: nowrap;
+  }
+
+  .dashboard-shell td:first-child,
+  .dashboard-shell th:first-child {
+    white-space: normal;
+  }
+
+  .dashboard-shell [class*="rounded-2xl"],
+  .dashboard-shell [class*="rounded-xl"] {
+    border-radius: 0.75rem;
+  }
+
+  .dashboard-shell [class*="h-64"],
+  .dashboard-shell [class*="h-56"],
+  .dashboard-shell [class*="h-48"] {
+    height: 16rem;
+  }
+
+  .dashboard-shell [class*="fixed"][class*="inset-0"] {
+    align-items: flex-start;
+    overflow-y: auto;
+    padding: 1rem;
+  }
+
+  .dashboard-shell [class*="fixed"][class*="inset-0"] > [class*="max-w-"] {
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    width: 100%;
+  }
+
+  .dashboard-shell [class*="shadow-2xl"] {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 420px) and (max-width: 767px) {
+  .dashboard-shell [class*="grid-cols-2"].mobile-keep-two,
+  .dashboard-shell [class*="md:grid-cols-4"].mobile-keep-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

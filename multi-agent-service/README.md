@@ -273,10 +273,10 @@ OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=qwen3.5:9b
 OPENROUTER_API_KEY=
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-OPENROUTER_MODEL=openrouter/auto
+OPENROUTER_MODEL=openai/gpt-4o-mini
 OPENROUTER_HTTP_REFERER=http://localhost:3000
 OPENROUTER_APP_NAME=WorkNex Multi-Agent Service
-OPENROUTER_MAX_TOKENS=
+OPENROUTER_MAX_TOKENS=800
 OPENAI_API_KEY=
 OPENAI_CHAT_MODEL=gpt-4o-mini
 ANTHROPIC_API_KEY=
@@ -329,7 +329,8 @@ To use OpenRouter:
 ```env
 LLM_PROVIDER=openrouter
 OPENROUTER_API_KEY=your_openrouter_key
-OPENROUTER_MODEL=openrouter/auto
+OPENROUTER_MODEL=openai/gpt-4o-mini
+OPENROUTER_MAX_TOKENS=800
 ```
 
 ## LangSmith tracing

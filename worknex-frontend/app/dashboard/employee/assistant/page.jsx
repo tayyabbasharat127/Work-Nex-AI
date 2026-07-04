@@ -56,7 +56,7 @@ export default function EmployeeAssistantPage() {
                 </div>
               </div>
 
-              <div className="h-[58vh] overflow-y-auto p-4 space-y-4">
+              <div className="h-[58vh] overflow-y-auto p-4 space-y-4 scrollbar-none">
                 {messages.map((message, index) => (
                   <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[82%] rounded-lg p-4 text-sm ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>

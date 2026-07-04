@@ -16,5 +16,5 @@ export default function DashboardLayout({ children }) {
     };
   }, []);
 
-  return <>{children}</>;
+  return <div className="dashboard-shell">{children}</div>;
 }

@@ -10,11 +10,9 @@
     "memory:setup": "node scripts/setup-memory-db.js"
   },
   "dependencies": {
-    "@langchain/anthropic": "^0.3.0",
     "@langchain/core": "^0.3.0",
     "@langchain/langgraph": "^0.2.0",
     "@langchain/langgraph-checkpoint-postgres": "^0.0.5",
-    "@langchain/ollama": "^0.2.4",
     "@langchain/openai": "^0.5.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",

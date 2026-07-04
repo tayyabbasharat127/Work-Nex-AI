@@ -246,17 +246,17 @@ async def _llm_extract(text: str) -> Optional[dict]:
     """Attempt LLM extraction. Returns None if no LLM available."""
     try:
         from app.core.config import settings
-        if not settings.GROQ_API_KEY and not settings.OPENAI_API_KEY:
+        if not settings.OPENROUTER_API_KEY:
             return None
 
         from langchain_core.messages import HumanMessage, SystemMessage
-
-        if settings.GROQ_API_KEY:
-            from langchain_groq import ChatGroq
-            llm = ChatGroq(api_key=settings.GROQ_API_KEY, model_name="llama3-8b-8192", temperature=0)
-        else:
-            from langchain_openai import ChatOpenAI
-            llm = ChatOpenAI(api_key=settings.OPENAI_API_KEY, model="gpt-3.5-turbo", temperature=0)
+        from langchain_openai import ChatOpenAI
+        llm = ChatOpenAI(
+            api_key=settings.OPENROUTER_API_KEY,
+            base_url=settings.OPENROUTER_BASE_URL,
+            model=settings.OPENROUTER_MODEL,
+            temperature=0,
+        )
 
         response = await llm.ainvoke([
             SystemMessage(content=_LLM_SYSTEM),

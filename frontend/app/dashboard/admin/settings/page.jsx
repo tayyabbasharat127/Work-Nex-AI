@@ -66,6 +66,14 @@ export default function AdminSettings() {
 
   const update = (key, value) => setSettings((prev) => ({ ...prev, [key]: value }));
 
+  // For nested objects (workingHours, lateThreshold, attendancePolicy):
+  // merges against the LATEST state via the setState updater, not a
+  // `settings.xxx` value captured in the render closure. `<input type="time">`
+  // fires onChange per segment (hour, then minute) — using the closure value
+  // let a fast second edit clobber the first because it spread a stale
+  // `settings.attendancePolicy` that hadn't caught up yet.
+  const updateNested = (key, patch) => setSettings((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -119,18 +127,18 @@ export default function AdminSettings() {
                   <Section title="Attendance">
                     <div className="grid grid-cols-2 gap-4">
                       <Field label="Work Start">
-                        <input type="time" value={settings.workingHours?.start || '09:00'} onChange={(event) => update('workingHours', { ...settings.workingHours, start: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                        <input type="time" value={settings.workingHours?.start || '09:00'} onChange={(event) => updateNested('workingHours', { start: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
                       </Field>
                       <Field label="Work End">
-                        <input type="time" value={settings.workingHours?.end || '17:00'} onChange={(event) => update('workingHours', { ...settings.workingHours, end: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                        <input type="time" value={settings.workingHours?.end || '17:00'} onChange={(event) => updateNested('workingHours', { end: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
                       </Field>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <Field label="Late Hour">
-                        <input type="number" value={settings.lateThreshold?.hour ?? 9} onChange={(event) => update('lateThreshold', { ...settings.lateThreshold, hour: Number(event.target.value) })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                        <input type="number" value={settings.lateThreshold?.hour ?? 9} onChange={(event) => updateNested('lateThreshold', { hour: Number(event.target.value) })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
                       </Field>
                       <Field label="Late Minute">
-                        <input type="number" value={settings.lateThreshold?.minute ?? 30} onChange={(event) => update('lateThreshold', { ...settings.lateThreshold, minute: Number(event.target.value) })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                        <input type="number" value={settings.lateThreshold?.minute ?? 30} onChange={(event) => updateNested('lateThreshold', { minute: Number(event.target.value) })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
                       </Field>
                     </div>
                     <Field label="Office IP Ranges">
@@ -142,10 +150,10 @@ export default function AdminSettings() {
                     </label>
                     <div className="grid grid-cols-2 gap-4">
                       <Field label="Office Window Start" hint="Reporting only — flags punches outside this range, never blocks a check-in">
-                        <input type="time" value={settings.attendancePolicy?.workWindowStart || ''} onChange={(event) => update('attendancePolicy', { ...settings.attendancePolicy, workWindowStart: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                        <input type="time" value={settings.attendancePolicy?.workWindowStart || ''} onChange={(event) => updateNested('attendancePolicy', { workWindowStart: event.target.value })} className="time-picker-visible w-full px-4 py-2 rounded-lg border border-border bg-input text-foreground" />
                       </Field>
                       <Field label="Office Window End">
-                        <input type="time" value={settings.attendancePolicy?.workWindowEnd || ''} onChange={(event) => update('attendancePolicy', { ...settings.attendancePolicy, workWindowEnd: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                        <input type="time" value={settings.attendancePolicy?.workWindowEnd || ''} onChange={(event) => updateNested('attendancePolicy', { workWindowEnd: event.target.value })} className="time-picker-visible w-full px-4 py-2 rounded-lg border border-border bg-input text-foreground" />
                       </Field>
                     </div>
                   </Section>

@@ -306,6 +306,47 @@ const aiParsePolicyDocument = async (documentId, user) => {
   return serializeDocument(updated);
 };
 
+// The legacy LeavePolicy table is still what LeaveBalance rows key against
+// (a hard FK — LeaveBalance.policyId -> LeavePolicy.id), so it can't simply
+// be replaced by LeavePolicyVersion. Instead, every time a new rules version
+// goes ACTIVE, sync LeavePolicy's totals/carry-forward/roles to match — so
+// anything that still reads LeavePolicy (new-user balance provisioning, the
+// annual carry-forward reset job) sees the real configured numbers instead
+// of stale defaults from org registration. Existing rows for leave types no
+// longer in the active policy are left alone (not deleted — employees may
+// already have LeaveBalance rows against them), just no longer picked up by
+// new-user provisioning (see users.service.js createUser).
+const syncLegacyLeavePolicies = async (tx, organizationId, leavePolicies) => {
+  const roles = await tx.role.findMany({ where: { organizationId }, select: { id: true, tier: true } });
+  const roleIdByTier = Object.fromEntries(roles.map((r) => [r.tier, r.id]));
+
+  for (const rule of leavePolicies) {
+    const applicableRoleIds = (rule.applicableRoles || [])
+      .map((tier) => roleIdByTier[tier])
+      .filter(Boolean);
+    const description = rule.displayName ? `${rule.displayName} — synced from active leave policy` : undefined;
+    await tx.leavePolicy.upsert({
+      where: { organizationId_leaveType: { organizationId, leaveType: rule.leaveType } },
+      update: {
+        totalDays: rule.annualQuota ?? 0,
+        carryForward: rule.carryForwardAllowed,
+        maxCarryForward: rule.maxCarryForwardDays,
+        applicableRoleIds,
+        ...(description ? { description } : {}),
+      },
+      create: {
+        organizationId,
+        leaveType: rule.leaveType,
+        totalDays: rule.annualQuota ?? 0,
+        carryForward: rule.carryForwardAllowed,
+        maxCarryForward: rule.maxCarryForwardDays,
+        applicableRoleIds,
+        description: description || null,
+      },
+    });
+  }
+};
+
 // Shared by both the document-upload approval path and manual policy entry —
 // archives the current ACTIVE version and activates a new one. `documentId` is
 // null for manually-entered rules (LeavePolicyVersion.policyDocumentId is optional).
@@ -341,6 +382,7 @@ const activateRulesVersion = async (organizationId, approvedRules, user, documen
       newValues: approvedRules,
     },
   });
+  await syncLegacyLeavePolicies(tx, organizationId, approvedRules.leavePolicies);
   return version;
 };
 

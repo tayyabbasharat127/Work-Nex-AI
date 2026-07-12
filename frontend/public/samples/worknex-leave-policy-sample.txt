@@ -29,7 +29,7 @@ followed by plain sentences. WorkNex looks for phrases like these:
   "Manager approval and HR approval are required." -> needs manager AND admin
   "A medical certificate is required after 2 days." -> sick-leave document rule
   "Applicable roles: EMPLOYEE, MANAGER, ADMIN." -> who this leave type is for
-    (supported role names: EMPLOYEE, MANAGER, ADMIN, SUPER_ADMIN)
+    (supported role names: EMPLOYEE, MANAGER, ADMIN)
 
 You don't need every phrase in every block — only include the ones that apply.
 

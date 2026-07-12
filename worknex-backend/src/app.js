@@ -32,6 +32,7 @@ const routes = require('./routes');
 const { errorHandler } = require('./middleware/error.middleware');
 const logger = require('./config/logger');
 const prisma = require('./config/db');
+const { ensureSuperAdmin } = require('./bootstrap/ensureSuperAdmin');
 
 // Start scheduled jobs
 require('./jobs/scheduler');
@@ -143,6 +144,7 @@ const startServer = async () => {
     logger.info('Database connected successfully');
 
     await verifyMigrations();
+    await ensureSuperAdmin();
 
     app.listen(PORT, '0.0.0.0', () => {
       logger.info(`WorkNex AI Backend running on http://0.0.0.0:${PORT} [${process.env.NODE_ENV}]`);

@@ -162,7 +162,8 @@ export const authAPI = {
         industry: userData.industry || 'Technology',
         country: userData.country || 'Pakistan',
         phone: userData.phone,
-        website: userData.company_domain ? `https://${userData.company_domain}` : undefined
+        website: userData.company_domain ? `https://${userData.company_domain}` : undefined,
+        planType: userData.subscription_plan || userData.planType,
       };
       
       try {

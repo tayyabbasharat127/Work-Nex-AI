@@ -2,11 +2,41 @@
 
 import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { Search, Plus, Eye, EyeOff, Edit, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Eye, EyeOff, Edit, Trash2, X, ChevronLeft, ChevronRight, Mail, Phone, Briefcase, Calendar, IdCard, UsersRound, ClipboardList, ShieldCheck } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
 import { departmentAPI, rolesAPI, staffCategoryAPI } from '@/lib/api';
 import { getRoleName } from '@/lib/helpers';
 import { toast } from 'sonner';
+
+const formatJoiningDate = (value) => {
+  if (!value) return null;
+  return new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+};
+
+const formatTenure = (value) => {
+  if (!value) return null;
+  const months = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
+  if (months < 1) return 'Joined this month';
+  if (months < 12) return `${months} month${months === 1 ? '' : 's'} at company`;
+  const years = Math.floor(months / 12);
+  const rem = months % 12;
+  return `${years} year${years === 1 ? '' : 's'}${rem ? ` ${rem} mo` : ''} at company`;
+};
+
+function DetailField({ icon: Icon, label, value }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-start gap-3 p-3.5 rounded-xl bg-muted/30 border border-border/60">
+      <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+        <Icon size={16} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="font-medium text-sm mt-0.5 truncate">{value}</p>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminUsers() {
   const { users, loading, fetchUsers, createUser, updateUser, deleteUser } = useUsers();
@@ -195,7 +225,7 @@ export default function AdminUsers() {
                 className="px-4 py-3 rounded-xl border border-border bg-card text-foreground focus:outline-none focus:border-primary"
               >
                 <option value="All">All Roles</option>
-                {roles.map(role => (
+                {roles.filter(r => r.tier !== 'SUPER_ADMIN').map(role => (
                   <option key={role.id} value={role.id}>{role.name}</option>
                 ))}
               </select>
@@ -534,42 +564,57 @@ export default function AdminUsers() {
         {/* View Modal */}
         {showViewModal && viewingUser && (
           <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl">
-              <div className="flex items-center justify-between p-6 border-b border-border">
-                <h2 className="text-xl font-bold">User Details</h2>
-                <button onClick={() => setShowViewModal(false)} className="p-2 hover:bg-muted rounded-lg transition">
+            <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+              {/* Header banner — avatar/name live inside the banner itself,
+                  not overlapping its edge, so there's no fragile negative-margin
+                  positioning to break. */}
+              <div className="relative bg-gradient-to-br from-primary to-primary/70 px-6 pt-5 pb-6">
+                <button
+                  onClick={() => setShowViewModal(false)}
+                  className="absolute top-4 right-4 p-2 rounded-lg text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10 transition"
+                >
                   <X size={20} />
                 </button>
-              </div>
-              <div className="p-6">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xl">
-                    {viewingUser.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?'}
+                <p className="text-primary-foreground/70 text-xs font-semibold uppercase tracking-wide mb-4">User Details</p>
+
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center text-primary-foreground font-bold text-xl shrink-0">
+                    {viewingUser.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold">{viewingUser.name}</h3>
-                    <p className="text-muted-foreground">{viewingUser.roleName || getRoleName(viewingUser.role_id)}</p>
+                  <div className="min-w-0">
+                    <h3 className="text-xl font-bold text-primary-foreground truncate">{viewingUser.name}</h3>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-primary-foreground text-xs font-semibold">
+                        {viewingUser.roleName || getRoleName(viewingUser.role_id)}
+                      </span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        viewingUser.status === 'Active' ? 'bg-success/90 text-white' : 'bg-white/20 text-primary-foreground'
+                      }`}>
+                        {viewingUser.status}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-4">
-                  <div className="flex justify-between py-3 border-b border-border">
-                    <span className="text-muted-foreground">Email</span>
-                    <span className="font-medium">{viewingUser.email}</span>
-                  </div>
-                  <div className="flex justify-between py-3 border-b border-border">
-                    <span className="text-muted-foreground">Department</span>
-                    <span className="font-medium">
-                      {departments.find(d => d.id === viewingUser.department_id)?.name || 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-3">
-                    <span className="text-muted-foreground">Status</span>
-                    <span className={`px-3 py-1 rounded-lg text-xs font-medium ${
-                      viewingUser.status === 'Active' ? 'bg-success/20 text-success' : 'bg-muted text-muted-foreground'
-                    }`}>
-                      {viewingUser.status}
-                    </span>
-                  </div>
+              </div>
+
+              <div className="px-6 pt-5 pb-6 overflow-y-auto">
+                {formatTenure(viewingUser.joiningDate) && (
+                  <p className="text-xs text-muted-foreground mb-4">{formatTenure(viewingUser.joiningDate)}</p>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <DetailField icon={Mail} label="Email" value={viewingUser.email} />
+                  <DetailField icon={Phone} label="Phone" value={viewingUser.phone} />
+                  <DetailField icon={Briefcase} label="Designation" value={viewingUser.designation} />
+                  <DetailField icon={IdCard} label="Employee ID" value={viewingUser.employeeId} />
+                  <DetailField
+                    icon={ClipboardList}
+                    label="Department"
+                    value={viewingUser.department?.name || departments.find(d => d.id === viewingUser.department_id)?.name}
+                  />
+                  <DetailField icon={UsersRound} label="Manager" value={viewingUser.manager ? `${viewingUser.manager.firstName} ${viewingUser.manager.lastName}` : null} />
+                  <DetailField icon={ShieldCheck} label="Staff Category" value={viewingUser.staffCategory?.name} />
+                  <DetailField icon={Calendar} label="Joining Date" value={formatJoiningDate(viewingUser.joiningDate)} />
                 </div>
               </div>
             </div>

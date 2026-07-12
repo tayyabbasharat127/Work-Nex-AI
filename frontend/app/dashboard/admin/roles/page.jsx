@@ -126,7 +126,8 @@ export default function AdminRoles() {
             <div className="text-center py-12 text-muted-foreground">Loading roles...</div>
           ) : (
             <div className="space-y-4">
-              {roles.map((role) => (
+              {/* SUPER_ADMIN is WorkNex's own platform-operator tier, not an org role — never listed here. */}
+              {roles.filter((role) => role.tier !== 'SUPER_ADMIN').map((role) => (
                 <div key={role.id} className="bg-card border border-border rounded-lg p-6 hover:border-primary transition">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-start gap-4">

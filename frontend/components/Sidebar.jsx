@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -18,7 +18,6 @@ import {
   TrendingDown,
   Bell,
   BookOpen,
-  Brain,
   Zap,
   Database,
   Monitor,
@@ -28,7 +27,6 @@ import {
   ClipboardList
 } from 'lucide-react';
 import { authAPI } from '@/lib/api';
-import NotificationBell from './NotificationBell';
 
 const ADMIN_MENU = [
   { label: 'Dashboard', href: '/dashboard/admin', icon: Home },
@@ -141,7 +139,6 @@ export default function Sidebar({ role = 'admin' }) {
                 {user?.email || `${role}@worknexai.com`}
               </p>
             </div>
-            <NotificationBell role={role} />
           </div>
         </div>
 

@@ -13,11 +13,13 @@ const userSelect = {
   joiningDate: true, isActive: true, twoFAEnabled: true,
   profilePicture: true, createdAt: true,
   departmentId: true, // Added: needed for frontend
+  staffCategoryId: true,
   managerId: true, // Added: CRITICAL - needed for team filtering
   organizationId: true,
   roleId: true,
   customRole: { select: { id: true, name: true, tier: true, permissions: true } },
   department: { select: { id: true, name: true } },
+  staffCategory: { select: { id: true, name: true } },
   manager: { select: { id: true, firstName: true, lastName: true, email: true } },
 };
 
@@ -117,6 +119,14 @@ const createUser = async (data, requestingUser) => {
       where: { id: data.departmentId, organizationId },
     });
     if (!department) throw new ApiError(400, 'Department not found');
+  }
+
+  // Validate staff category exists if provided
+  if (data.staffCategoryId) {
+    const category = await prisma.staffCategory.findFirst({
+      where: { id: data.staffCategoryId, organizationId },
+    });
+    if (!category) throw new ApiError(400, 'Staff category not found');
   }
 
   // Validate manager exists and has correct role
@@ -250,6 +260,13 @@ const updateUser = async (id, data, requestingUser) => {
       where: { id: safeData.departmentId, organizationId: target.organizationId },
     });
     if (!department) throw new ApiError(400, 'Department not found');
+  }
+
+  if (safeData.staffCategoryId) {
+    const category = await prisma.staffCategory.findFirst({
+      where: { id: safeData.staffCategoryId, organizationId: target.organizationId },
+    });
+    if (!category) throw new ApiError(400, 'Staff category not found');
   }
 
   if (safeData.managerId) {

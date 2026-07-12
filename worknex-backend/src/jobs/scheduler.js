@@ -1,27 +1,14 @@
 const cron = require('node-cron');
 const logger = require('../config/logger');
-const analyticsService = require('../modules/analytics/analytics.service');
 const attendanceService = require('../modules/attendance/attendance.service');
 const leaveSandwich = require('../modules/leave/leave.sandwich');
 const prisma = require('../config/db');
 
-/**
- * Nightly ETL: compute performance records for current month
- * Runs at 2:00 AM every day
- */
-cron.schedule('0 2 * * *', async () => {
-  logger.info('[CRON] Running nightly ETL...');
-  try {
-    const now = new Date();
-    const organizations = await prisma.organization.findMany({ select: { id: true } });
-    for (const organization of organizations) {
-      const result = await analyticsService.runETL(now.getMonth() + 1, now.getFullYear(), { organizationId: organization.id, role: 'SYSTEM' });
-      logger.info(`[CRON] ETL complete for org ${organization.id}: ${result.processed || result.totalRecords || 0} records processed`);
-    }
-  } catch (err) {
-    logger.error(`[CRON] ETL failed: ${err.message}`);
-  }
-});
+// Nightly ETL used to be scheduled here too (calling analyticsService.runETL,
+// which itself just delegates to etlOrchestrator.runAll) — that duplicated
+// modules/etl/etl.scheduler.js, which owns the same 0 2 * * * cron and the
+// same orchestrator call, plus start()/stop() lifecycle hooks used in
+// app.js. Removed here so the pipeline only runs once per night per org.
 
 /**
  * TMS Attendance Sync: every hour during working hours (7AM - 8PM)

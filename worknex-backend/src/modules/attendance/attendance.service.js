@@ -146,6 +146,52 @@ const getAttendanceSummary = async (query, requestingUser) => {
   return prisma.attendance.groupBy({ by: ['status'], where, _count: { status: true } });
 };
 
+// Reporting only — no auto-penalty. For every user whose StaffCategory sets a
+// minHoursPerWeek target (e.g. Faculty: 40 hrs/week), sums this week's actual
+// workingHours and flags anyone under target. Users with no category, or a
+// category with no target set, are simply omitted (nothing to report).
+const getWeeklyHoursShortfall = async (requestingUser) => {
+  const now = new Date();
+  const day = now.getUTCDay();
+  const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ((day + 6) % 7)));
+  const weekEnd = new Date(weekStart);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+
+  const users = await prisma.user.findMany({
+    where: {
+      ...getOrganizationScope(requestingUser),
+      isActive: true,
+      staffCategory: { minHoursPerWeek: { not: null } },
+    },
+    select: {
+      id: true, firstName: true, lastName: true, employeeId: true,
+      staffCategory: { select: { name: true, minHoursPerWeek: true } },
+    },
+  });
+  if (!users.length) return [];
+
+  const records = await prisma.attendance.findMany({
+    where: { userId: { in: users.map((u) => u.id) }, date: { gte: weekStart, lt: weekEnd } },
+    select: { userId: true, workingHours: true },
+  });
+  const hoursByUser = {};
+  records.forEach((r) => { hoursByUser[r.userId] = (hoursByUser[r.userId] || 0) + Number(r.workingHours || 0); });
+
+  return users.map((u) => {
+    const hoursThisWeek = Number((hoursByUser[u.id] || 0).toFixed(2));
+    const target = u.staffCategory.minHoursPerWeek;
+    return {
+      userId: u.id,
+      name: `${u.firstName} ${u.lastName}`,
+      employeeId: u.employeeId,
+      category: u.staffCategory.name,
+      hoursThisWeek,
+      targetHoursPerWeek: target,
+      shortfall: Number(Math.max(0, target - hoursThisWeek).toFixed(2)),
+    };
+  }).filter((row) => row.shortfall > 0);
+};
+
 // ─── Admin corrections ──────────────────────────────────────────────────────────
 
 const manualEntry = async (data, requestingUser, req = null) => {
@@ -270,6 +316,7 @@ module.exports = {
   getAllAttendance,
   getUserAttendance,
   getAttendanceSummary,
+  getWeeklyHoursShortfall,
   manualEntry,
   updateAttendance,
   syncFromTMS,

@@ -48,6 +48,7 @@ router.post('/generate-absences', requirePermission('attendance:manage'), attend
 
 // ── Admin/Manager collection routes ───────────────────────────────────────────
 router.get('/summary',  authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), auditHrAccess('AttendanceSummary'), attendanceController.getAttendanceSummary);
+router.get('/hours-shortfall', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), auditHrAccess('AttendanceHoursShortfall'), attendanceController.getWeeklyHoursShortfall);
 router.get('/user/:userId', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), auditHrAccess('Attendance'), attendanceController.getUserAttendance);
 router.get('/',         authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), auditHrAccess('Attendance'), attendanceController.getAllAttendance);
 

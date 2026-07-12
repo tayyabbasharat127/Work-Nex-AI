@@ -62,6 +62,8 @@ router.get('/policies/all',    leaveController.getPolicies);
 router.get('/policies/active', requirePermission('leave:manage_policy'), leaveController.getActivePolicyVersion);
 // Every role needs display labels to render leave-type text — no admin-only gate here.
 router.get('/type-labels', leaveController.getLeaveTypeLabels);
+// Read by the AI service (leave-forecast baseline) using the requesting user's own token — same open-read pattern as /attendance/holidays.
+router.get('/history/daily-counts', leaveController.getDailyLeaveCounts);
 router.post('/policies',       requirePermission('leave:manage_policy'), leaveController.createPolicy);
 router.put('/policies/:id',    requirePermission('leave:manage_policy'), leaveController.updatePolicy);
 

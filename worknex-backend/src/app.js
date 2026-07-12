@@ -1,6 +1,25 @@
 require('dotenv').config();
 require('express-async-errors');
 
+// Apply any pending Prisma migrations before anything else touches the
+// database — so pointing the backend at a brand-new, empty database and
+// starting it (however it's started: node, npm start, nodemon, a process
+// manager) is enough to get a fully migrated schema, with no manual
+// `prisma migrate deploy` step. Idempotent: a no-op (~1s) once everything is
+// already applied, so it's safe to run on every single boot, not just first.
+{
+  const { execSync } = require('child_process');
+  try {
+    console.log('[startup] Applying pending Prisma migrations...');
+    execSync('npx prisma migrate deploy', { stdio: 'inherit', cwd: __dirname + '/..' });
+    console.log('[startup] Database schema is up to date.');
+  } catch (err) {
+    console.error('[startup] Prisma migration failed — refusing to start with a possibly out-of-sync schema.');
+    console.error(err.message);
+    process.exit(1);
+  }
+}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');

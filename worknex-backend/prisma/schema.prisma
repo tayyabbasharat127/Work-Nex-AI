@@ -23,6 +23,82 @@ model Department {
   @@index([organizationId])
 }
 
+// Org-defined, admin-named grouping (e.g. "Faculty"/"NTS" for a university,
+// "Engineering"/"Remote" for a software house, or none at all) — drives
+// per-category attendance rules (late threshold, 3-lates-to-absence,
+// weekly-hours target) without hardcoding any org's own terminology.
+model StaffCategory {
+  id                String       @id @default(uuid())
+  organizationId    String
+  name              String
+  lateThresholdTime String?      // "08:40" — null = no lateness rule for this category
+  latesPerAbsence   Int?         // 3 — null = 3-strikes rule doesn't apply
+  minHoursPerDay    Float?
+  minHoursPerWeek   Float?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  users             User[]
+  organization      Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, name])
+  @@unique([id, organizationId])
+  @@index([organizationId])
+}
+
+enum GoalStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  MISSED
+}
+
+enum ReviewStatus {
+  DRAFT
+  SUBMITTED
+}
+
+model Goal {
+  id             String       @id @default(uuid())
+  organizationId String
+  userId         String              // owner/employee
+  title          String
+  description    String?
+  metric         String?             // free-text target, e.g. "Ship 3 features"
+  dueDate        DateTime?
+  progress       Int          @default(0)   // 0-100
+  status         GoalStatus   @default(NOT_STARTED)
+  createdById    String              // employee or manager who created it
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation("GoalOwner", fields: [userId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([id, organizationId])
+  @@index([organizationId, userId])
+}
+
+model PerformanceReview {
+  id              String       @id @default(uuid())
+  organizationId  String
+  userId          String              // reviewee
+  managerId       String              // reviewer, snapshotted at creation time
+  cycle           String              // free text, e.g. "Q1 2026"
+  managerRating   Int?                // 1-5
+  managerComments String?      @db.Text
+  status          ReviewStatus @default(DRAFT)
+  submittedAt     DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  user            User         @relation("ReviewSubject", fields: [userId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  manager         User         @relation("ReviewManager", fields: [managerId, organizationId], references: [id, organizationId])
+  organization    Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([userId, managerId, cycle])
+  @@unique([id, organizationId])
+  @@index([organizationId, userId])
+  @@index([organizationId, managerId])
+}
+
 model User {
   id             String              @id @default(uuid())
   organizationId String
@@ -33,6 +109,7 @@ model User {
   passwordHash   String
   roleId         String
   departmentId   String?
+  staffCategoryId String?
   managerId      String?
   designation    String?
   joiningDate    DateTime?
@@ -56,7 +133,11 @@ model User {
   approvedPolicyVersions LeavePolicyVersion[] @relation("ApprovedPolicyVersions")
   employeeLeaveDecisionLogs LeaveDecisionLog[] @relation("EmployeeLeaveDecisionLogs")
   evaluatedLeaveDecisionLogs LeaveDecisionLog[] @relation("EvaluatorLeaveDecisionLogs")
+  goals            Goal[]              @relation("GoalOwner")
+  reviewsReceived  PerformanceReview[] @relation("ReviewSubject")
+  reviewsGiven     PerformanceReview[] @relation("ReviewManager")
   department     Department?         @relation(fields: [departmentId, organizationId], references: [id, organizationId])
+  staffCategory  StaffCategory?      @relation(fields: [staffCategoryId, organizationId], references: [id, organizationId])
   manager        User?               @relation("ManagerSubordinates", fields: [managerId, organizationId], references: [id, organizationId])
   organization   Organization        @relation(fields: [organizationId], references: [id])
   subordinates   User[]              @relation("ManagerSubordinates")
@@ -359,6 +440,7 @@ model Organization {
   invoices     Invoice[]
   users        User[]
   departments  Department[]
+  staffCategories StaffCategory[]
   attendance   Attendance[]
   leavePolicies LeavePolicy[]
   leaveBalances LeaveBalance[]
@@ -366,6 +448,8 @@ model Organization {
   notifications Notification[]
   performanceRecords PerformanceRecord[]
   attritionRecords   AttritionRecord[]
+  goals              Goal[]
+  performanceReviews PerformanceReview[]
   holidays     Holiday[]
   auditLogs    AuditLog[]
   etlSyncLogs  EtlSyncLog[]

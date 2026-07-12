@@ -401,6 +401,49 @@ const getActivePolicyVersion = async (requestingUser) => automation.getActivePol
 
 const getLeaveTypeLabels = async (requestingUser) => automation.getLeaveTypeLabels(requestingUser.organizationId);
 
+// Real recent leave-demand history — used by the AI service to seed the leave
+// forecast's rolling average instead of a fixed constant (see forecast_service.py).
+const getDailyLeaveCounts = async (requestingUser, days = 14) => {
+  const end = new Date();
+  end.setUTCHours(23, 59, 59, 999);
+  const start = new Date(end);
+  start.setUTCDate(start.getUTCDate() - (days - 1));
+  start.setUTCHours(0, 0, 0, 0);
+
+  const leaves = await prisma.leaveRequest.findMany({
+    where: {
+      ...getOrganizationScope(requestingUser),
+      status: 'APPROVED',
+      startDate: { lte: end },
+      endDate: { gte: start },
+    },
+    select: { startDate: true, endDate: true },
+  });
+
+  const counts = {};
+  for (let i = 0; i < days; i += 1) {
+    const d = new Date(start);
+    d.setUTCDate(d.getUTCDate() + i);
+    counts[d.toISOString().slice(0, 10)] = 0;
+  }
+
+  leaves.forEach((leave) => {
+    const from = leave.startDate < start ? start : leave.startDate;
+    const to = leave.endDate > end ? end : leave.endDate;
+    const cursor = new Date(from);
+    cursor.setUTCHours(0, 0, 0, 0);
+    while (cursor <= to) {
+      const key = cursor.toISOString().slice(0, 10);
+      if (key in counts) counts[key] += 1;
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+  });
+
+  return Object.entries(counts)
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+};
+
 const createPolicy = async (data, requestingUser) => {
   return prisma.leavePolicy.create({ data: { ...data, organizationId: requestingUser.organizationId } });
 };
@@ -447,6 +490,7 @@ module.exports = {
   getPolicies,
   getActivePolicyVersion,
   getLeaveTypeLabels,
+  getDailyLeaveCounts,
   createPolicy,
   updatePolicy,
   evaluateExistingLeave,

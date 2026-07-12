@@ -27,6 +27,11 @@ const PERMISSIONS = [
     label: 'Broadcast Notifications',
     description: 'Send organization-wide notifications',
   },
+  {
+    key: 'performance:manage',
+    label: 'Manage Reviews & Goals',
+    description: 'Create/update goals for reports, create and submit performance reviews',
+  },
 ];
 
 const PERMISSION_KEYS = PERMISSIONS.map((p) => p.key);

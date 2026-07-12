@@ -5,7 +5,24 @@ import Sidebar from '@/components/Sidebar';
 import { aiAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import { AlertTriangle, Brain, RefreshCw, Users, Calendar } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis } from 'recharts';
+import { LineChart, Line, Bar, ComposedChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis } from 'recharts';
+
+// Custom tooltip for the leave-forecast chart — the default recharts tooltip
+// would also surface the two synthetic stacked-area series (bandBase/bandRange)
+// used to draw the confidence band, which aren't meaningful to a viewer on their own.
+const ForecastTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  const point = payload[0]?.payload;
+  return (
+    <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: 8, padding: '8px 12px' }}>
+      <p className="text-xs text-muted-foreground mb-1">{label}</p>
+      <p className="text-sm text-foreground">Predicted: <span className="font-semibold">{point?.predicted}</span></p>
+      {point?.low != null && point?.high != null && (
+        <p className="text-xs text-muted-foreground mt-0.5">Range: {point.low}–{point.high}</p>
+      )}
+    </div>
+  );
+};
 
 export default function AdminForecast() {
   const [leaveForecast, setLeaveForecast] = useState(null);
@@ -43,8 +60,14 @@ export default function AdminForecast() {
     }
   };
 
-  // Build forecast chart data
-  const forecastChartData = leaveForecast?.forecast || leaveForecast?.predictions || [];
+  // Build forecast chart data — bandBase/bandRange are a stacked-area trick
+  // to render the low..high confidence band behind the Bar (see ForecastTooltip
+  // for why they're hidden from the tooltip).
+  const forecastChartData = (leaveForecast?.forecast || leaveForecast?.predictions || []).map((f) => ({
+    ...f,
+    bandBase: f.low ?? f.predicted,
+    bandRange: (f.high ?? f.predicted) - (f.low ?? f.predicted),
+  }));
   const attritionData = attritionRisk?.employees || attritionRisk?.risks || [];
   const anomalyData = anomalies?.anomalies || anomalies?.data || [];
 
@@ -137,15 +160,22 @@ export default function AdminForecast() {
                 Leave Forecast (Next 30 Days)
               </h2>
               {forecastChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={forecastChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="date" stroke="#9ca3af" tick={{ fontSize: 11 }} />
-                    <YAxis stroke="#9ca3af" />
-                    <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} />
-                    <Bar dataKey="predicted" fill="#3b82f6" name="Predicted Leaves" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <ComposedChart data={forecastChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis dataKey="date" stroke="#9ca3af" tick={{ fontSize: 11 }} />
+                      <YAxis stroke="#9ca3af" />
+                      <Tooltip content={<ForecastTooltip />} />
+                      <Area dataKey="bandBase" stackId="band" stroke="none" fill="transparent" isAnimationActive={false} />
+                      <Area dataKey="bandRange" stackId="band" stroke="none" fill="#3b82f6" fillOpacity={0.15} isAnimationActive={false} name="Confidence range" />
+                      <Bar dataKey="predicted" fill="#3b82f6" name="Predicted Leaves" radius={[4, 4, 0, 0]} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                  {leaveForecast?.confidenceNote && (
+                    <p className="text-xs text-muted-foreground mt-2">{leaveForecast.confidenceNote}</p>
+                  )}
+                </>
               ) : (
                 <div className="h-60 flex items-center justify-center border border-dashed border-border rounded-lg">
                   <div className="text-center">

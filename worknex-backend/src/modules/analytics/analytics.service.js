@@ -378,6 +378,12 @@ const getPowerBIEmbedToken = async (requestingUser) => {
         username: requestingUser.email,
         roles: [RLS_ROLE_MAP[requestingUser.role] || requestingUser.role],
         datasets: [datasetId],
+        // Tenant key for row-level filtering — the report's role definitions
+        // must filter on CUSTOMDATA() (e.g. [OrganizationId] = CUSTOMDATA())
+        // for this to actually isolate orgs; role alone only segments by
+        // tier, not by organization, so two OrgAdmins from different orgs
+        // would otherwise get an identical RLS identity.
+        customData: requestingUser.organizationId,
       },
     ];
   }
@@ -412,6 +418,7 @@ const _buildDatasetSchema = (orgId) => ({
     {
       name: 'Attendance',
       columns: [
+        { name: 'OrganizationId', dataType: 'string' },
         { name: 'UserId', dataType: 'string' },
         { name: 'Date', dataType: 'dateTime' },
         { name: 'Status', dataType: 'string' },
@@ -424,6 +431,7 @@ const _buildDatasetSchema = (orgId) => ({
     {
       name: 'LeaveRequests',
       columns: [
+        { name: 'OrganizationId', dataType: 'string' },
         { name: 'EmployeeId', dataType: 'string' },
         { name: 'LeaveType', dataType: 'string' },
         { name: 'Status', dataType: 'string' },
@@ -436,6 +444,7 @@ const _buildDatasetSchema = (orgId) => ({
     {
       name: 'Performance',
       columns: [
+        { name: 'OrganizationId', dataType: 'string' },
         { name: 'UserId', dataType: 'string' },
         { name: 'Month', dataType: 'int64' },
         { name: 'Year', dataType: 'int64' },
@@ -451,6 +460,7 @@ const _buildDatasetSchema = (orgId) => ({
     {
       name: 'Employees',
       columns: [
+        { name: 'OrganizationId', dataType: 'string' },
         { name: 'UserId', dataType: 'string' },
         { name: 'FullName', dataType: 'string' },
         { name: 'Email', dataType: 'string' },
@@ -540,6 +550,7 @@ const pushDataToPowerBI = async (requestingUser) => {
 
   const results = await Promise.all([
     pushTable('Attendance', attendance.map((a) => ({
+      OrganizationId: orgId,
       UserId: a.userId,
       Date: a.date?.toISOString(),
       Status: a.status,
@@ -549,6 +560,7 @@ const pushDataToPowerBI = async (requestingUser) => {
       CheckOut: a.checkOut?.toISOString() || null,
     }))),
     pushTable('LeaveRequests', leaves.map((l) => ({
+      OrganizationId: orgId,
       EmployeeId: l.employeeId,
       LeaveType: l.leaveType,
       Status: l.status,
@@ -558,6 +570,7 @@ const pushDataToPowerBI = async (requestingUser) => {
       Department: l.employee?.department?.name || 'Unassigned',
     }))),
     pushTable('Performance', performance.map((p) => ({
+      OrganizationId: orgId,
       UserId: p.userId,
       Month: p.month,
       Year: p.year,
@@ -570,6 +583,7 @@ const pushDataToPowerBI = async (requestingUser) => {
       Department: p.user?.department?.name || 'Unassigned',
     }))),
     pushTable('Employees', employees.map((u) => ({
+      OrganizationId: orgId,
       UserId: u.id,
       FullName: `${u.firstName} ${u.lastName}`.trim(),
       Email: u.email,

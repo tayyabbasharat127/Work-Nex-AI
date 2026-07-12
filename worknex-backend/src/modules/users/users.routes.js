@@ -34,6 +34,7 @@ router.post(
     body('roleId').optional({ nullable: true, checkFalsy: true }).isString().withMessage('roleId must be a string'),
     body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
     body('departmentId').optional({ nullable: true, checkFalsy: true }).isString().withMessage('Department ID must be a string'),
+    body('staffCategoryId').optional({ nullable: true, checkFalsy: true }).isString().withMessage('Staff category ID must be a string'),
     body('managerId').optional({ nullable: true, checkFalsy: true }).isString().withMessage('Manager ID must be a string'),
     body('designation').optional({ nullable: true, checkFalsy: true }).isString(),
     body('phone').optional({ nullable: true, checkFalsy: true }).isString(),

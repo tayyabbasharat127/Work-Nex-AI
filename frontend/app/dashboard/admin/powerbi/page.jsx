@@ -205,13 +205,23 @@ export default function PowerBIPage() {
 
           {/* Embedded report — iframe fallback when POWERBI_EMBED_URL is a public "Publish to web" URL */}
           {embedState === 'setup' && embedMsg === '' && process.env.NEXT_PUBLIC_POWERBI_EMBED_URL && (
-            <div className="h-[720px] rounded-xl border border-border bg-card overflow-hidden">
-              <iframe
-                title="WorkNex Power BI Report"
-                src={process.env.NEXT_PUBLIC_POWERBI_EMBED_URL}
-                className="w-full h-full border-0"
-                allowFullScreen
-              />
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-600 dark:text-yellow-400">
+                <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                <span>
+                  Demo/public view — &quot;Publish to Web&quot; links have no row-level security and are visible to
+                  anyone with the URL. Do not use with real tenant data; use the RLS-protected embed above once
+                  Power BI service-principal setup is complete.
+                </span>
+              </div>
+              <div className="h-[720px] rounded-xl border border-border bg-card overflow-hidden">
+                <iframe
+                  title="WorkNex Power BI Report"
+                  src={process.env.NEXT_PUBLIC_POWERBI_EMBED_URL}
+                  className="w-full h-full border-0"
+                  allowFullScreen
+                />
+              </div>
             </div>
           )}
 

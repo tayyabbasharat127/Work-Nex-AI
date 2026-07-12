@@ -126,7 +126,7 @@ export default function AttritionPage() {
               <div className="w-3 h-3 rounded-full bg-red-500 mt-1 shrink-0" />
               <div>
                 <p className="font-semibold text-red-400 text-sm">HIGH Risk (&gt;60%)</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Likely to leave within 3 months. Immediate manager intervention recommended.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Elevated attrition signals present. Recommend a proactive manager check-in.</p>
               </div>
             </div>
             <div className="flex items-start gap-3 p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/5">
@@ -140,7 +140,7 @@ export default function AttritionPage() {
               <div className="w-3 h-3 rounded-full bg-green-500 mt-1 shrink-0" />
               <div>
                 <p className="font-semibold text-green-400 text-sm">LOW Risk (&lt;30%)</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Employee appears stable. Low probability of leaving in the near term.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Employee appears stable. No significant attrition signals detected at this time.</p>
               </div>
             </div>
           </div>

@@ -24,9 +24,11 @@ import {
   Monitor,
   Sparkles,
   Shield,
-  Fingerprint
+  Fingerprint,
+  ClipboardList
 } from 'lucide-react';
 import { authAPI } from '@/lib/api';
+import NotificationBell from './NotificationBell';
 
 const ADMIN_MENU = [
   { label: 'Dashboard', href: '/dashboard/admin', icon: Home },
@@ -37,6 +39,7 @@ const ADMIN_MENU = [
   { label: 'Biometric Integration', href: '/dashboard/admin/biometric-integration', icon: Fingerprint },
   { label: 'Leaves', href: '/dashboard/admin/leaves', icon: CalendarX },
   { label: 'Departments', href: '/dashboard/admin/departments', icon: Users },
+  { label: 'Staff Categories', href: '/dashboard/admin/staff-categories', icon: ClipboardList },
   { label: 'Performance', href: '/dashboard/admin/performance', icon: Award },
   { label: 'Reports', href: '/dashboard/admin/reports', icon: TrendingUp },
   { label: 'Forecast', href: '/dashboard/admin/forecast', icon: Zap },
@@ -138,6 +141,7 @@ export default function Sidebar({ role = 'admin' }) {
                 {user?.email || `${role}@worknexai.com`}
               </p>
             </div>
+            <NotificationBell role={role} />
           </div>
         </div>
 
@@ -165,19 +169,18 @@ export default function Sidebar({ role = 'admin' }) {
                 </li>
               );
             })}
+            {/* Logout — right after the last menu item (Settings), same list */}
+            <li>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-destructive/20 transition"
+              >
+                <LogOut size={20} />
+                <span className="text-sm font-medium">Logout</span>
+              </button>
+            </li>
           </ul>
         </nav>
-
-        {/* Logout Button */}
-        <div className="p-4 border-t border-sidebar-border">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-destructive/20 transition"
-          >
-            <LogOut size={20} />
-            <span className="text-sm font-medium">Logout</span>
-          </button>
-        </div>
       </aside>
 
       {/* Mobile Overlay */}

@@ -84,7 +84,9 @@
       "Bash(curl -s http://localhost:5000/health)",
       "Bash(grep -n \"Policy Document Automation\\\\|/\\\\* Stats \\\\*/\" app/dashboard/admin/leaves/page.jsx)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/dashboard/admin/leaves)",
-      "Bash(grep -n \"leaveType} balance\\\\|leaveType} leave is not applicable\\\\|leaveType} leave was auto-approved\\\\|leaveType} leave$\\\\|applied for \\\\${leave.leaveType}\" src/modules/leave/leave.service.js)"
+      "Bash(grep -n \"leaveType} balance\\\\|leaveType} leave is not applicable\\\\|leaveType} leave was auto-approved\\\\|leaveType} leave$\\\\|applied for \\\\${leave.leaveType}\" src/modules/leave/leave.service.js)",
+      "Bash(powershell -Command \"Stop-Process -Id 5832 -Force\")",
+      "Bash(node -c src/modules/attendance/attendance.processor.js)"
     ],
     "additionalDirectories": [
       "c:\\Users\\TECHXCESS\\Desktop\\Work-Nex-AI\\worknex-backend\\docs"

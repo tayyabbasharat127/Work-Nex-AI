@@ -63,6 +63,11 @@ const getAttendanceSummary = async (req, res) => {
   apiResponse(res, 200, 'Summary fetched', summary);
 };
 
+const getWeeklyHoursShortfall = async (req, res) => {
+  const rows = await attendanceService.getWeeklyHoursShortfall(req.user);
+  apiResponse(res, 200, 'Weekly hours shortfall fetched', rows);
+};
+
 const manualEntry = async (req, res) => {
   const record = await attendanceService.manualEntry(req.body, req.user, req);
   apiResponse(res, 200, 'Attendance recorded', record);
@@ -96,7 +101,7 @@ const generateAbsences = async (req, res) => {
 module.exports = {
   tmsWebhook,
   checkIn, checkOut, autoPing, getTodayAttendance, getMyAttendance,
-  getAllAttendance, getUserAttendance, getAttendanceSummary,
+  getAllAttendance, getUserAttendance, getAttendanceSummary, getWeeklyHoursShortfall,
   manualEntry, updateAttendance, syncFromTMS,
   getHolidays, createHoliday, generateAbsences,
 };

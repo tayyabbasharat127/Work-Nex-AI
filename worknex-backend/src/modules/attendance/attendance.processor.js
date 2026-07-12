@@ -80,12 +80,52 @@ const normalizeStatus = (status) => {
 
 // ─── Status computation (previously duplicated in checkIn/autoPing/syncFromTMS) ──
 
-const computeCheckInStatus = (checkInTime = new Date()) => {
+// "HH:MM" -> minutes since midnight. Used for both the category late-threshold
+// and the org work-window, so both accept the same simple string format.
+const parseTimeToMinutes = (value) => {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value || '');
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+};
+
+// `lateThresholdTime` ("08:40") comes from the check-in user's StaffCategory —
+// when absent (no category, or category has no threshold set), falls back to
+// the existing org-wide env vars exactly as before this feature existed.
+const computeCheckInStatus = (checkInTime = new Date(), lateThresholdTime = null) => {
   const parts = getLocalParts(checkInTime);
   const currentMinutes = Number(parts.hour) * 60 + Number(parts.minute);
-  const lateMinutes = (parseInt(process.env.LATE_THRESHOLD_HOUR || '9', 10) * 60)
-    + parseInt(process.env.LATE_THRESHOLD_MIN || '30', 10);
+  const overrideMinutes = parseTimeToMinutes(lateThresholdTime);
+  const lateMinutes = overrideMinutes !== null
+    ? overrideMinutes
+    : (parseInt(process.env.LATE_THRESHOLD_HOUR || '9', 10) * 60) + parseInt(process.env.LATE_THRESHOLD_MIN || '30', 10);
   return currentMinutes > lateMinutes ? 'LATE' : 'PRESENT';
+};
+
+// Reporting-only — never blocks a check-in, just flags punches outside the
+// org's configured office hours (e.g. "8 AM – 6 PM") for visibility.
+const isOutsideWorkWindow = async (checkInTime, organizationId) => {
+  const settings = await prisma.organizationSettings.findUnique({ where: { organizationId } });
+  const policy = settings?.attendancePolicyJson;
+  const startMinutes = parseTimeToMinutes(policy?.workWindowStart);
+  const endMinutes = parseTimeToMinutes(policy?.workWindowEnd);
+  if (startMinutes === null || endMinutes === null) return false;
+
+  const parts = getLocalParts(checkInTime);
+  const currentMinutes = Number(parts.hour) * 60 + Number(parts.minute);
+  return currentMinutes < startMinutes || currentMinutes > endMinutes;
+};
+
+// Counts this user's LATE days so far this calendar month (the month of
+// `date`) and reports whether including `date` itself crosses a multiple of
+// `latesPerAbsence` — e.g. the 3rd, 6th, 9th late of the month.
+const isNthLateThisMonth = async (userId, organizationId, date, latesPerAbsence) => {
+  const monthStart = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+  const monthEnd = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1));
+  const priorLateCount = await prisma.attendance.count({
+    where: { userId, organizationId, status: 'LATE', date: { gte: monthStart, lt: monthEnd, not: date } },
+  });
+  const countIncludingToday = priorLateCount + 1;
+  return countIncludingToday % latesPerAbsence === 0;
 };
 
 const computeWorkingHours = (checkIn, checkOut) => {
@@ -173,7 +213,23 @@ const processCheckIn = async ({ userId, organizationId, date, checkInTime, sourc
 
   await validateShift(userId, organizationId, date);
 
-  const status = computeCheckInStatus(checkInTime);
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { staffCategory: true } });
+  const category = user?.staffCategory || null;
+
+  let status = computeCheckInStatus(checkInTime, category?.lateThresholdTime);
+  const noteParts = notes ? [notes] : [];
+
+  if (status === 'LATE' && category?.latesPerAbsence) {
+    if (await isNthLateThisMonth(userId, organizationId, date, category.latesPerAbsence)) {
+      status = 'ABSENT';
+      noteParts.push(`Every ${category.latesPerAbsence} lates = 1 absence — threshold reached this month — auto-marked absent per ${category.name} policy`);
+    }
+  }
+
+  if (await isOutsideWorkWindow(checkInTime, organizationId)) {
+    noteParts.push('Outside configured work window');
+  }
+
   const data = {
     organizationId,
     userId,
@@ -184,7 +240,7 @@ const processCheckIn = async ({ userId, organizationId, date, checkInTime, sourc
     longitude,
     ipAddress,
     source,
-    notes,
+    notes: noteParts.length ? noteParts.join(' | ') : notes,
   };
 
   const record = existing
@@ -227,15 +283,38 @@ const processCheckOut = async ({ userId, organizationId, date, checkOutTime }) =
  */
 const processRecord = async ({ userId, organizationId, date, checkIn = null, checkOut = null, status, source, notes = undefined }) => {
   const workingHours = computeWorkingHours(checkIn, checkOut);
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { staffCategory: true } });
+  const category = user?.staffCategory || null;
+
   // Matches the pre-refactor syncFromTMS fallback exactly: no checkIn and no
   // explicit status still resolves to PRESENT, not ABSENT. Preserved as-is —
   // changing this is a behavior change, not a refactor, and out of scope here.
-  const resolvedStatus = normalizeStatus(status) || (checkIn && computeCheckInStatus(checkIn) === 'LATE' ? 'LATE' : 'PRESENT');
+  let resolvedStatus = normalizeStatus(status)
+    || (checkIn && computeCheckInStatus(checkIn, category?.lateThresholdTime) === 'LATE' ? 'LATE' : 'PRESENT');
+
+  const noteParts = notes ? [notes] : [];
+
+  // The 3-lates-to-absence rule applies regardless of whether "LATE" came
+  // from the device/source directly or from the fallback threshold check —
+  // this is how real biometric-device attendance (the actual NTS check-in
+  // path) gets covered, not just the web self check-in.
+  if (resolvedStatus === 'LATE' && category?.latesPerAbsence) {
+    if (await isNthLateThisMonth(userId, organizationId, date, category.latesPerAbsence)) {
+      resolvedStatus = 'ABSENT';
+      noteParts.push(`Every ${category.latesPerAbsence} lates = 1 absence — threshold reached this month — auto-marked absent per ${category.name} policy`);
+    }
+  }
+
+  if (checkIn && await isOutsideWorkWindow(checkIn, organizationId)) {
+    noteParts.push('Outside configured work window');
+  }
+
+  const finalNotes = noteParts.length ? noteParts.join(' | ') : notes;
 
   const record = await prisma.attendance.upsert({
     where: { userId_date: { userId, date } },
-    update: { organizationId, checkIn, checkOut, workingHours, status: resolvedStatus, source, notes },
-    create: { organizationId, userId, date, checkIn, checkOut, workingHours, status: resolvedStatus, source, notes },
+    update: { organizationId, checkIn, checkOut, workingHours, status: resolvedStatus, source, notes: finalNotes },
+    create: { organizationId, userId, date, checkIn, checkOut, workingHours, status: resolvedStatus, source, notes: finalNotes },
   });
 
   await emitNotifications(record, checkOut ? 'CHECK_OUT' : 'CHECK_IN');
@@ -251,6 +330,7 @@ module.exports = {
   computeCheckInStatus,
   computeWorkingHours,
   computeCheckOutStatus,
+  isOutsideWorkWindow,
   getHolidayForDate,
   getApprovedLeaveForDate,
   validateLeave,

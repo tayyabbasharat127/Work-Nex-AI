@@ -577,7 +577,10 @@ export const userAPI = {
     // Only add optional fields if they have valid values
     const departmentId = toStringOrUndefined(userData.departmentId || userData.department_id);
     if (departmentId) backendData.departmentId = departmentId;
-    
+
+    const staffCategoryId = toStringOrUndefined(userData.staffCategoryId || userData.staff_category_id);
+    if (staffCategoryId) backendData.staffCategoryId = staffCategoryId;
+
     const managerId = toStringOrUndefined(userData.managerId || userData.manager_id);
     if (managerId) backendData.managerId = managerId;
     
@@ -639,7 +642,12 @@ export const userAPI = {
       const deptId = userData.departmentId || userData.department_id;
       updateData.departmentId = deptId && deptId !== '' ? String(deptId) : null;
     }
-    
+
+    if (userData.staffCategoryId || userData.staff_category_id) {
+      const catId = userData.staffCategoryId || userData.staff_category_id;
+      updateData.staffCategoryId = catId && catId !== '' ? String(catId) : null;
+    }
+
     if (userData.managerId || userData.manager_id) {
       const mgrId = userData.managerId || userData.manager_id;
       updateData.managerId = mgrId && mgrId !== '' ? String(mgrId) : null;
@@ -696,6 +704,45 @@ export const departmentAPI = {
 
   delete: async (departmentId) => {
     const response = await apiFetch(`/users/departments/${departmentId}`, { method: 'DELETE' });
+    return response.data || response;
+  },
+};
+
+// Staff Categories API — org-defined attendance-policy groups (e.g.
+// "Faculty"/"NTS" for a university), each with its own late threshold,
+// 3-lates-to-absence rule, and weekly-hours target.
+export const staffCategoryAPI = {
+  getAll: async () => {
+    const response = await apiFetch('/staff-categories');
+    return response.data || response;
+  },
+
+  create: async (data) => {
+    const response = await apiFetch('/staff-categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data || response;
+  },
+
+  update: async (id, data) => {
+    const response = await apiFetch(`/staff-categories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return response.data || response;
+  },
+
+  delete: async (id) => {
+    const response = await apiFetch(`/staff-categories/${id}`, { method: 'DELETE' });
+    return response.data || response;
+  },
+};
+
+// Attendance hours-shortfall report (Faculty-style weekly-hours visibility)
+export const hoursShortfallAPI = {
+  getAll: async () => {
+    const response = await apiFetch('/attendance/hours-shortfall');
     return response.data || response;
   },
 };
@@ -1066,6 +1113,82 @@ export const performanceAPI = {
   getLeaderboard: async (params) => {
     const queryString = new URLSearchParams(params).toString();
     const response = await apiFetch(`/performance/leaderboard${queryString ? `?${queryString}` : ''}`);
+    return response.data || response;
+  },
+
+  getSummary: async (userId) => {
+    const response = await apiFetch(`/performance-goals/summary/${userId}`);
+    return response.data || response;
+  },
+};
+
+export const goalsAPI = {
+  getMy: async () => {
+    const response = await apiFetch('/performance-goals/goals/me');
+    return response.data || response;
+  },
+
+  getUser: async (userId) => {
+    const response = await apiFetch(`/performance-goals/goals/user/${userId}`);
+    return response.data || response;
+  },
+
+  create: async (data) => {
+    const response = await apiFetch('/performance-goals/goals', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data || response;
+  },
+
+  update: async (id, data) => {
+    const response = await apiFetch(`/performance-goals/goals/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    return response.data || response;
+  },
+
+  delete: async (id) => {
+    const response = await apiFetch(`/performance-goals/goals/${id}`, { method: 'DELETE' });
+    return response.data || response;
+  },
+};
+
+export const reviewsAPI = {
+  getMy: async () => {
+    const response = await apiFetch('/performance-goals/reviews/me');
+    return response.data || response;
+  },
+
+  getUser: async (userId) => {
+    const response = await apiFetch(`/performance-goals/reviews/user/${userId}`);
+    return response.data || response;
+  },
+
+  getTeamStatus: async () => {
+    const response = await apiFetch('/performance-goals/reviews/team-status');
+    return response.data || response;
+  },
+
+  create: async (data) => {
+    const response = await apiFetch('/performance-goals/reviews', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data || response;
+  },
+
+  update: async (id, data) => {
+    const response = await apiFetch(`/performance-goals/reviews/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    return response.data || response;
+  },
+
+  submit: async (id) => {
+    const response = await apiFetch(`/performance-goals/reviews/${id}/submit`, { method: 'PATCH' });
     return response.data || response;
   },
 };

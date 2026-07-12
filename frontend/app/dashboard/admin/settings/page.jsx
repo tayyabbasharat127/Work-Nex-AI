@@ -14,7 +14,7 @@ const defaultSettings = {
   lateThreshold: { hour: 9, minute: 30 },
   officeIpRanges: '',
   wifiVerificationEnabled: false,
-  attendancePolicy: { halfDayHours: 4 },
+  attendancePolicy: { halfDayHours: 4, workWindowStart: '', workWindowEnd: '' },
   leaveAutomationEnabled: true,
   sandwichLeaveEnabled: false,
 };
@@ -140,6 +140,14 @@ export default function AdminSettings() {
                       <input type="checkbox" checked={Boolean(settings.wifiVerificationEnabled)} onChange={(event) => update('wifiVerificationEnabled', event.target.checked)} />
                       <span>Enable Wi-Fi/IP verification</span>
                     </label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field label="Office Window Start" hint="Reporting only — flags punches outside this range, never blocks a check-in">
+                        <input type="time" value={settings.attendancePolicy?.workWindowStart || ''} onChange={(event) => update('attendancePolicy', { ...settings.attendancePolicy, workWindowStart: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                      </Field>
+                      <Field label="Office Window End">
+                        <input type="time" value={settings.attendancePolicy?.workWindowEnd || ''} onChange={(event) => update('attendancePolicy', { ...settings.attendancePolicy, workWindowEnd: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                      </Field>
+                    </div>
                   </Section>
 
                   <Section title="Leave Automation">
@@ -183,11 +191,12 @@ function Section({ title, children }) {
   );
 }
 
-function Field({ label, children }) {
+function Field({ label, hint, children }) {
   return (
     <div>
       <label className="block text-sm font-medium mb-2">{label}</label>
       {children}
+      {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
     </div>
   );
 }

@@ -37,6 +37,8 @@ export function useUsers() {
         permissions: user.permissions || [],
         department_id: user.departmentId || user.department?.id,
         department: user.department,
+        staff_category_id: user.staffCategoryId || user.staffCategory?.id,
+        staffCategory: user.staffCategory,
         manager_id: user.managerId || user.manager?.id,
         manager: user.manager,
         designation: user.designation,

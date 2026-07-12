@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { Search, Plus, Eye, EyeOff, Edit, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
-import { departmentAPI, rolesAPI } from '@/lib/api';
+import { departmentAPI, rolesAPI, staffCategoryAPI } from '@/lib/api';
 import { getRoleName } from '@/lib/helpers';
 import { toast } from 'sonner';
 
 export default function AdminUsers() {
   const { users, loading, fetchUsers, createUser, updateUser, deleteUser } = useUsers();
   const [departments, setDepartments] = useState([]);
+  const [staffCategories, setStaffCategories] = useState([]);
   const [roles, setRoles] = useState([]);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -31,6 +32,7 @@ export default function AdminUsers() {
     password: '',
     roleId: '',
     department_id: '',
+    staff_category_id: '',
     manager_id: '',
     designation: '',
     phone: '',
@@ -45,6 +47,8 @@ export default function AdminUsers() {
       await fetchUsers();
       const depts = await departmentAPI.getAll();
       setDepartments(Array.isArray(depts) ? depts : []);
+      const categories = await staffCategoryAPI.getAll();
+      setStaffCategories(Array.isArray(categories) ? categories : []);
       const roleList = await rolesAPI.getAll();
       setRoles(Array.isArray(roleList) ? roleList : []);
     } catch (err) {
@@ -81,6 +85,7 @@ export default function AdminUsers() {
       password: '',
       roleId: defaultRoleId(),
       department_id: '',
+      staff_category_id: '',
       manager_id: '',
       designation: '',
       phone: '',
@@ -99,6 +104,7 @@ export default function AdminUsers() {
       password: '',
       roleId: user.roleId || defaultRoleId(),
       department_id: user.department_id || '',
+      staff_category_id: user.staff_category_id || '',
       manager_id: user.manager_id || '',
       designation: user.designation || '',
       phone: user.phone || '',
@@ -437,6 +443,21 @@ export default function AdminUsers() {
                     </select>
                   </div>
                 </div>
+                {staffCategories.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Staff Category <span className="text-muted-foreground text-xs">(optional)</span></label>
+                    <select
+                      value={formData.staff_category_id}
+                      onChange={(e) => setFormData({ ...formData, staff_category_id: e.target.value || '' })}
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
+                    >
+                      <option value="">None</option>
+                      {staffCategories.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Designation</label>

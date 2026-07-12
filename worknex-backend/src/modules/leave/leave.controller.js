@@ -66,6 +66,12 @@ const getLeaveTypeLabels = async (req, res) => {
   apiResponse(res, 200, 'Leave type labels fetched', labels);
 };
 
+const getDailyLeaveCounts = async (req, res) => {
+  const days = Math.min(parseInt(req.query.days, 10) || 14, 90);
+  const counts = await leaveService.getDailyLeaveCounts(req.user, days);
+  apiResponse(res, 200, 'Daily leave counts fetched', counts);
+};
+
 const createPolicy = async (req, res) => {
   const policy = await leaveService.createPolicy(req.body, req.user);
   apiResponse(res, 201, 'Policy created', policy);
@@ -114,7 +120,7 @@ const getDecisionExplanation = async (req, res) => {
 module.exports = {
   applyLeave, approveLeave, rejectLeave, cancelLeave,
   getLeaves, getMyLeaves, getPendingLeaves, getLeaveById,
-  getMyBalances, getUserBalances, getPolicies, getActivePolicyVersion, getLeaveTypeLabels, createPolicy, updatePolicy,
+  getMyBalances, getUserBalances, getPolicies, getActivePolicyVersion, getLeaveTypeLabels, getDailyLeaveCounts, createPolicy, updatePolicy,
   uploadPolicyDocument, extractPolicyDocument, aiParsePolicyDocument,
   approvePolicyRules, saveManualPolicyRules, evaluateLeave, getDecisionExplanation,
 };

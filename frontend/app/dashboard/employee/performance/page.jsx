@@ -2,17 +2,28 @@
 
 import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { performanceAPI } from '@/lib/api';
+import { performanceAPI, goalsAPI, reviewsAPI } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Award, Clock, Calendar, TrendingUp, RefreshCw } from 'lucide-react';
+import { Award, Clock, Calendar, TrendingUp, RefreshCw, Target, Plus, MessageSquare, Star } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
+const GOAL_STATUSES = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'MISSED'];
+
 export default function EmployeePerformance() {
+  const { user } = useAuth();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState(null);
+  const [goals, setGoals] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [showGoalForm, setShowGoalForm] = useState(false);
+  const [goalForm, setGoalForm] = useState({ title: '', metric: '', dueDate: '' });
+  const [savingGoal, setSavingGoal] = useState(false);
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadData = async () => {
@@ -27,6 +38,48 @@ export default function EmployeePerformance() {
       toast.error('Failed to load performance data');
     } finally {
       setLoading(false);
+    }
+    loadGoalsAndReviews();
+  };
+
+  const loadGoalsAndReviews = async () => {
+    try {
+      const [goalsData, reviewsData] = await Promise.all([goalsAPI.getMy(), reviewsAPI.getMy()]);
+      setGoals(Array.isArray(goalsData) ? goalsData : []);
+      setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+      if (user?.id) {
+        const summaryData = await performanceAPI.getSummary(user.id);
+        setSummary(summaryData);
+      }
+    } catch {
+      // Goals/reviews are a secondary panel — a failure here shouldn't block
+      // the primary attendance-score view above from rendering.
+    }
+  };
+
+  const handleCreateGoal = async (e) => {
+    e.preventDefault();
+    if (!goalForm.title.trim()) return;
+    setSavingGoal(true);
+    try {
+      await goalsAPI.create({ ...goalForm, dueDate: goalForm.dueDate || null });
+      toast.success('Goal created');
+      setGoalForm({ title: '', metric: '', dueDate: '' });
+      setShowGoalForm(false);
+      loadGoalsAndReviews();
+    } catch (err) {
+      toast.error(err.message || 'Failed to create goal');
+    } finally {
+      setSavingGoal(false);
+    }
+  };
+
+  const updateGoalField = async (goal, field, value) => {
+    try {
+      await goalsAPI.update(goal.id, { [field]: value });
+      setGoals((prev) => prev.map((g) => (g.id === goal.id ? { ...g, [field]: value } : g)));
+    } catch (err) {
+      toast.error(err.message || 'Failed to update goal');
     }
   };
 
@@ -69,13 +122,32 @@ export default function EmployeePerformance() {
         </div>
 
         <div className="p-6 space-y-6">
+          {/* Overall Performance — from goals + manager reviews, kept separate from the attendance score below */}
+          <div className="bg-card border border-border rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <Star size={18} className="text-purple-400" />
+              <p className="text-sm text-muted-foreground">Overall Performance</p>
+            </div>
+            {summary?.overallPerformanceScore != null ? (
+              <>
+                <p className={`text-3xl font-bold ${getColor(summary.overallPerformanceScore)}`}>{summary.overallPerformanceScore}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {summary.avgGoalCompletion != null ? `${summary.avgGoalCompletion}% avg goal completion` : 'No goals yet'}
+                  {summary.avgManagerRating != null ? ` · ${summary.avgManagerRating}/5 avg rating` : ' · no reviews yet'}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">Set a goal or wait for a manager review to see this.</p>
+            )}
+          </div>
+
           {/* Latest Month Summary */}
           {latest && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-card border border-border rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-2">
                   <Award size={18} className="text-yellow-400" />
-                  <p className="text-sm text-muted-foreground">Overall Score</p>
+                  <p className="text-sm text-muted-foreground">Attendance & Punctuality Score</p>
                 </div>
                 <p className={`text-3xl font-bold ${getColor(latest.overallScore)}`}>
                   {(latest.overallScore || 0).toFixed(1)}
@@ -125,6 +197,114 @@ export default function EmployeePerformance() {
               </ResponsiveContainer>
             </div>
           )}
+
+          {/* Goals */}
+          <div className="bg-card border border-border rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Target size={20} className="text-purple-400" />
+                My Goals
+              </h2>
+              <button onClick={() => setShowGoalForm((v) => !v)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border hover:bg-muted transition text-sm">
+                <Plus size={14} /> Add Goal
+              </button>
+            </div>
+
+            {showGoalForm && (
+              <form onSubmit={handleCreateGoal} className="mb-4 p-4 rounded-lg border border-dashed border-border space-y-3">
+                <input
+                  value={goalForm.title}
+                  onChange={(e) => setGoalForm({ ...goalForm, title: e.target.value })}
+                  placeholder='Goal title, e.g. "Complete AWS certification"'
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-input text-sm"
+                  required
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    value={goalForm.metric}
+                    onChange={(e) => setGoalForm({ ...goalForm, metric: e.target.value })}
+                    placeholder="Target (optional)"
+                    className="px-3 py-2 rounded-lg border border-border bg-input text-sm"
+                  />
+                  <input
+                    type="date"
+                    value={goalForm.dueDate}
+                    onChange={(e) => setGoalForm({ ...goalForm, dueDate: e.target.value })}
+                    className="px-3 py-2 rounded-lg border border-border bg-input text-sm"
+                  />
+                </div>
+                <button type="submit" disabled={savingGoal} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50">
+                  {savingGoal ? 'Saving...' : 'Create Goal'}
+                </button>
+              </form>
+            )}
+
+            {goals.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-6 text-center">No goals yet — add one to start tracking.</p>
+            ) : (
+              <div className="space-y-3">
+                {goals.map((goal) => (
+                  <div key={goal.id} className="p-4 rounded-lg border border-border">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-medium">{goal.title}</p>
+                      <select
+                        value={goal.status}
+                        onChange={(e) => updateGoalField(goal, 'status', e.target.value)}
+                        className="text-xs px-2 py-1 rounded-lg border border-border bg-input"
+                      >
+                        {GOAL_STATUSES.map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+                      </select>
+                    </div>
+                    {goal.metric && <p className="text-xs text-muted-foreground mb-2">Target: {goal.metric}</p>}
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range" min="0" max="100" value={goal.progress}
+                        onChange={(e) => updateGoalField(goal, 'progress', Number(e.target.value))}
+                        className="flex-1"
+                      />
+                      <span className="text-sm font-semibold w-10 text-right">{goal.progress}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Manager Reviews — read-only; only the manager fills rating/comments */}
+          <div className="bg-card border border-border rounded-xl p-6">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <MessageSquare size={20} className="text-blue-400" />
+              My Reviews
+            </h2>
+            {reviews.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-6 text-center">No reviews yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {reviews.map((review) => (
+                  <div key={review.id} className="p-4 rounded-lg border border-border">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-medium">{review.cycle}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${review.status === 'SUBMITTED' ? 'bg-green-500/15 text-green-400' : 'bg-yellow-500/15 text-yellow-400'}`}>
+                        {review.status === 'SUBMITTED' ? 'Submitted' : 'In progress'}
+                      </span>
+                    </div>
+                    {review.status === 'SUBMITTED' ? (
+                      <>
+                        <div className="flex items-center gap-1 my-1">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <Star key={n} size={14} className={n <= review.managerRating ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'} />
+                          ))}
+                        </div>
+                        {review.managerComments && <p className="text-sm text-muted-foreground">{review.managerComments}</p>}
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Your manager hasn&apos;t submitted this review yet.</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Monthly Records */}
           {loading ? (

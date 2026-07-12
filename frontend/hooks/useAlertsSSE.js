@@ -8,6 +8,7 @@ export function useAlertsSSE() {
   const [connected, setConnected] = useState(false);
   const esRef = useRef(null);
   const reconnectTimer = useRef(null);
+  const connectRef = useRef(null);
 
   const connect = useCallback(() => {
     if (esRef.current) {
@@ -51,9 +52,11 @@ export function useAlertsSSE() {
       es.close();
       esRef.current = null;
       // Reconnect after 15s
-      reconnectTimer.current = setTimeout(connect, 15000);
+      reconnectTimer.current = setTimeout(() => connectRef.current?.(), 15000);
     };
   }, []);
+
+  useEffect(() => { connectRef.current = connect; }, [connect]);
 
   useEffect(() => {
     // Defer until after mount so auth token is available

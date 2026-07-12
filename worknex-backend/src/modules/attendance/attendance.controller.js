@@ -1,5 +1,25 @@
 const attendanceService = require('./attendance.service');
+const webhookProvider = require('./providers/webhook.provider');
 const { apiResponse } = require('../../utils/ApiResponse');
+
+// Device push (ADMS). Not a logged-in user — accepts the device serial
+// number and an optional communication key from query params, headers, or
+// body, whichever the device's firmware sends. Records can arrive as a
+// single punch object or an array of punches.
+const tmsWebhook = async (req, res) => {
+  const serialNumber = req.query.SN || req.query.sn || req.body.SN || req.body.serialNumber;
+  const rawRecords = Array.isArray(req.body.records) ? req.body.records : [req.body];
+
+  const result = await webhookProvider.receivePush({
+    serialNumber,
+    signature: req.headers['x-worknex-signature'],
+    timestamp: req.headers['x-worknex-timestamp'],
+    nonce: req.headers['x-worknex-nonce'],
+    rawBody: req.rawBody,
+    records: rawRecords,
+  });
+  apiResponse(res, 200, 'Push received', result);
+};
 
 const checkIn = async (req, res) => {
   const { latitude, longitude } = req.body;
@@ -74,6 +94,7 @@ const generateAbsences = async (req, res) => {
 };
 
 module.exports = {
+  tmsWebhook,
   checkIn, checkOut, autoPing, getTodayAttendance, getMyAttendance,
   getAllAttendance, getUserAttendance, getAttendanceSummary,
   manualEntry, updateAttendance, syncFromTMS,

@@ -4,10 +4,12 @@ import { useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { Check, X } from 'lucide-react';
 import { useLeaves } from '@/hooks/useLeaves';
+import { useLeaveTypeLabels, formatLeaveType } from '@/hooks/useLeaveTypeLabels';
 import { toast } from 'sonner';
 
 export default function ManagerLeaves() {
   const { leaves, loading, fetchPendingLeaves, updateLeaveStatus } = useLeaves();
+  const { labels: typeLabels } = useLeaveTypeLabels();
 
   async function loadLeaves() {
     try {
@@ -79,7 +81,7 @@ export default function ManagerLeaves() {
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="font-semibold">{employeeName}</h3>
-                        <p className="text-sm text-muted-foreground capitalize">{leaveType.toLowerCase()}</p>
+                        <p className="text-sm text-muted-foreground">{formatLeaveType(typeLabels, leaveType)}</p>
                         {reason && <p className="text-sm text-muted-foreground mt-1">{reason}</p>}
                       </div>
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${

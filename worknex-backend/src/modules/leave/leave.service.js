@@ -5,7 +5,16 @@ const { paginate, paginateMeta } = require('../../utils/pagination');
 const { assertCanAccessUser, getAccessibleUserIds, isAdminRole } = require('../../utils/rbac');
 const { getOrganizationScope } = require('../../utils/tenant');
 const notificationService = require('../notifications/notification.service');
+const { sendEmail } = require('../../config/email');
 const automation = require('./leave.automation');
+
+const fmtDate = (d) => new Date(d).toISOString().slice(0, 10);
+
+// Fire-and-forget — a broken SMTP config must never block a leave decision.
+const notifyByEmail = (to, subject, html) => {
+  if (!to) return;
+  sendEmail(to, subject, html).catch(() => {});
+};
 
 const attachDecision = async (leave) => ({
   ...leave,
@@ -25,8 +34,9 @@ const audit = async (action, entityId, organizationId, userId, values) => {
   }).catch(() => {});
 };
 
-const getLeaveOrThrow = async (id, include = {}) => {
-  const leave = await prisma.leaveRequest.findUnique({ where: { id }, include });
+const getLeaveOrThrow = async (id, organizationId, include = {}) => {
+  if (!organizationId) throw new ApiError(403, 'Organization context required');
+  const leave = await prisma.leaveRequest.findFirst({ where: { id, organizationId }, include });
   if (!leave) throw new ApiError(404, 'Leave request not found');
   return leave;
 };
@@ -45,11 +55,12 @@ const assertApproverCanAct = async (approver, leave, action) => {
 
 const loadPolicyAndBalance = async (organizationId, userId, leaveType, year) => {
   const policy = await prisma.leavePolicy.findFirst({ where: { organizationId, leaveType } });
-  if (!policy) throw new ApiError(400, `No active ${leaveType} leave policy exists`);
+  const label = (await automation.getLeaveTypeLabels(organizationId))[leaveType] || leaveType;
+  if (!policy) throw new ApiError(400, `No active ${label} leave policy exists`);
   const balance = await prisma.leaveBalance.findFirst({
     where: { organizationId, userId, policyId: policy.id, year },
   });
-  if (!balance) throw new ApiError(400, `${leaveType} balance does not exist for ${year}`);
+  if (!balance) throw new ApiError(400, `${label} balance does not exist for ${year}`);
   return { policy, balance };
 };
 
@@ -101,13 +112,17 @@ const validateDraftOrThrow = async (user, data) => {
 
   const employee = await prisma.user.findFirst({
     where: { id: user.id, organizationId: user.organizationId },
-    select: { id: true, role: true, managerId: true, organizationId: true, firstName: true, lastName: true },
+    select: {
+      id: true, roleId: true, managerId: true, organizationId: true, firstName: true, lastName: true, email: true,
+      customRole: { select: { name: true } },
+    },
   });
   if (!employee) throw new ApiError(404, 'Employee not found');
 
   const { policy, balance } = await loadPolicyAndBalance(user.organizationId, user.id, data.leaveType, start.getFullYear());
-  if (!policy.applicableRoles.includes(employee.role)) {
-    throw new ApiError(400, `${data.leaveType} leave is not applicable to ${employee.role}`);
+  if (!policy.applicableRoleIds.includes(employee.roleId)) {
+    const label = (await automation.getLeaveTypeLabels(user.organizationId))[data.leaveType] || data.leaveType;
+    throw new ApiError(400, `${label} leave is not applicable to ${employee.customRole.name}`);
   }
   if (balance.remainingDays < totalDays) {
     throw new ApiError(400, `Insufficient leave balance. Available: ${balance.remainingDays} days`);
@@ -128,13 +143,19 @@ const validateDraftOrThrow = async (user, data) => {
 };
 
 const applyAutomation = async (leave, employee, actor) => {
+  const leaveLabel = (await automation.getLeaveTypeLabels(leave.organizationId))[leave.leaveType] || leave.leaveType;
   const decision = await automation.evaluateLeaveRequest({
     leave,
     actor,
     excludeLeaveId: leave.id,
   });
   decision.leaveRequestId = leave.id;
-  const savedDecision = await automation.saveDecision(decision, actor);
+
+  // AUTO_APPROVED/AUTO_REJECTED are the engine's decision, not the applicant's —
+  // attribute them to the system, not the employee who happened to submit.
+  const isSystemDecision = decision.decision.startsWith('AUTO_');
+  if (isSystemDecision) decision.reasons = ['[SYSTEM] Automated decision', ...decision.reasons];
+  const savedDecision = await automation.saveDecision(decision, isSystemDecision ? null : actor);
 
   if (decision.decision === 'AUTO_APPROVED') {
     const updated = await prisma.$transaction(async (tx) => {
@@ -146,7 +167,24 @@ const applyAutomation = async (leave, employee, actor) => {
       });
     });
     await notificationService.create(leave.employeeId, 'LEAVE_APPROVED', 'Leave Auto Approved', decision.reasons.join('; '));
+    notifyByEmail(
+      employee.email,
+      'Your leave has been auto-approved',
+      `<p>Hi ${employee.firstName},</p><p>Your <b>${leaveLabel}</b> leave (${fmtDate(leave.startDate)} to ${fmtDate(leave.endDate)}) has been automatically approved.</p><p>${decision.reasons.join('; ')}</p>`,
+    );
+    if (employee.managerId) {
+      const manager = await prisma.user.findUnique({ where: { id: employee.managerId }, select: { email: true, firstName: true } });
+      if (manager) {
+        await notificationService.create(employee.managerId, 'LEAVE_APPLIED', 'Team Leave Auto Approved', `${employee.firstName} ${employee.lastName}'s ${leaveLabel} leave was auto-approved`);
+        notifyByEmail(
+          manager.email,
+          `${employee.firstName} ${employee.lastName}'s leave was auto-approved`,
+          `<p>Hi ${manager.firstName},</p><p><b>${employee.firstName} ${employee.lastName}</b>'s <b>${leaveLabel}</b> leave (${fmtDate(leave.startDate)} to ${fmtDate(leave.endDate)}) was automatically approved per policy — no action needed from you.</p>`,
+        );
+      }
+    }
     await audit('APPROVE', leave.id, leave.organizationId, actor.id, savedDecision);
+    triggerMirrorSandwichCheck(updated);
     return attachDecision(updated);
   }
 
@@ -157,12 +195,17 @@ const applyAutomation = async (leave, employee, actor) => {
       include: leaveInclude,
     });
     await notificationService.create(leave.employeeId, 'LEAVE_REJECTED', 'Leave Auto Rejected', decision.reasons.join('; '));
+    notifyByEmail(
+      employee.email,
+      'Your leave request was not approved',
+      `<p>Hi ${employee.firstName},</p><p>Your <b>${leaveLabel}</b> leave (${fmtDate(leave.startDate)} to ${fmtDate(leave.endDate)}) could not be approved.</p><p>${decision.reasons.join('; ')}</p>`,
+    );
     await audit('REJECT', leave.id, leave.organizationId, actor.id, savedDecision);
     return attachDecision(updated);
   }
 
   if (employee.managerId) {
-    await notificationService.create(employee.managerId, 'LEAVE_APPLIED', 'New Leave Request', `${employee.firstName} ${employee.lastName} applied for ${leave.leaveType} leave`);
+    await notificationService.create(employee.managerId, 'LEAVE_APPLIED', 'New Leave Request', `${employee.firstName} ${employee.lastName} applied for ${leaveLabel} leave`);
   }
   await audit('UPDATE', leave.id, leave.organizationId, actor.id, savedDecision);
   return attachDecision({ ...leave, decisionExplanation: savedDecision });
@@ -194,7 +237,7 @@ const applyLeave = async (user, data) => {
 };
 
 const approveLeave = async (approver, leaveId, note) => {
-  const leave = await getLeaveOrThrow(leaveId, { employee: { select: { managerId: true } } });
+  const leave = await getLeaveOrThrow(leaveId, approver.organizationId, { employee: { select: { managerId: true } } });
   await assertApproverCanAct(approver, leave, 'approve');
   if (leave.status !== 'PENDING') throw new ApiError(400, 'Leave is not in pending state');
 
@@ -219,11 +262,12 @@ const approveLeave = async (approver, leaveId, note) => {
   }, approver);
   await audit('APPROVE', leaveId, leave.organizationId, approver.id, decision);
   await notificationService.create(leave.employeeId, 'LEAVE_APPROVED', 'Leave Approved', `Your ${leave.leaveType} leave request has been approved`);
+  triggerMirrorSandwichCheck(updated);
   return attachDecision(updated);
 };
 
 const rejectLeave = async (approver, leaveId, note) => {
-  const leave = await getLeaveOrThrow(leaveId, { employee: { select: { managerId: true } } });
+  const leave = await getLeaveOrThrow(leaveId, approver.organizationId, { employee: { select: { managerId: true } } });
   await assertApproverCanAct(approver, leave, 'reject');
   if (leave.status !== 'PENDING') throw new ApiError(400, 'Leave is not in pending state');
 
@@ -247,8 +291,50 @@ const rejectLeave = async (approver, leaveId, note) => {
   return attachDecision(updated);
 };
 
+// Lazy require — leave.sandwich.js calls back into applySandwichPenalty below,
+// so requiring it at module load time here would create a require cycle.
+const triggerMirrorSandwichCheck = (leave) => {
+  const leaveSandwich = require('./leave.sandwich');
+  leaveSandwich.runSandwichCheckForNewLeave(leave, leave.organizationId)
+    .catch((err) => console.error('[Sandwich] mirror-check failed:', err.message));
+};
+
+const applySandwichPenalty = async (leaveRequestId, extraDays, gapDescription, organizationId) => {
+  const leave = await getLeaveOrThrow(leaveRequestId, organizationId, {
+    employee: { select: { id: true, firstName: true, lastName: true, managerId: true } },
+  });
+  const year = leave.startDate.getFullYear();
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const policy = await tx.leavePolicy.findFirst({ where: { organizationId: leave.organizationId, leaveType: leave.leaveType } });
+    if (policy) {
+      await tx.leaveBalance.updateMany({
+        where: { organizationId: leave.organizationId, userId: leave.employeeId, policyId: policy.id, year },
+        data: { usedDays: { increment: extraDays }, remainingDays: { decrement: extraDays } },
+      });
+    }
+    return tx.leaveRequest.update({
+      where: { id: leaveRequestId },
+      data: {
+        totalDays: { increment: extraDays },
+        isSandwiched: true,
+        sandwichExtraDays: extraDays,
+        approverNote: [leave.approverNote, `Sandwich rule applied: ${gapDescription}`].filter(Boolean).join(' | '),
+      },
+      include: leaveInclude,
+    });
+  });
+
+  await audit('UPDATE', leaveRequestId, leave.organizationId, null, { action: 'SANDWICH_ADJUSTMENT', extraDays, gapDescription });
+  await notificationService.create(leave.employeeId, 'SYSTEM', 'Leave Adjusted — Sandwich Rule', `Your ${leave.leaveType} leave now deducts ${extraDays} extra day(s): ${gapDescription}`);
+  if (leave.employee.managerId) {
+    await notificationService.create(leave.employee.managerId, 'SYSTEM', 'Sandwich Leave Adjustment', `${leave.employee.firstName} ${leave.employee.lastName}'s leave was adjusted (+${extraDays} day(s)) per sandwich policy: ${gapDescription}`);
+  }
+  return attachDecision(updated);
+};
+
 const cancelLeave = async (user, leaveId) => {
-  const leave = await getLeaveOrThrow(leaveId);
+  const leave = await getLeaveOrThrow(leaveId, user.organizationId);
   if (leave.organizationId !== user.organizationId) throw new ApiError(403, 'Not authorized');
   if (leave.employeeId !== user.id) throw new ApiError(403, 'Not authorized');
   if (!['PENDING', 'APPROVED'].includes(leave.status)) throw new ApiError(400, 'Cannot cancel this leave');
@@ -291,7 +377,7 @@ const getPendingLeaves = async (user) => {
 };
 
 const getLeaveById = async (id, user) => {
-  const leave = await getLeaveOrThrow(id, leaveInclude);
+  const leave = await getLeaveOrThrow(id, user.organizationId, leaveInclude);
   if (user.role !== 'SUPER_ADMIN' && leave.organizationId !== user.organizationId) throw new ApiError(403, 'Not authorized for this organization');
   if (user.role === 'EMPLOYEE' && leave.employeeId !== user.id) throw new ApiError(403, 'Not authorized to access this leave');
   if (user.role === 'MANAGER' && leave.employee.managerId !== user.id) throw new ApiError(403, 'Not authorized to access this leave');
@@ -311,12 +397,16 @@ const getUserBalances = async (userId, requestingUser) => {
 
 const getPolicies = async (requestingUser) => prisma.leavePolicy.findMany({ where: getOrganizationScope(requestingUser) });
 
+const getActivePolicyVersion = async (requestingUser) => automation.getActivePolicyVersion(requestingUser.organizationId);
+
+const getLeaveTypeLabels = async (requestingUser) => automation.getLeaveTypeLabels(requestingUser.organizationId);
+
 const createPolicy = async (data, requestingUser) => {
   return prisma.leavePolicy.create({ data: { ...data, organizationId: requestingUser.organizationId } });
 };
 
 const updatePolicy = async (id, data, requestingUser) => {
-  const policy = await prisma.leavePolicy.findUnique({ where: { id }, select: { organizationId: true } });
+  const policy = await prisma.leavePolicy.findFirst({ where: { id, ...getOrganizationScope(requestingUser) }, select: { organizationId: true } });
   if (!policy) throw new ApiError(404, 'Policy not found');
   if (requestingUser.role !== 'SUPER_ADMIN' && policy.organizationId !== requestingUser.organizationId) throw new ApiError(403, 'Not authorized for this organization');
   const { organizationId, ...safeData } = data;
@@ -347,6 +437,7 @@ module.exports = {
   approveLeave,
   rejectLeave,
   cancelLeave,
+  applySandwichPenalty,
   getLeaves,
   getMyLeaves,
   getPendingLeaves,
@@ -354,6 +445,8 @@ module.exports = {
   getMyBalances,
   getUserBalances,
   getPolicies,
+  getActivePolicyVersion,
+  getLeaveTypeLabels,
   createPolicy,
   updatePolicy,
   evaluateExistingLeave,
@@ -362,4 +455,5 @@ module.exports = {
   extractPolicyDocument: automation.extractPolicyDocument,
   aiParsePolicyDocument: automation.aiParsePolicyDocument,
   approvePolicyRules: automation.approvePolicyRules,
+  saveManualPolicyRules: automation.saveManualPolicyRules,
 };

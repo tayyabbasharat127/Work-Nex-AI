@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { attendanceAPI, leaveAPI, notificationsAPI, performanceAPI, userAPI } from '@/lib/api';
+import { useLeaveTypeLabels, formatLeaveType } from '@/hooks/useLeaveTypeLabels';
 import { Clock, Calendar, TrendingUp, CheckCircle, LogIn, LogOut, AlertCircle, RefreshCw } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -66,6 +67,7 @@ export default function EmployeeDashboard() {
   const [today, setToday] = useState(null);
   const [history, setHistory] = useState([]);
   const [balances, setBalances] = useState([]);
+  const { labels: typeLabels } = useLeaveTypeLabels();
   const [leaves, setLeaves] = useState([]);
   const [performance, setPerformance] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -185,7 +187,7 @@ export default function EmployeeDashboard() {
     })),
     ...leaves.slice(0, 2).map((item) => ({
       id: `leave-${item.id}`,
-      action: `${item.leaveType} leave ${item.status?.toLowerCase() || 'updated'}`,
+      action: `${formatLeaveType(typeLabels, item.leaveType)} leave ${item.status?.toLowerCase() || 'updated'}`,
       detail: `${new Date(item.startDate).toLocaleDateString()} - ${new Date(item.endDate).toLocaleDateString()}`,
       time: item.appliedAt ? new Date(item.appliedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
     })),

@@ -4,11 +4,15 @@ import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { Plus, X } from 'lucide-react';
 import { useLeaves } from '@/hooks/useLeaves';
+import { useLeaveTypeLabels, formatLeaveType } from '@/hooks/useLeaveTypeLabels';
 import { leaveAPI } from '@/lib/api';
 import { toast } from 'sonner';
 
+const FALLBACK_LEAVE_TYPES = ['ANNUAL', 'SICK', 'CASUAL', 'MATERNITY', 'PATERNITY', 'UNPAID', 'OTHER'];
+
 export default function EmployeeLeaves() {
   const { leaves, loading, fetchMyLeaves, createLeave, cancelLeave } = useLeaves();
+  const { labels: typeLabels } = useLeaveTypeLabels();
   const [showModal, setShowModal] = useState(false);
   const [balances, setBalances] = useState([]);
   const [formData, setFormData] = useState({
@@ -130,15 +134,15 @@ export default function EmployeeLeaves() {
           {/* Leave Balance */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-card border border-border rounded-lg p-6">
-              <p className="text-muted-foreground text-sm mb-2">Casual Leave Balance</p>
+              <p className="text-muted-foreground text-sm mb-2">{formatLeaveType(typeLabels, 'CASUAL')} Leave Balance</p>
               <p className="text-3xl font-bold text-primary">{balanceByType.CASUAL ?? 0} days</p>
             </div>
             <div className="bg-card border border-border rounded-lg p-6">
-              <p className="text-muted-foreground text-sm mb-2">Annual Leave Balance</p>
+              <p className="text-muted-foreground text-sm mb-2">{formatLeaveType(typeLabels, 'ANNUAL')} Leave Balance</p>
               <p className="text-3xl font-bold text-primary">{balanceByType.ANNUAL ?? 0} days</p>
             </div>
             <div className="bg-card border border-border rounded-lg p-6">
-              <p className="text-muted-foreground text-sm mb-2">Sick Leave Balance</p>
+              <p className="text-muted-foreground text-sm mb-2">{formatLeaveType(typeLabels, 'SICK')} Leave Balance</p>
               <p className="text-3xl font-bold text-primary">{balanceByType.SICK ?? 0} days</p>
             </div>
           </div>
@@ -166,7 +170,7 @@ export default function EmployeeLeaves() {
                     <div key={leave.id} className="p-6 border border-border rounded-lg hover:border-primary transition">
                       <div className="flex justify-between items-start mb-4">
                         <div>
-                          <h3 className="font-semibold capitalize">{leaveType.toLowerCase()}</h3>
+                          <h3 className="font-semibold">{formatLeaveType(typeLabels, leaveType)}</h3>
                           <p className="text-sm text-muted-foreground">{reason}</p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -251,13 +255,9 @@ export default function EmployeeLeaves() {
                     className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
                     required
                   >
-                    <option value="ANNUAL">Annual Leave</option>
-                    <option value="SICK">Sick Leave</option>
-                    <option value="CASUAL">Casual Leave</option>
-                    <option value="MATERNITY">Maternity Leave</option>
-                    <option value="PATERNITY">Paternity Leave</option>
-                    <option value="UNPAID">Unpaid Leave</option>
-                    <option value="OTHER">Other</option>
+                    {(Object.keys(typeLabels).length ? Object.keys(typeLabels) : FALLBACK_LEAVE_TYPES).map((type) => (
+                      <option key={type} value={type}>{formatLeaveType(typeLabels, type)} Leave</option>
+                    ))}
                   </select>
                 </div>
 

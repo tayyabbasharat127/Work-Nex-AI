@@ -92,7 +92,7 @@ def build_llm() -> Optional[BaseChatModel]:
 # ---------------------------------------------------------------------------
 async def _call(path: str, token: str | None = None, method: str = "GET") -> dict:
     """Make a backend API call. Uses provided token, falls back to service token."""
-    auth = token or settings.BACKEND_TOKEN
+    auth = token
     headers = {"Content-Type": "application/json"}
     if auth:
         headers["Authorization"] = f"Bearer {auth}"
@@ -109,12 +109,12 @@ async def _call(path: str, token: str | None = None, method: str = "GET") -> dic
 
 async def _personal(path: str) -> dict:
     """Call a personal endpoint using the current user's JWT token."""
-    return await _call(path, token=_user_token.get() or settings.BACKEND_TOKEN)
+    return await _call(path, token=_user_token.get())
 
 
 async def _service(path: str) -> dict:
     """Call an analytics endpoint using the service token."""
-    return await _call(path, token=settings.BACKEND_TOKEN)
+    return await _call(path, token=_user_token.get())
 
 
 # ===========================================================================
@@ -316,6 +316,18 @@ TOOLS = [
     search_hr_policy,
 ]
 
+def _tools_for_role(role: str) -> list:
+    personal = TOOLS[:5] + [search_hr_policy]
+    if role == "EMPLOYEE":
+        return personal
+    if role == "MANAGER":
+        return personal + [get_dashboard_kpis, get_attendance_trends, get_department_attendance,
+                           get_leave_summary, get_leave_by_type, get_leave_trends,
+                           get_workforce_headcount, get_attendance_anomalies]
+    if role in ("ADMIN", "SUPER_ADMIN"):
+        return TOOLS
+    return personal
+
 # ---------------------------------------------------------------------------
 # System prompt — user-aware, role-aware
 # ---------------------------------------------------------------------------
@@ -339,16 +351,14 @@ IMPORTANT RULES:
 # ---------------------------------------------------------------------------
 # Agent cache (one per LLM instance) — uses LangGraph create_react_agent
 # ---------------------------------------------------------------------------
-_cached_agent: Any = None
-_cached_llm: Optional[BaseChatModel] = None
+_cached_agents: dict[str, Any] = {}
 
 
-def _get_agent(llm: BaseChatModel) -> Any:
-    global _cached_agent, _cached_llm
-    if _cached_agent is None or llm is not _cached_llm:
-        _cached_agent = create_react_agent(llm, TOOLS)
-        _cached_llm = llm
-    return _cached_agent
+def _get_agent(llm: BaseChatModel, role: str) -> Any:
+    key = f"{llm.__class__.__name__}:{role}"
+    if key not in _cached_agents:
+        _cached_agents[key] = create_react_agent(llm, _tools_for_role(role))
+    return _cached_agents[key]
 
 
 # ---------------------------------------------------------------------------
@@ -388,7 +398,7 @@ async def run_agent(
         today=datetime.now().strftime("%Y-%m-%d"),
     )
 
-    agent = _get_agent(llm)
+    agent = _get_agent(llm, role)
     try:
         result = await agent.ainvoke({
             "messages": [

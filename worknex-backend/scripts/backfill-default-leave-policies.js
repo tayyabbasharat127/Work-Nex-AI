@@ -1,5 +1,6 @@
 const prisma = require('../src/config/db');
 const { ensureDefaultLeavePolicies, ensureLeaveBalancesForUser } = require('../src/modules/leave/leave.defaults');
+const { ensureSystemRoles } = require('../src/utils/systemRoles');
 
 async function main() {
   const year = new Date().getFullYear();
@@ -9,12 +10,13 @@ async function main() {
 
   for (const organization of organizations) {
     await prisma.$transaction(async (tx) => {
-      const policies = await ensureDefaultLeavePolicies(tx, organization.id);
+      const systemRoles = await ensureSystemRoles(tx, organization.id);
+      const policies = await ensureDefaultLeavePolicies(tx, organization.id, systemRoles);
       const users = await tx.user.findMany({
         where: {
           organizationId: organization.id,
           isActive: true,
-          role: { in: ['EMPLOYEE', 'MANAGER', 'ADMIN'] },
+          customRole: { tier: { in: ['EMPLOYEE', 'MANAGER', 'ADMIN'] } },
         },
         select: { id: true },
       });

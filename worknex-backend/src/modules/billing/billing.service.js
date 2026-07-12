@@ -5,6 +5,7 @@ const { ApiError } = require('../../utils/ApiError');
 const { sendEmail } = require('../../config/email');
 const { PLANS, TAX_RATE, ANNUAL_DISCOUNT } = require('./billing.plans');
 const { ensureDefaultLeavePolicies, ensureLeaveBalancesForUser } = require('../leave/leave.defaults');
+const { ensureSystemRoles } = require('../../utils/systemRoles');
 
 const generateLicenseKey = () => {
   const seg = () => uuidv4().replace(/-/g, '').toUpperCase().slice(0, 6);
@@ -74,6 +75,7 @@ const registerOrganization = async (data) => {
     const organization = await tx.organization.create({
       data: { name: orgName, slug, industry, country, phone, website },
     });
+    const systemRoles = await ensureSystemRoles(tx, organization.id);
     const adminDepartment = await tx.department.create({
       data: {
         organizationId: organization.id,
@@ -89,7 +91,7 @@ const registerOrganization = async (data) => {
         lastName: ownerLastName,
         email: ownerEmail,
         passwordHash,
-        role: 'ADMIN',
+        roleId: systemRoles.ADMIN.id,
         designation: 'Organization Owner',
         phone: phone || null,
         joiningDate: new Date(),
@@ -99,11 +101,11 @@ const registerOrganization = async (data) => {
       select: {
         id: true,
         email: true,
-        role: true,
         firstName: true,
         lastName: true,
         employeeId: true,
         organizationId: true,
+        customRole: { select: { id: true, name: true, tier: true } },
       },
     });
     const updatedOrganization = await tx.organization.update({
@@ -118,9 +120,11 @@ const registerOrganization = async (data) => {
         currentPeriodStart: new Date(), currentPeriodEnd: trialEnd, licenseKey,
       },
     });
-    const policies = await ensureDefaultLeavePolicies(tx, organization.id);
+    const policies = await ensureDefaultLeavePolicies(tx, organization.id, systemRoles);
     await ensureLeaveBalancesForUser(tx, organization.id, owner.id, policies);
-    return { organization: updatedOrganization, owner };
+    const { customRole, ...ownerRest } = owner;
+    const serializedOwner = { ...ownerRest, role: customRole.tier, roleId: customRole.id, roleName: customRole.name };
+    return { organization: updatedOrganization, owner: serializedOwner };
   });
 
   await trySendEmail(ownerEmail, 'Welcome to WorkNex AI',
@@ -197,7 +201,7 @@ const subscribe = async (organizationId, planType, billingCycle, paymentMethod, 
       organizationId,
       OR: [
         ...(orgOwner?.ownerId ? [{ id: orgOwner.ownerId }] : []),
-        { role: 'ADMIN' },
+        { customRole: { tier: 'ADMIN' } },
       ],
     },
     orderBy: { createdAt: 'asc' },

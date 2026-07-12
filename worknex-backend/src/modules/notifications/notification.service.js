@@ -53,7 +53,7 @@ const deleteNotification = async (id, user) => {
 
 const broadcast = async (type, title, message, roleFilter = null, requestingUser) => {
   const where = { isActive: true, ...getOrganizationScope(requestingUser) };
-  if (roleFilter) where.role = roleFilter;
+  if (roleFilter) where.customRole = { tier: roleFilter };
 
   const users = await prisma.user.findMany({ where, select: { id: true, organizationId: true } });
   const data = users.map((u) => ({ organizationId: u.organizationId, userId: u.id, type, title, message }));

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { analyticsAPI, attendanceAPI, etlAPI, notificationsAPI } from '@/lib/api';
+import { useLeaveTypeLabels, formatLeaveType } from '@/hooks/useLeaveTypeLabels';
 import { Users, Clock, CalendarX, TrendingUp, AlertCircle, RefreshCw } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
@@ -64,6 +65,7 @@ export default function AdminDashboard() {
   const [leaveDistribution, setLeaveDistribution] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [etlStatus, setEtlStatus] = useState(null);
+  const { labels: typeLabels } = useLeaveTypeLabels();
 
   const loadDashboard = async () => {
     setLoading(true);
@@ -86,7 +88,7 @@ export default function AdminDashboard() {
       if (deptData.status === 'fulfilled') setDepartmentAttendance(normalizeArray(deptData.value));
       if (leaveTypeData.status === 'fulfilled') {
         setLeaveDistribution(normalizeArray(leaveTypeData.value).map((item, index) => ({
-          name: item.leaveType || 'Leave',
+          name: item.leaveType ? formatLeaveType(typeLabels, item.leaveType) : 'Leave',
           value: item._sum?.totalDays || item.totalDays || item._count?.leaveType || item.count || 0,
           color: COLORS[index % COLORS.length],
         })).filter((item) => item.value > 0));

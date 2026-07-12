@@ -56,6 +56,16 @@ const getPolicies = async (req, res) => {
   apiResponse(res, 200, 'Policies fetched', policies);
 };
 
+const getActivePolicyVersion = async (req, res) => {
+  const version = await leaveService.getActivePolicyVersion(req.user);
+  apiResponse(res, 200, 'Active policy version fetched', version);
+};
+
+const getLeaveTypeLabels = async (req, res) => {
+  const labels = await leaveService.getLeaveTypeLabels(req.user);
+  apiResponse(res, 200, 'Leave type labels fetched', labels);
+};
+
 const createPolicy = async (req, res) => {
   const policy = await leaveService.createPolicy(req.body, req.user);
   apiResponse(res, 201, 'Policy created', policy);
@@ -86,6 +96,11 @@ const approvePolicyRules = async (req, res) => {
   apiResponse(res, 200, 'Policy rules approved', document);
 };
 
+const saveManualPolicyRules = async (req, res) => {
+  const result = await leaveService.saveManualPolicyRules(req.body.leavePolicies, req.user);
+  apiResponse(res, 200, 'Policy rules activated', result);
+};
+
 const evaluateLeave = async (req, res) => {
   const decision = await leaveService.evaluateExistingLeave(req.params.id, req.user);
   apiResponse(res, 200, 'Leave evaluated', decision);
@@ -99,7 +114,7 @@ const getDecisionExplanation = async (req, res) => {
 module.exports = {
   applyLeave, approveLeave, rejectLeave, cancelLeave,
   getLeaves, getMyLeaves, getPendingLeaves, getLeaveById,
-  getMyBalances, getUserBalances, getPolicies, createPolicy, updatePolicy,
+  getMyBalances, getUserBalances, getPolicies, getActivePolicyVersion, getLeaveTypeLabels, createPolicy, updatePolicy,
   uploadPolicyDocument, extractPolicyDocument, aiParsePolicyDocument,
-  approvePolicyRules, evaluateLeave, getDecisionExplanation,
+  approvePolicyRules, saveManualPolicyRules, evaluateLeave, getDecisionExplanation,
 };

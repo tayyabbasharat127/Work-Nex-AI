@@ -34,8 +34,7 @@ export default function ChatbotWidget() {
 
   // Fetch AI mode on mount
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_AI_URL || 'http://localhost:8000'}/chat/status`)
-      .then(r => r.json())
+    aiAPI.status()
       .then(d => setAiMode(d.llmProvider || d.mode))
       .catch(() => setAiMode('statistical'));
   }, []);

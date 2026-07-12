@@ -134,7 +134,10 @@ const getDepartmentReport = async (query, user) => {
   const userWhere = { ...deptWhere, isActive: true };
   const accessibleUserIds = await getAccessibleUserIds(user);
   if (accessibleUserIds !== null) userWhere.id = { in: accessibleUserIds };
-  const users = await prisma.user.findMany({ where: userWhere, select: { departmentId: true, role: true } });
+  const users = await prisma.user.findMany({
+    where: userWhere,
+    select: { departmentId: true, customRole: { select: { tier: true } } },
+  });
   if (user.role === 'MANAGER') {
     const departmentIds = [...new Set(users.map((item) => item.departmentId).filter(Boolean))];
     deptWhere.id = departmentIds.length ? { in: departmentIds } : '__none__';
@@ -147,8 +150,8 @@ const getDepartmentReport = async (query, user) => {
       name: dept.name,
       description: dept.description,
       activeUsers: members.length,
-      managers: members.filter((item) => item.role === 'MANAGER').length,
-      employees: members.filter((item) => item.role === 'EMPLOYEE').length,
+      managers: members.filter((item) => item.customRole.tier === 'MANAGER').length,
+      employees: members.filter((item) => item.customRole.tier === 'EMPLOYEE').length,
     };
   });
   return baseReport('department', user, query, { totalDepartments: rows.length, totalActiveUsers: users.length }, rows);

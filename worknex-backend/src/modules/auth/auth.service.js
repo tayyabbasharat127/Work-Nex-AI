@@ -6,11 +6,15 @@ const { v4: uuidv4 } = require('uuid');
 const prisma = require('../../config/db');
 const { ApiError } = require('../../utils/ApiError');
 const { sendEmail } = require('../../config/email');
+const { getSystemRoleId } = require('../../utils/systemRoles');
 
 const userPayload = (user) => ({
   id: user.id,
   email: user.email,
-  role: user.role,
+  role: user.customRole.tier,
+  roleId: user.customRole.id,
+  roleName: user.customRole.name,
+  permissions: user.customRole.permissions,
   firstName: user.firstName,
   lastName: user.lastName,
   organizationId: user.organizationId,
@@ -27,10 +31,26 @@ const generateTokens = (userId, role, organizationId) => {
 };
 
 const register = async (data, requestingUser = null) => {
-  const role = ['ADMIN', 'MANAGER', 'EMPLOYEE'].includes(data.role) ? data.role : 'EMPLOYEE';
   if (requestingUser?.role !== 'SUPER_ADMIN' && data.organizationId !== requestingUser?.organizationId) {
     throw new ApiError(403, 'Cannot create user in another organization');
   }
+
+  let roleId;
+  let tier;
+  if (data.roleId) {
+    const customRole = await prisma.role.findFirst({
+      where: { id: data.roleId, organizationId: data.organizationId },
+      select: { id: true, tier: true },
+    });
+    if (!customRole) throw new ApiError(400, 'Role not found in organization');
+    roleId = customRole.id;
+    tier = customRole.tier;
+  } else {
+    tier = ['ADMIN', 'MANAGER', 'EMPLOYEE'].includes(data.role) ? data.role : 'EMPLOYEE';
+    roleId = await getSystemRoleId(prisma, data.organizationId, tier);
+    if (!roleId) throw new ApiError(400, `No system role found for tier ${tier} in this organization`);
+  }
+
   const existing = await prisma.user.findUnique({ where: { email: data.email } });
   if (existing) throw new ApiError(409, 'Email already registered');
 
@@ -63,7 +83,7 @@ const register = async (data, requestingUser = null) => {
       lastName:     data.lastName,
       email:        data.email,
       passwordHash,
-      role,
+      roleId,
       departmentId: data.departmentId || null,
       managerId:    data.managerId    || null,
       designation:  data.designation  || null,
@@ -73,18 +93,18 @@ const register = async (data, requestingUser = null) => {
     select: {
       id: true,
       email: true,
-      role: true,
       firstName: true,
       lastName: true,
       employeeId: true,
       organizationId: true,
+      customRole: { select: { id: true, name: true, tier: true } },
     },
   });
-  return user;
+  return { ...user, role: user.customRole.tier, roleId: user.customRole.id, roleName: user.customRole.name };
 };
 
 const login = async (email, password) => {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email }, include: { customRole: true } });
   if (!user || !user.isActive) throw new ApiError(401, 'Invalid credentials');
 
   const valid = await bcrypt.compare(password, user.passwordHash);
@@ -94,7 +114,7 @@ const login = async (email, password) => {
     return { requires2FA: true, userId: user.id };
   }
 
-  const { accessToken, refreshToken } = generateTokens(user.id, user.role, user.organizationId);
+  const { accessToken, refreshToken } = generateTokens(user.id, user.customRole.tier, user.organizationId);
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt } });
 
@@ -111,10 +131,10 @@ const refreshToken = async (token) => {
   if (!stored || stored.expiresAt < new Date()) throw new ApiError(401, 'Invalid refresh token');
 
   const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-  const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+  const user = await prisma.user.findUnique({ where: { id: decoded.userId }, include: { customRole: true } });
   if (!user || !user.isActive) throw new ApiError(401, 'User not found');
 
-  const tokens = generateTokens(user.id, user.role, user.organizationId);
+  const tokens = generateTokens(user.id, user.customRole.tier, user.organizationId);
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
   await prisma.refreshToken.update({
@@ -164,13 +184,13 @@ const disable2FA = async (userId, token) => {
 };
 
 const validate2FA = async (userId, token) => {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: { customRole: true } });
   if (!user || !user.twoFAEnabled) throw new ApiError(400, '2FA not enabled');
 
   const valid = authenticator.verify({ token, secret: user.twoFASecret });
   if (!valid) throw new ApiError(400, 'Invalid 2FA token');
 
-  const tokens = generateTokens(user.id, user.role, user.organizationId);
+  const tokens = generateTokens(user.id, user.customRole.tier, user.organizationId);
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   await prisma.refreshToken.create({ data: { token: tokens.refreshToken, userId: user.id, expiresAt } });
   return { ...tokens, user: userPayload(user) };

@@ -16,6 +16,7 @@ const defaultSettings = {
   wifiVerificationEnabled: false,
   attendancePolicy: { halfDayHours: 4 },
   leaveAutomationEnabled: true,
+  sandwichLeaveEnabled: false,
 };
 
 const normalizeIpRanges = (value) => {
@@ -145,6 +146,10 @@ export default function AdminSettings() {
                     <label className="flex items-center gap-3">
                       <input type="checkbox" checked={Boolean(settings.leaveAutomationEnabled)} onChange={(event) => update('leaveAutomationEnabled', event.target.checked)} />
                       <span>Enable leave automation rules</span>
+                    </label>
+                    <label className="flex items-center gap-3">
+                      <input type="checkbox" checked={Boolean(settings.sandwichLeaveEnabled)} onChange={(event) => update('sandwichLeaveEnabled', event.target.checked)} />
+                      <span>Enable sandwich-leave rule (leave adjacent to an unapproved absence deducts the weekend/holiday gap too)</span>
                     </label>
                   </Section>
 

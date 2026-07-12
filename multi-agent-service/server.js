@@ -3,10 +3,11 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { HumanMessage } from "@langchain/core/messages";
 import { createSupervisorAgent } from "./agents/supervisor.js";
-import { getBackendApiUrl, getCorsOrigins, normalizeBearerToken } from "./config/runtime.js";
+import { getBackendApiUrl, getCorsOrigins } from "./config/runtime.js";
 import { resolveLlmProvider } from "./config/llm.js";
 import { buildLangSmithRunConfig, configureLangSmith, getLangSmithStatus } from "./config/langsmith.js";
 import { getMemoryStatus, initializeMemory } from "./config/memory.js";
+import { assertThreadOwner, authenticate, createOwnedThreadId } from "./security/auth.js";
 
 dotenv.config();
 const langSmithStatus = configureLangSmith();
@@ -25,6 +26,7 @@ app.use(cors({
   },
   credentials: true,
 }));
+app.use("/api", authenticate);
 
 app.get("/health", (req, res) => {
   res.json({
@@ -87,7 +89,7 @@ app.get("/api/capabilities", (req, res) => {
 
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message, threadId, userId, userContext } = req.body || {};
+    const { message, threadId } = req.body || {};
     if (!message || typeof message !== "string") {
       return res.status(400).json({
         success: false,
@@ -95,18 +97,27 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    const authToken = normalizeBearerToken(req.headers.authorization || req.body.authToken);
-    const resolvedThreadId = threadId || `thread_${Date.now()}`;
+    if (threadId && !assertThreadOwner(threadId, req.principal)) {
+      return res.status(404).json({ success: false, message: "Thread not found" });
+    }
+    const authToken = req.principal.token;
+    const resolvedThreadId = threadId || createOwnedThreadId(req.principal);
+    const userContext = { role: req.principal.role, organizationId: req.principal.organizationId };
     const supervisor = createSupervisorAgent({
       authToken,
-      userId: userId || userContext?.id || "anonymous",
-      userContext: userContext || null,
+      userId: req.principal.userId,
+      organizationId: req.principal.organizationId,
+      role: req.principal.role,
+      userContext,
     });
 
+    const controller = new AbortController();
+    const timeoutMs = Number(process.env.AGENT_REQUEST_TIMEOUT_MS || 30000);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     const result = await supervisor.invoke(
       { messages: [new HumanMessage(message)] },
-      buildLangSmithRunConfig({ threadId: resolvedThreadId, userContext })
-    );
+      { ...buildLangSmithRunConfig({ threadId: resolvedThreadId, userContext }), recursionLimit: Number(process.env.AGENT_RECURSION_LIMIT || 8), signal: controller.signal }
+    ).finally(() => clearTimeout(timer));
 
     const lastMessage = result.messages[result.messages.length - 1];
     const answer = typeof lastMessage.content === "string"
@@ -137,10 +148,15 @@ app.post("/api/chat", async (req, res) => {
 app.get("/api/threads/:threadId", async (req, res) => {
   try {
     const { threadId } = req.params;
+    if (!assertThreadOwner(threadId, req.principal)) {
+      return res.status(404).json({ success: false, message: "Thread not found" });
+    }
     const supervisor = createSupervisorAgent({
-      authToken: "",
-      userId: "history_reader",
-      userContext: null,
+      authToken: req.principal.token,
+      userId: req.principal.userId,
+      organizationId: req.principal.organizationId,
+      role: req.principal.role,
+      userContext: { role: req.principal.role, organizationId: req.principal.organizationId },
     });
 
     const state = await supervisor.getState({

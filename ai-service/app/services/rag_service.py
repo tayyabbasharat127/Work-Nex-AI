@@ -159,7 +159,7 @@ def _intent_actions(message: str, role: str) -> list[dict[str, str]]:
         actions.append({"type": "navigate", "label": "Open attendance", "path": path})
     if "performance" in text:
         actions.append({"type": "navigate", "label": "Open performance", "path": "/dashboard/employee/performance"})
-    if "forecast" in text:
+    if "forecast" in text and role in ("ADMIN", "SUPER_ADMIN"):
         actions.append({"type": "navigate", "label": "Open forecast", "path": "/dashboard/admin/forecast"})
     return actions
 
@@ -169,6 +169,9 @@ def _intent_actions(message: str, role: str) -> list[dict[str, str]]:
 # ---------------------------------------------------------------------------
 
 async def answer(message: str, role: str = "EMPLOYEE", user_context: dict | None = None) -> dict[str, Any]:
+    # Query text is untrusted data. This service performs retrieval/extractive
+    # selection only and never interprets query or document text as commands.
+    message = message[:1000]
     chunks = retrieve(message)
     actions = _intent_actions(message, role)
 

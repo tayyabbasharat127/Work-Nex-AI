@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { attendanceAPI, leaveAPI, performanceAPI } from '@/lib/api';
+import { useLeaveTypeLabels, formatLeaveType } from '@/hooks/useLeaveTypeLabels';
 import { BarChart3, TrendingUp, Clock, Calendar, AlertCircle, RefreshCw } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -39,6 +40,7 @@ export default function EmployeeAnalytics() {
   const [attendance, setAttendance] = useState([]);
   const [balances, setBalances] = useState([]);
   const [performance, setPerformance] = useState([]);
+  const { labels: typeLabels } = useLeaveTypeLabels();
 
   const loadData = async () => {
     setLoading(true);
@@ -93,10 +95,13 @@ export default function EmployeeAnalytics() {
     return acc;
   }, {}));
 
-  const leaveDistribution = balances.flatMap((item, index) => ([
-    { name: `${item.policy?.leaveType || 'Leave'} used`, value: Number(item.usedDays || 0), color: index % 2 ? '#8b5cf6' : '#3b82f6' },
-    { name: `${item.policy?.leaveType || 'Leave'} remaining`, value: Number(item.remainingDays || 0), color: index % 2 ? '#10b981' : '#06b6d4' },
-  ])).filter((item) => item.value > 0);
+  const leaveDistribution = balances.flatMap((item, index) => {
+    const label = item.policy?.leaveType ? formatLeaveType(typeLabels, item.policy.leaveType) : 'Leave';
+    return [
+      { name: `${label} used`, value: Number(item.usedDays || 0), color: index % 2 ? '#8b5cf6' : '#3b82f6' },
+      { name: `${label} remaining`, value: Number(item.remainingDays || 0), color: index % 2 ? '#10b981' : '#06b6d4' },
+    ];
+  }).filter((item) => item.value > 0);
 
   const performanceTrend = [...performance]
     .sort((a, b) => (a.year - b.year) || (a.month - b.month))

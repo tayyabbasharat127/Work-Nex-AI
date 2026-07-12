@@ -10,6 +10,7 @@ const defaults = {
   officeIpRanges: [],
   wifiVerificationEnabled: false,
   leaveAutomationEnabled: true,
+  sandwichLeaveEnabled: false,
   attendancePolicyJson: { halfDayHours: 4 },
 };
 
@@ -78,6 +79,7 @@ const serializeSettings = (org, settings) => {
     attendancePolicyJson: settings.attendancePolicyJson || defaults.attendancePolicyJson,
     attendancePolicy: settings.attendancePolicyJson || defaults.attendancePolicyJson,
     leaveAutomationEnabled: settings.leaveAutomationEnabled,
+    sandwichLeaveEnabled: settings.sandwichLeaveEnabled,
     storage: 'database',
     updatedAt: settings.updatedAt,
   };
@@ -106,6 +108,7 @@ const updateOrganizationSettings = async (user, data) => {
       : normalizeOfficeIpRanges(data.officeIpRanges),
     wifiVerificationEnabled: data.wifiVerificationEnabled,
     leaveAutomationEnabled: data.leaveAutomationEnabled,
+    sandwichLeaveEnabled: data.sandwichLeaveEnabled,
     attendancePolicyJson: data.attendancePolicyJson || data.attendancePolicy,
   };
   const cleanSettingsData = Object.fromEntries(Object.entries(settingsData).filter(([, value]) => value !== undefined));

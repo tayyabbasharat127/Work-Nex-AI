@@ -19,6 +19,7 @@ model Department {
   organization   Organization @relation(fields: [organizationId], references: [id])
 
   @@unique([organizationId, name])
+  @@unique([id, organizationId])
   @@index([organizationId])
 }
 
@@ -30,7 +31,7 @@ model User {
   lastName       String
   email          String              @unique
   passwordHash   String
-  role           Role                @default(EMPLOYEE)
+  roleId         String
   departmentId   String?
   managerId      String?
   designation    String?
@@ -55,12 +56,14 @@ model User {
   approvedPolicyVersions LeavePolicyVersion[] @relation("ApprovedPolicyVersions")
   employeeLeaveDecisionLogs LeaveDecisionLog[] @relation("EmployeeLeaveDecisionLogs")
   evaluatedLeaveDecisionLogs LeaveDecisionLog[] @relation("EvaluatorLeaveDecisionLogs")
-  department     Department?         @relation(fields: [departmentId], references: [id])
-  manager        User?               @relation("ManagerSubordinates", fields: [managerId], references: [id])
+  department     Department?         @relation(fields: [departmentId, organizationId], references: [id, organizationId])
+  manager        User?               @relation("ManagerSubordinates", fields: [managerId, organizationId], references: [id, organizationId])
   organization   Organization        @relation(fields: [organizationId], references: [id])
   subordinates   User[]              @relation("ManagerSubordinates")
+  customRole     Role                @relation(fields: [roleId], references: [id])
 
   @@index([organizationId])
+  @@unique([id, organizationId])
 }
 
 model RefreshToken {
@@ -79,7 +82,7 @@ model LeavePolicy {
   totalDays       Int
   carryForward    Boolean        @default(false)
   maxCarryForward Int            @default(0)
-  applicableRoles Role[]
+  applicableRoleIds String[]     @default([])
   description     String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -87,6 +90,7 @@ model LeavePolicy {
   organization    Organization   @relation(fields: [organizationId], references: [id])
 
   @@unique([organizationId, leaveType])
+  @@unique([id, organizationId])
   @@index([organizationId, leaveType])
 }
 
@@ -101,8 +105,8 @@ model LeaveBalance {
   remainingDays Int
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
-  policy        LeavePolicy @relation(fields: [policyId], references: [id])
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  policy        LeavePolicy @relation(fields: [policyId, organizationId], references: [id, organizationId])
+  user          User        @relation(fields: [userId, organizationId], references: [id, organizationId], onDelete: Cascade)
   organization  Organization @relation(fields: [organizationId], references: [id])
 
   @@unique([userId, policyId, year])
@@ -124,12 +128,15 @@ model LeaveRequest {
   appliedAt    DateTime    @default(now())
   reviewedAt   DateTime?
   updatedAt    DateTime    @updatedAt
-  approver     User?       @relation("ApproverLeaves", fields: [approverId], references: [id])
-  employee     User        @relation("EmployeeLeaves", fields: [employeeId], references: [id])
+  isSandwiched      Boolean @default(false)
+  sandwichExtraDays Int     @default(0)
+  approver     User?       @relation("ApproverLeaves", fields: [approverId, organizationId], references: [id, organizationId])
+  employee     User        @relation("EmployeeLeaves", fields: [employeeId, organizationId], references: [id, organizationId])
   organization Organization @relation(fields: [organizationId], references: [id])
   decisionLogs LeaveDecisionLog[]
 
   @@index([organizationId, status])
+  @@unique([id, organizationId])
 }
 
 model Attendance {
@@ -148,7 +155,7 @@ model Attendance {
   notes        String?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
-  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId, organizationId], references: [id, organizationId], onDelete: Cascade)
   organization Organization     @relation(fields: [organizationId], references: [id])
 
   @@unique([userId, date])
@@ -185,6 +192,90 @@ model Notification {
   @@index([organizationId, userId, isRead])
 }
 
+enum BiometricIntegrationType {
+  DATABASE
+  API
+  ADMS
+}
+
+// Per-organization config for connecting an attendance sync source (currently
+// ZKTeco/BioTime). Feeds tms.provider.js, which today reads this from env
+// vars — this table replaces that with an admin-editable, per-org config.
+// All credential fields are stored encrypted (see utils/encryption.js) and
+// are never returned to the frontend once saved.
+model BiometricIntegration {
+  id                       String                    @id @default(uuid())
+  organizationId           String                    @unique
+  integrationType          BiometricIntegrationType  @default(DATABASE)
+  enabled                  Boolean                   @default(false)
+
+  dbType                   String?
+  dbHost                   String?
+  dbPort                   Int?
+  dbName                   String?
+  dbUsername               String?
+  dbPasswordEncrypted      String?
+  dbTableName              String?
+
+  apiBaseUrl               String?
+  apiKeyEncrypted          String?
+
+  admsCommunicationKeyEncrypted String?
+
+  fieldMapping             Json                      @default("{}")
+  syncIntervalMinutes      Int                       @default(60)
+
+  lastTestedAt             DateTime?
+  lastTestResult           Json?
+
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+
+  organization             Organization              @relation(fields: [organizationId], references: [id])
+  devices                  BiometricDevice[]
+}
+
+enum BiometricDeviceStatus {
+  ONLINE
+  OFFLINE
+  UNKNOWN
+}
+
+model BiometricDevice {
+  id                     String                @id @default(uuid())
+  organizationId         String
+  biometricIntegrationId String?
+  name                   String
+  deviceSerial           String?
+  hmacSecretEncrypted    String?
+  ipAddress              String?
+  port                   Int?
+  location               String?
+  status                 BiometricDeviceStatus @default(UNKNOWN)
+  lastSeenAt             DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
+  organization           Organization          @relation(fields: [organizationId], references: [id])
+  integration             BiometricIntegration? @relation(fields: [biometricIntegrationId], references: [id], onDelete: SetNull)
+  webhookNonces           BiometricWebhookNonce[]
+
+  @@index([organizationId])
+  @@unique([deviceSerial])
+}
+
+model BiometricWebhookNonce {
+  id        String   @id @default(uuid())
+  deviceId  String
+  nonce     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  device    BiometricDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, nonce])
+  @@index([expiresAt])
+}
+
 model PerformanceRecord {
   id                String   @id @default(uuid())
   organizationId    String
@@ -203,11 +294,12 @@ model PerformanceRecord {
   mlPredictedScore  Float?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId, organizationId], references: [id, organizationId], onDelete: Cascade)
   organization      Organization @relation(fields: [organizationId], references: [id])
   attritionRecords  AttritionRecord[]
 
   @@unique([userId, month, year])
+  @@unique([id, organizationId])
   @@index([organizationId, year, month])
 }
 
@@ -226,9 +318,9 @@ model AttritionRecord {
   performanceRecordId String?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
-  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User              @relation(fields: [userId, organizationId], references: [id, organizationId], onDelete: Cascade)
   organization        Organization      @relation(fields: [organizationId], references: [id])
-  performanceRecord   PerformanceRecord? @relation(fields: [performanceRecordId], references: [id], onDelete: SetNull)
+  performanceRecord   PerformanceRecord? @relation(fields: [performanceRecordId, organizationId], references: [id, organizationId], onDelete: NoAction)
 
   @@unique([userId, month, year])
   @@index([organizationId, year, month])
@@ -283,6 +375,9 @@ model Organization {
   leavePolicyVersions LeavePolicyVersion[]
   leaveDecisionLogs LeaveDecisionLog[]
   subscription Subscription?
+  customRoles  Role[]
+  biometricIntegration BiometricIntegration?
+  biometricDevices     BiometricDevice[]
 }
 
 model OrganizationSettings {
@@ -295,6 +390,7 @@ model OrganizationSettings {
   officeIpRanges          Json?
   wifiVerificationEnabled Boolean      @default(false)
   leaveAutomationEnabled  Boolean      @default(true)
+  sandwichLeaveEnabled    Boolean      @default(false)
   attendancePolicyJson    Json?
   createdAt               DateTime     @default(now())
   updatedAt               DateTime     @updatedAt
@@ -447,11 +543,31 @@ model AuditLog {
   @@index([organizationId])
 }
 
-enum Role {
+enum RoleTier {
   SUPER_ADMIN
   ADMIN
   MANAGER
   EMPLOYEE
+}
+
+// Dynamic, admin-configurable role. Every row inherits its access-scope
+// behavior (self/subordinates/org) from `tier`, but has its own display
+// name and capability list, so orgs can define custom roles (e.g. "Dean")
+// without needing new scoping logic.
+model Role {
+  id             String        @id @default(uuid())
+  organizationId String?
+  name           String
+  tier           RoleTier
+  permissions    String[]      @default([])
+  isSystem       Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  users          User[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
 }
 
 enum LeaveStatus {
@@ -468,6 +584,11 @@ enum LeaveType {
   MATERNITY
   PATERNITY
   UNPAID
+  BEREAVEMENT
+  MARRIAGE
+  STUDY
+  HAJJ
+  COMPENSATORY
   OTHER
 }
 
@@ -490,6 +611,7 @@ enum NotificationType {
 }
 
 enum AuditAction {
+  READ
   CREATE
   UPDATE
   DELETE

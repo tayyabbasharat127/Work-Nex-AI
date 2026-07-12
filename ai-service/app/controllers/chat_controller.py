@@ -1,5 +1,6 @@
 """Chat controller — routes to LangChain agent (personal + aggregate) or statistical fallback."""
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from app.core.auth import AuthenticatedPrincipal, require_user
 from app.models.schemas import ChatRequest, ChatResponse
 from app.services.chat_service import detect_intent, generate_response, is_langchain_mode
 
@@ -7,14 +8,11 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
 @router.post("", response_model=ChatResponse)
-async def chat(req: ChatRequest) -> ChatResponse:
-    ctx = req.userContext or {}
-    role       = ctx.get("role", "EMPLOYEE")
-    user_id    = req.userId or ""
-    auth_token = req.authToken or ""
-    first_name = ctx.get("firstName", "")
-    last_name  = ctx.get("lastName", "")
-    user_name  = f"{first_name} {last_name}".strip() or ctx.get("name", "")
+async def chat(req: ChatRequest, principal: AuthenticatedPrincipal = Depends(require_user)) -> ChatResponse:
+    role = principal.role
+    user_id = principal.user_id
+    auth_token = principal.token
+    user_name = "User"
     intent     = detect_intent(req.message)
 
     if is_langchain_mode():
@@ -44,7 +42,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
     # Statistical + RAG fallback
     response = await generate_response(intent, req.message, role, user_id)
     from app.services.rag_service import answer as rag_answer
-    rag = await rag_answer(req.message, role=role, user_context=ctx)
+    rag = await rag_answer(req.message, role=role, user_context={"organizationId": principal.organization_id})
     answer_text = response.get("text", rag.get("answer", ""))
     return ChatResponse(
         message=answer_text,
@@ -74,7 +72,7 @@ async def chat_status():
         "mode": "langchain" if lc_ready else "statistical",
         "langchainReady": lc_ready,
         "llmProvider": provider,
-        "backendConnected": bool(settings.BACKEND_TOKEN),
+        "backendConnected": bool(settings.BACKEND_URL),
         "personalToolsEnabled": bool(lc_ready),
         "ragBackend": "chromadb-semantic",
     }

@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, Depends
+from app.core.auth import AuthenticatedPrincipal, require_principal
 from pydantic import BaseModel
 
 from app.models.schemas import (
@@ -51,7 +52,9 @@ async def detect_anomalies_post(req: AnomalyScanRequest):
 
 @router.get("/predict/attrition-risk")
 async def attrition_risk_get():
-    return await calculate_attrition_risk()
+    result = await calculate_attrition_risk()
+    result.update({"advisoryOnly": True, "humanReviewRequired": True, "disclaimer": "Advisory model output only. Human review is required before employment action."})
+    return result
 
 
 class AttritionSingleRequest(BaseModel):
@@ -67,6 +70,9 @@ class AttritionSingleResponse(BaseModel):
     factors: List[str]
     modelVersion: str
     source: str
+    advisoryOnly: bool = True
+    humanReviewRequired: bool = True
+    disclaimer: str = "Advisory model output only. Human review is required before employment action."
 
 
 @router.post("/predict/attrition", response_model=AttritionSingleResponse)
@@ -87,10 +93,9 @@ async def performance_prediction(req: PerformancePredictionRequest) -> Performan
 
 class LeavePolicyRequest(BaseModel):
     text: str
-    organizationId: Optional[str] = None
 
 
 @router.post("/predict/leave-policy")
-async def leave_policy(req: LeavePolicyRequest):
+async def leave_policy(req: LeavePolicyRequest, principal: AuthenticatedPrincipal = Depends(require_principal)):
     """Extract structured leave policy from free-text (HR docs, emails, PDFs)."""
-    return await extract_leave_policy(req.text, req.organizationId)
+    return await extract_leave_policy(req.text, principal.organization_id)

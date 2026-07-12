@@ -28,6 +28,7 @@ from typing import Any
 import httpx
 
 from app.core.config import settings
+from app.core.auth import get_current_token
 
 logger = logging.getLogger(__name__)
 
@@ -117,13 +118,14 @@ def _load_artifact(path: Path, meta_path: Path):
 # ─── Backend data fetcher ─────────────────────────────────────────────────────
 
 async def _fetch(path: str) -> Any:
-    if not settings.BACKEND_TOKEN:
+    token = get_current_token()
+    if not token:
         return None
     try:
         async with httpx.AsyncClient(timeout=12.0) as client:
             r = await client.get(
                 f"{settings.BACKEND_URL}{path}",
-                headers={"Authorization": f"Bearer {settings.BACKEND_TOKEN}"},
+                headers={"Authorization": f"Bearer {token}"},
             )
         if r.status_code == 200:
             return r.json().get("data")

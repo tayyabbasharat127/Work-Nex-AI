@@ -33,9 +33,12 @@ const DEFAULT_LEAVE_POLICIES = [
   },
 ];
 
-const ensureDefaultLeavePolicies = async (tx, organizationId) => {
+const ensureDefaultLeavePolicies = async (tx, organizationId, systemRoles) => {
   const policies = [];
   for (const policy of DEFAULT_LEAVE_POLICIES) {
+    const applicableRoleIds = policy.applicableRoles
+      .map((tier) => systemRoles[tier]?.id)
+      .filter(Boolean);
     policies.push(await tx.leavePolicy.upsert({
       where: {
         organizationId_leaveType: {
@@ -47,6 +50,7 @@ const ensureDefaultLeavePolicies = async (tx, organizationId) => {
       create: {
         organizationId,
         ...policy,
+        applicableRoleIds,
       },
     }));
   }

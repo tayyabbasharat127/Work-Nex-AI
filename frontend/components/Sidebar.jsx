@@ -22,7 +22,9 @@ import {
   Zap,
   Database,
   Monitor,
-  Sparkles
+  Sparkles,
+  Shield,
+  Fingerprint
 } from 'lucide-react';
 import { authAPI } from '@/lib/api';
 
@@ -30,7 +32,9 @@ const ADMIN_MENU = [
   { label: 'Dashboard', href: '/dashboard/admin', icon: Home },
   { label: 'Analytics', href: '/dashboard/admin/analytics', icon: BarChart3 },
   { label: 'Users', href: '/dashboard/admin/users', icon: Users },
+  { label: 'Roles', href: '/dashboard/admin/roles', icon: Shield },
   { label: 'Attendance', href: '/dashboard/admin/attendance', icon: Clock },
+  { label: 'Biometric Integration', href: '/dashboard/admin/biometric-integration', icon: Fingerprint },
   { label: 'Leaves', href: '/dashboard/admin/leaves', icon: CalendarX },
   { label: 'Departments', href: '/dashboard/admin/departments', icon: Users },
   { label: 'Performance', href: '/dashboard/admin/performance', icon: Award },

@@ -20,6 +20,7 @@ const logger = require('../../config/logger');
 const AI_SERVICE_URL     = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 const POLL_INTERVAL_MS   = parseInt(process.env.ALERT_POLL_INTERVAL_MS || String(5 * 60 * 1000), 10);
 const ALERT_TIMEOUT_MS   = 8000;
+const { aiServiceHeaders } = require('../../utils/aiServiceAuth');
 
 // Map of orgId → Set<res> (SSE response streams)
 const _clients = new Map();
@@ -110,7 +111,7 @@ async function _pollOrg(orgId) {
     const resp = await axios.post(
       `${AI_SERVICE_URL}/detect/anomalies`,
       { organizationId: orgId, date: today },
-      { timeout: ALERT_TIMEOUT_MS },
+      { headers: aiServiceHeaders(orgId), timeout: ALERT_TIMEOUT_MS },
     );
     anomalies = resp.data?.anomalies ?? resp.data ?? [];
   } catch (err) {

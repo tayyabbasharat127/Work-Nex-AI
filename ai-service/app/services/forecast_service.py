@@ -9,11 +9,11 @@ from pathlib import Path
 from typing import Optional
 
 import httpx
+from app.core.auth import get_current_token
 
 logger = logging.getLogger(__name__)
 
 BACKEND_INTERNAL_URL = os.getenv("BACKEND_URL", "http://localhost:5000/api/v1")
-BACKEND_INTERNAL_KEY = os.getenv("AI_SERVICE_SECRET", "")
 
 ROOT = Path(__file__).resolve().parents[2]
 MODEL_PATH = ROOT / "models" / "leave_forecast_model.pkl"
@@ -46,9 +46,8 @@ def _load_model():
 async def _fetch_holiday_dates(start: datetime, end: datetime) -> set[str]:
     """Fetch public holiday dates from backend. Returns a set of 'YYYY-MM-DD' strings."""
     try:
-        headers: dict = {}
-        if BACKEND_INTERNAL_KEY:
-            headers["X-Internal-Key"] = BACKEND_INTERNAL_KEY
+        token = get_current_token()
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
         async with httpx.AsyncClient(timeout=4.0) as client:
             r = await client.get(f"{BACKEND_INTERNAL_URL}/attendance/holidays", headers=headers)
             if r.status_code == 200:

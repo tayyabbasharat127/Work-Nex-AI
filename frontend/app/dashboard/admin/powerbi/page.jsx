@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { analyticsAPI } from '@/lib/api';
+import { useLeaveTypeLabels, formatLeaveType } from '@/hooks/useLeaveTypeLabels';
 import {
   AlertCircle, BarChart3, RefreshCw, TrendingUp, Users, CalendarX,
   Clock, Upload, CheckCircle2, XCircle, Info, Database,
@@ -39,6 +40,7 @@ export default function PowerBIPage() {
   const [headcount, setHeadcount] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState('');
+  const { labels: typeLabels } = useLeaveTypeLabels();
 
   const year = new Date().getFullYear();
   const month = new Date().getMonth() + 1;
@@ -61,7 +63,7 @@ export default function PowerBIPage() {
       if (byType.status === 'fulfilled') {
         const raw = Array.isArray(byType.value) ? byType.value : [];
         setLeaveByType(raw.map((r) => ({
-          name: r.leaveType || r._count,
+          name: r.leaveType ? formatLeaveType(typeLabels, r.leaveType) : r._count,
           value: Number(r._count?.leaveType || r._count || 0),
           color: LEAVE_COLORS[r.leaveType] || '#8884d8',
         })));
@@ -73,9 +75,9 @@ export default function PowerBIPage() {
     } finally {
       setDataLoading(false);
     }
-  }, [month, year]);
+  }, [month, year, typeLabels]);
 
-  // Load Power BI embed token
+  // Load Power BI embed token and render report using powerbi-client npm package
   const loadEmbed = useCallback(async () => {
     setEmbedState('loading');
     setEmbedMsg('');
@@ -87,25 +89,21 @@ export default function PowerBIPage() {
         setEmbedMsg('Embed token received but POWERBI_REPORT_ID or POWERBI_EMBED_URL is not configured.');
         return;
       }
-      const pbi = typeof window !== 'undefined' ? window.powerbi : null;
-      if (pbi?.embed && pbi?.models) {
-        pbi.embed(reportRef.current, {
-          type: 'report',
-          id: data.reportId,
-          embedUrl: data.embedUrl,
-          accessToken: data.embedToken,
-          tokenType: pbi.models.TokenType.Embed,
-          settings: { panes: { filters: { visible: false }, pageNavigation: { visible: true } } },
-        });
-        setEmbedState('embedded');
-      } else {
-        setEmbedState('setup');
-        setEmbedMsg(
-          data.rlsApplied
-            ? `RLS embed token generated for ${data.userEmail} (${data.userRole}). Load powerbi-client JS to render.`
-            : 'Embed token ready. Load powerbi-client JS to render the report.',
-        );
-      }
+      const pbi = await import('powerbi-client');
+      const powerbiService = new pbi.service.Service(
+        pbi.factories.hpmFactory,
+        pbi.factories.wpmpFactory,
+        pbi.factories.routerFactory,
+      );
+      powerbiService.embed(reportRef.current, {
+        type: 'report',
+        id: data.reportId,
+        embedUrl: data.embedUrl,
+        accessToken: data.embedToken,
+        tokenType: pbi.models.TokenType.Embed,
+        settings: { panes: { filters: { visible: false }, pageNavigation: { visible: true } } },
+      });
+      setEmbedState('embedded');
     } catch (err) {
       setEmbedState('setup');
       setEmbedMsg(err?.message || 'Power BI credentials not configured on the backend.');
@@ -205,7 +203,19 @@ export default function PowerBIPage() {
             </div>
           )}
 
-          {/* Embedded report */}
+          {/* Embedded report — iframe fallback when POWERBI_EMBED_URL is a public "Publish to web" URL */}
+          {embedState === 'setup' && embedMsg === '' && process.env.NEXT_PUBLIC_POWERBI_EMBED_URL && (
+            <div className="h-[720px] rounded-xl border border-border bg-card overflow-hidden">
+              <iframe
+                title="WorkNex Power BI Report"
+                src={process.env.NEXT_PUBLIC_POWERBI_EMBED_URL}
+                className="w-full h-full border-0"
+                allowFullScreen
+              />
+            </div>
+          )}
+
+          {/* Embedded report — SDK path (requires Azure service principal setup) */}
           <div className={embedState === 'embedded' ? 'h-[720px] rounded-xl border border-border bg-card overflow-hidden' : 'hidden'}>
             <div ref={reportRef} className="w-full h-full" />
           </div>

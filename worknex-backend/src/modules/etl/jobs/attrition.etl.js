@@ -37,6 +37,7 @@ const prisma     = require('../../../config/db');
 const ETLLogger  = require('../etl.logger');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const { aiServiceHeaders } = require('../../../utils/aiServiceAuth');
 const AI_TIMEOUT_MS  = 8000;
 
 const RISK_THRESHOLDS = { LOW: 30, MEDIUM: 55, HIGH: 75 };
@@ -112,7 +113,7 @@ class AttritionETL {
         const resp = await axios.post(
           `${AI_SERVICE_URL}/predict/attrition`,
           { employeeId: user.employeeId, performanceRecord: perf },
-          { timeout: AI_TIMEOUT_MS },
+          { headers: aiServiceHeaders(orgId), timeout: AI_TIMEOUT_MS },
         );
         const d = resp.data;
         riskScore    = parseFloat((d.riskScore   ?? d.risk_score   ?? 50).toFixed(2));

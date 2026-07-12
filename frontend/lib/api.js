@@ -1,6 +1,10 @@
 // API Configuration and Base Setup
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
+// The backend's own address (not the frontend's window.location.origin) —
+// used to display the real webhook URL a biometric device should push to.
+export const WEBHOOK_BASE_URL = `${API_BASE_URL}/attendance/tms-webhook`;
+
 // Restore access token from localStorage so page refreshes don't wipe the session
 let inMemoryAccessToken = typeof window !== 'undefined'
   ? localStorage.getItem('accessToken') || null
@@ -476,6 +480,24 @@ export const leaveAPI = {
     return response.data || response;
   },
 
+  saveManualPolicyRules: async (leavePolicies) => {
+    const response = await apiFetch('/leave/policies/manual', {
+      method: 'PUT',
+      body: JSON.stringify({ leavePolicies }),
+    });
+    return response.data || response;
+  },
+
+  getActivePolicyVersion: async () => {
+    const response = await apiFetch('/leave/policies/active');
+    return response.data || response;
+  },
+
+  getTypeLabels: async () => {
+    const response = await apiFetch('/leave/type-labels');
+    return response.data || response;
+  },
+
   evaluate: async (leaveId) => {
     const response = await apiFetch(`/leave/${leaveId}/evaluate`, { method: 'POST' });
     return response.data || response;
@@ -549,7 +571,9 @@ export const userAPI = {
       employeeId: employeeId,
       role: userData.role || roleMap[userData.role_id] || 'EMPLOYEE',
     };
-    
+    // A specific dynamic role (including custom roles) takes precedence over the tier fallback above.
+    if (userData.roleId) backendData.roleId = userData.roleId;
+
     // Only add optional fields if they have valid values
     const departmentId = toStringOrUndefined(userData.departmentId || userData.department_id);
     if (departmentId) backendData.departmentId = departmentId;
@@ -600,7 +624,9 @@ export const userAPI = {
       };
       updateData.role = roleMap[userData.role_id] || 'EMPLOYEE';
     }
-    
+    // A specific dynamic role (including custom roles) takes precedence over the tier fallback above.
+    if (userData.roleId) updateData.roleId = userData.roleId;
+
     // Map other fields
     if (userData.email) updateData.email = userData.email;
     if (userData.firstName) updateData.firstName = userData.firstName;
@@ -670,6 +696,94 @@ export const departmentAPI = {
 
   delete: async (departmentId) => {
     const response = await apiFetch(`/users/departments/${departmentId}`, { method: 'DELETE' });
+    return response.data || response;
+  },
+};
+
+// Roles API — dynamic, admin-configurable roles (a role has a fixed tier
+// governing scope, plus a custom name and permission list)
+export const rolesAPI = {
+  getAll: async () => {
+    const response = await apiFetch('/roles');
+    return response.data || response;
+  },
+
+  getPermissions: async () => {
+    const response = await apiFetch('/roles/permissions');
+    return response.data || response;
+  },
+
+  create: async (roleData) => {
+    const response = await apiFetch('/roles', {
+      method: 'POST',
+      body: JSON.stringify(roleData),
+    });
+    return response.data || response;
+  },
+
+  update: async (roleId, roleData) => {
+    const response = await apiFetch(`/roles/${roleId}`, {
+      method: 'PUT',
+      body: JSON.stringify(roleData),
+    });
+    return response.data || response;
+  },
+
+  delete: async (roleId) => {
+    const response = await apiFetch(`/roles/${roleId}`, { method: 'DELETE' });
+    return response.data || response;
+  },
+};
+
+// Biometric Integration API — connect a real attendance device (ZKTeco/
+// BioTime) via Database, API, or ADMS, all configured from the admin UI
+export const biometricAPI = {
+  getIntegration: async () => {
+    const response = await apiFetch('/biometric/integration');
+    return response.data || response;
+  },
+
+  updateIntegration: async (data) => {
+    const response = await apiFetch('/biometric/integration', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return response.data || response;
+  },
+
+  testConnection: async () => {
+    const response = await apiFetch('/biometric/integration/test', { method: 'POST' });
+    return response.data || response;
+  },
+
+  getDevices: async () => {
+    const response = await apiFetch('/biometric/devices');
+    return response.data || response;
+  },
+
+  createDevice: async (data) => {
+    const response = await apiFetch('/biometric/devices', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data || response;
+  },
+
+  updateDevice: async (id, data) => {
+    const response = await apiFetch(`/biometric/devices/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return response.data || response;
+  },
+
+  deleteDevice: async (id) => {
+    const response = await apiFetch(`/biometric/devices/${id}`, { method: 'DELETE' });
+    return response.data || response;
+  },
+
+  getSyncLogs: async () => {
+    const response = await apiFetch('/biometric/sync-logs');
     return response.data || response;
   },
 };
@@ -844,6 +958,10 @@ export const billingAPI = {
 
 // AI API
 export const aiAPI = {
+  status: async () => {
+    const response = await apiFetch('/ai/status');
+    return response.data || response;
+  },
   chat: async (message) => {
     const response = await apiFetch('/ai/chat', {
       method: 'POST',

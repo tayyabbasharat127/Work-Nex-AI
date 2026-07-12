@@ -30,8 +30,8 @@ router.get('/attrition', analyticsController.getAttritionAnalytics);
 router.get('/performance/leaderboard', analyticsController.getPerformanceLeaderboard);
 router.get('/performance/team', authorize('ADMIN', 'MANAGER', 'SUPER_ADMIN'), analyticsController.getTeamPerformance);
 
-// Power BI — service-principal token (no RLS)
-router.get('/powerbi/token', authorize('SUPER_ADMIN', 'ADMIN'), analyticsController.getPowerBIToken);
+// Power BI — service-principal token (no RLS) — SUPER_ADMIN only (exposes raw AAD token)
+router.get('/powerbi/token', authorize('SUPER_ADMIN'), analyticsController.getPowerBIToken);
 // Power BI — per-user embed token with RLS identity
 router.get('/powerbi/embed-token', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), analyticsController.getPowerBIEmbedToken);
 // Power BI — push WorkNex data rows into the push dataset

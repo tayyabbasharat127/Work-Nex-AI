@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const logger = require('../config/logger');
 const analyticsService = require('../modules/analytics/analytics.service');
 const attendanceService = require('../modules/attendance/attendance.service');
+const leaveSandwich = require('../modules/leave/leave.sandwich');
 const prisma = require('../config/db');
 
 /**
@@ -12,8 +13,11 @@ cron.schedule('0 2 * * *', async () => {
   logger.info('[CRON] Running nightly ETL...');
   try {
     const now = new Date();
-    const result = await analyticsService.runETL(now.getMonth() + 1, now.getFullYear());
-    logger.info(`[CRON] ETL complete: ${result.processed} records processed`);
+    const organizations = await prisma.organization.findMany({ select: { id: true } });
+    for (const organization of organizations) {
+      const result = await analyticsService.runETL(now.getMonth() + 1, now.getFullYear(), { organizationId: organization.id, role: 'SYSTEM' });
+      logger.info(`[CRON] ETL complete for org ${organization.id}: ${result.processed || result.totalRecords || 0} records processed`);
+    }
   } catch (err) {
     logger.error(`[CRON] ETL failed: ${err.message}`);
   }
@@ -25,8 +29,11 @@ cron.schedule('0 2 * * *', async () => {
 cron.schedule('0 7-20 * * 1-6', async () => {
   logger.info('[CRON] Running TMS attendance sync...');
   try {
-    const result = await attendanceService.syncFromTMS();
-    logger.info(`[CRON] TMS sync: ${result.processed}/${result.total} records`);
+    const organizations = await prisma.organization.findMany({ select: { id: true } });
+    for (const organization of organizations) {
+      const result = await attendanceService.syncFromTMS(new Date(), { organizationId: organization.id, role: 'SYSTEM' });
+      logger.info(`[CRON] TMS sync for org ${organization.id}: ${result.processed}/${result.total} records`);
+    }
   } catch (err) {
     logger.error(`[CRON] TMS sync failed: ${err.message}`);
   }
@@ -87,8 +94,26 @@ cron.schedule('0 0 1 1 *', async () => {
 cron.schedule('59 23 * * 1-6', async () => {
   logger.info('[CRON] Marking absent employees...');
   try {
-    const result = await attendanceService.generateAbsences();
+    const organizations = await prisma.organization.findMany({ select: { id: true } });
+    const results = [];
+    for (const organization of organizations) {
+      results.push(await attendanceService.generateAbsences(new Date(), { organizationId: organization.id, role: 'SYSTEM' }));
+    }
+    const result = {
+      created: results.reduce((sum, item) => sum + item.created, 0),
+      scanned: results.reduce((sum, item) => sum + item.scanned, 0),
+      createdRecords: results.flatMap((item) => item.createdRecords || []),
+    };
     logger.info(`[CRON] Absent marking complete: ${result.created}/${result.scanned} records created`);
+
+    for (const record of result.createdRecords || []) {
+      try {
+        const adjustment = await leaveSandwich.runSandwichCheckForAbsence(record.date, record.userId, record.organizationId);
+        if (adjustment) logger.info(`[CRON] Sandwich rule applied for user ${record.userId}: +${adjustment.sandwichExtraDays} day(s)`);
+      } catch (err) {
+        logger.error(`[CRON] Sandwich check failed for user ${record.userId}: ${err.message}`);
+      }
+    }
   } catch (err) {
     logger.error(`[CRON] Absent marking failed: ${err.message}`);
   }

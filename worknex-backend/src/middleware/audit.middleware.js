@@ -29,4 +29,6 @@ const auditLog = (entity, action) => {
   };
 };
 
-module.exports = { auditLog };
+const auditHrAccess = (entity) => auditLog(entity, 'READ');
+
+module.exports = { auditLog, auditHrAccess };

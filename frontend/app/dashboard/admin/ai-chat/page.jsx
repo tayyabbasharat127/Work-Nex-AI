@@ -18,8 +18,7 @@ export default function AIChatPage() {
   const [aiMode, setAiMode] = useState(null); // null | 'langchain' | 'statistical'
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/chat/status`)
-      .then((r) => r.json())
+    aiAPI.status()
       .then((d) => setAiMode(d.mode || 'statistical'))
       .catch(() => setAiMode('statistical'));
   }, []);

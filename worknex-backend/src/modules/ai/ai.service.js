@@ -15,22 +15,23 @@ const normalizeChatResponse = (data) => ({
   data: data.data || {},
 });
 
+const status = async (authorization) => {
+  const response = await axios.get(`${AI_SERVICE}/chat/status`, { headers: { Authorization: authorization }, timeout: 5000 });
+  return response.data;
+};
+
 const chat = async (userId, message, authToken = '') => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
       id: true, firstName: true, lastName: true,
-      role: true, departmentId: true, organizationId: true,
+      departmentId: true, organizationId: true,
+      customRole: { select: { tier: true } },
     },
   });
-
   try {
-    const response = await axios.post(`${AI_SERVICE}/chat`, {
-      userId,
-      userContext: user,
-      message,
-      authToken,   // forward user's JWT → enables personal DB queries in agent
-    }, { timeout: 30000 });
+    const response = await axios.post(`${AI_SERVICE}/chat`, { message,
+    }, { headers: { Authorization: `Bearer ${authToken}` }, timeout: 30000 });
     return normalizeChatResponse(response.data);
   } catch {
     return buildFallbackChat(message, user);
@@ -88,25 +89,27 @@ const buildFallbackChat = (message, user) => {
   );
 };
 
-const leaveForecast = async (departmentId) => {
+const leaveForecast = async (requestingUser, departmentId, authorization) => {
   try {
     const response = await axios.get(`${AI_SERVICE}/predict/leave-forecast`, {
       params: { departmentId },
+      headers: { Authorization: authorization },
       timeout: 15000,
     });
     return response.data;
   } catch {
-    return await buildStatisticalForecast(departmentId);
+    return await buildStatisticalForecast(requestingUser, departmentId);
   }
 };
 
-const buildStatisticalForecast = async (departmentId) => {
+const buildStatisticalForecast = async (requestingUser, departmentId) => {
   const now = new Date();
   const threeMonthsAgo = new Date(now);
   threeMonthsAgo.setMonth(now.getMonth() - 3);
 
   const historicalLeaves = await prisma.leaveRequest.findMany({
     where: {
+      ...(requestingUser.role === 'SUPER_ADMIN' ? {} : { organizationId: requestingUser.organizationId }),
       status: 'APPROVED',
       startDate: { gte: threeMonthsAgo },
     },
@@ -145,10 +148,12 @@ const buildStatisticalForecast = async (departmentId) => {
   };
 };
 
-const attendanceAnomaly = async (userId) => {
+const attendanceAnomaly = async (requestingUser, userId, authorization) => {
+  await assertCanAccessUser(requestingUser, userId);
   try {
     const response = await axios.get(`${AI_SERVICE}/predict/attendance-anomaly`, {
       params: { userId },
+      headers: { Authorization: authorization },
       timeout: 15000,
     });
     return response.data;
@@ -182,18 +187,21 @@ const buildAttendanceAnomalies = async (userId) => {
   };
 };
 
-const attritionRisk = async () => {
+const attritionRisk = async (requestingUser, authorization) => {
   try {
-    const response = await axios.get(`${AI_SERVICE}/predict/attrition-risk`, { timeout: 15000 });
+    const response = await axios.get(`${AI_SERVICE}/predict/attrition-risk`, { headers: { Authorization: authorization }, timeout: 15000 });
     return response.data;
   } catch {
-    return await buildAttritionRisk();
+    return await buildAttritionRisk(requestingUser);
   }
 };
 
-const buildAttritionRisk = async () => {
+const buildAttritionRisk = async (requestingUser) => {
   const perfRecords = await prisma.performanceRecord.findMany({
-    where: { year: new Date().getFullYear(), month: new Date().getMonth() + 1 },
+    where: {
+      ...(requestingUser.role === 'SUPER_ADMIN' ? {} : { organizationId: requestingUser.organizationId }),
+      year: new Date().getFullYear(), month: new Date().getMonth() + 1,
+    },
     include: { user: { select: { id: true, firstName: true, lastName: true, department: { select: { name: true } } } } },
     orderBy: { overallScore: 'asc' },
     take: 20,
@@ -296,17 +304,19 @@ const deterministicPerformancePrediction = (employeeId, features) => {
   if (features.absenceCount >= 3) reasons.push('Absence count is elevated.');
   if (features.averageWorkingHours < 7) reasons.push('Average working hours are below baseline.');
   if (!reasons.length) reasons.push('Stable attendance and prior performance support the forecast.');
-  return { employeeId, predictedScore, riskLevel, confidence: 0.62, reasons, featuresUsed: features, modelVersion: 'node-deterministic-fallback-v1', fallback: true };
+  return { employeeId, predictedScore, riskLevel, confidence: 0.62, reasons, featuresUsed: features, modelVersion: 'node-deterministic-fallback-v1', fallback: true, advisoryOnly: true, humanReviewRequired: true, disclaimer: 'Advisory model output only. Human review is required before employment action.' };
 };
 
-const predictPerformance = async (requestingUser, employeeId) => {
+const predictPerformance = async (requestingUser, employeeId, authorization) => {
   const features = await getPerformanceFeatures(employeeId, requestingUser);
   try {
-    const response = await axios.post(`${AI_SERVICE}/predict/performance`, { employeeId, features }, { timeout: 15000 });
+    const response = await axios.post(`${AI_SERVICE}/predict/performance`, { employeeId, features }, {
+      headers: { Authorization: authorization }, timeout: 15000,
+    });
     return response.data;
   } catch {
     return deterministicPerformancePrediction(employeeId, features);
   }
 };
 
-module.exports = { chat, leaveForecast, attendanceAnomaly, attritionRisk, predictPerformance };
+module.exports = { status, chat, leaveForecast, attendanceAnomaly, attritionRisk, predictPerformance };

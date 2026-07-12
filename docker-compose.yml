@@ -69,7 +69,7 @@ services:
       HOST: "0.0.0.0"
       PORT: "8000"
       BACKEND_URL: http://backend:5000/api/v1
-      BACKEND_TOKEN: ${BACKEND_TOKEN:-}
+      JWT_SECRET: ${JWT_SECRET}
       AI_PROVIDER: ${AI_PROVIDER:-statistical}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -78,8 +78,8 @@ services:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
       LANGCHAIN_MODEL: ${LANGCHAIN_MODEL:-}
       LANGCHAIN_VERBOSE: ${LANGCHAIN_VERBOSE:-false}
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     restart: unless-stopped
 
   multi-agent:
@@ -94,10 +94,16 @@ services:
       PORT: 8010
       NODE_ENV: production
       WORKNEX_BACKEND_API_URL: http://backend:5000/api/v1
+      JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGINS: ${FRONTEND_URL:-http://localhost:3000}
       AGENT_MEMORY_PROVIDER: postgres
       AGENT_MEMORY_DATABASE_URL: postgresql://worknex:worknex_pass@postgres:5432/worknex_agent_memory
       AGENT_MEMORY_ALLOW_IN_MEMORY_FALLBACK: "true"
+      AGENT_REQUEST_TIMEOUT_MS: 30000
+      AGENT_RECURSION_LIMIT: 8
+      AGENT_MAX_SUPERVISOR_TURNS: 4
+      AGENT_MAX_TOOL_CALLS: 6
+      AGENT_MAX_ESTIMATED_TOKENS: 8000
       LLM_PROVIDER: ${LLM_PROVIDER:-openrouter}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4o-mini}

@@ -28,7 +28,7 @@ const getDashboardKPIs = async (requestingUser) => {
     pendingLeaves,
     absentToday,
   ] = await Promise.all([
-    prisma.user.count({ where: { ...userScope, isActive: true, role: 'EMPLOYEE' } }),
+    prisma.user.count({ where: { ...userScope, isActive: true, customRole: { tier: 'EMPLOYEE' } } }),
     prisma.attendance.count({ where: { ...attendanceScope, date: today, status: { in: ['PRESENT', 'LATE'] } } }),
     prisma.leaveRequest.count({ where: { ...leaveScope, status: 'PENDING' } }),
     prisma.attendance.count({ where: { ...attendanceScope, date: today, status: 'ABSENT' } }),
@@ -263,22 +263,32 @@ const getLeaveByType = async (year, requestingUser) => {
 
 const getHeadcount = async (requestingUser) => {
   const where = await getUserScope(requestingUser, 'id');
+  // Prisma groupBy only works on scalar columns, so group by roleId (a real
+  // column) then resolve each id's tier — several custom roles can share a
+  // tier, so counts for the same tier are summed rather than overwritten.
   const groups = await prisma.user.groupBy({
-    by: ['role', 'isActive'],
+    by: ['roleId', 'isActive'],
     where,
-    _count: { role: true },
+    _count: { roleId: true },
   });
+
+  const roles = await prisma.role.findMany({
+    where: { id: { in: [...new Set(groups.map((g) => g.roleId))] } },
+    select: { id: true, tier: true },
+  });
+  const tierById = Object.fromEntries(roles.map((r) => [r.id, r.tier]));
 
   // Flatten into readable format
   const result = {};
   groups.forEach(g => {
-    const key = `${g.role}_${g.isActive ? 'active' : 'inactive'}`;
-    result[key] = g._count.role;
+    const tier = tierById[g.roleId] || 'UNKNOWN';
+    const key = `${tier}_${g.isActive ? 'active' : 'inactive'}`;
+    result[key] = (result[key] || 0) + g._count.roleId;
   });
 
   // Add totals
-  result.totalActive = groups.filter(g => g.isActive).reduce((s, g) => s + g._count.role, 0);
-  result.totalInactive = groups.filter(g => !g.isActive).reduce((s, g) => s + g._count.role, 0);
+  result.totalActive = groups.filter(g => g.isActive).reduce((s, g) => s + g._count.roleId, 0);
+  result.totalInactive = groups.filter(g => !g.isActive).reduce((s, g) => s + g._count.roleId, 0);
   result.total = result.totalActive + result.totalInactive;
 
   return result;
@@ -357,10 +367,16 @@ const getPowerBIEmbedToken = async (requestingUser) => {
 
   // Apply RLS identity when dataset supports it
   if (datasetId) {
+    const RLS_ROLE_MAP = {
+      SUPER_ADMIN: 'SuperAdmin',
+      ADMIN: 'OrgAdmin',
+      MANAGER: 'Manager',
+      EMPLOYEE: 'Employee',
+    };
     body.identities = [
       {
         username: requestingUser.email,
-        roles: [requestingUser.role],
+        roles: [RLS_ROLE_MAP[requestingUser.role] || requestingUser.role],
         datasets: [datasetId],
       },
     ];
@@ -504,7 +520,8 @@ const pushDataToPowerBI = async (requestingUser) => {
       where: { organizationId: orgId },
       select: {
         id: true, firstName: true, lastName: true, email: true,
-        role: true, isActive: true, createdAt: true,
+        isActive: true, createdAt: true,
+        customRole: { select: { name: true } },
         department: { select: { name: true } },
       },
       take: 1000,
@@ -556,7 +573,7 @@ const pushDataToPowerBI = async (requestingUser) => {
       UserId: u.id,
       FullName: `${u.firstName} ${u.lastName}`.trim(),
       Email: u.email,
-      Role: u.role,
+      Role: u.customRole.name,
       Department: u.department?.name || 'Unassigned',
       IsActive: u.isActive,
       JoinDate: u.createdAt?.toISOString(),
@@ -595,7 +612,7 @@ const getAuditLogs = async (requestingUser, limit = 50) => {
   return prisma.auditLog.findMany({
     where: getOrganizationScope(requestingUser),
     include: {
-      user: { select: { firstName: true, lastName: true, email: true, role: true } },
+      user: { select: { firstName: true, lastName: true, email: true, customRole: { select: { tier: true, name: true } } } },
     },
     orderBy: { createdAt: 'desc' },
     take: Math.min(Number(limit) || 50, 100),

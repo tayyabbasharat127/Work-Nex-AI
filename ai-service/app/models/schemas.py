@@ -3,11 +3,16 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
 
-class ChatRequest(BaseModel):
-    userId: str
-    userContext: Optional[Dict] = {}
+class _LegacyChatRequestRemoved(BaseModel):
     message: str
     authToken: Optional[str] = None   # user's JWT — enables personal DB queries
+
+
+class ChatRequest(BaseModel):
+    message: str
+
+    class Config:
+        extra = "forbid"
 
 
 class ChatResponse(BaseModel):
@@ -64,6 +69,9 @@ class PerformancePredictionResponse(BaseModel):
     featuresUsed: Dict[str, Any]
     modelVersion: str
     fallback: bool = False
+    advisoryOnly: bool = True
+    humanReviewRequired: bool = True
+    disclaimer: str = "Advisory model output only. Human review is required before employment action."
 
 
 class AutoApproveRequest(BaseModel):
@@ -79,3 +87,4 @@ class AutoApproveResponse(BaseModel):
     score: int
     reasons: List[str]
     recommendation: str
+    humanReviewRequired: bool = True

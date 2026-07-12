@@ -29,11 +29,12 @@ async def auto_approve(data: AutoApproveRequest) -> AutoApproveResponse:
     else:
         reasons.append("Team coverage below 70%")
 
-    decision = "AUTO_APPROVE" if score >= 70 and not reasons else "ROUTE_TO_MANAGER"
+    decision = "RECOMMEND_APPROVE" if score >= 70 and not reasons else "ROUTE_TO_MANAGER"
 
     return AutoApproveResponse(
         decision=decision,
         score=score,
         reasons=reasons,
-        recommendation="Auto-approved by AI" if decision == "AUTO_APPROVE" else f"Requires manager review: {', '.join(reasons)}"
+        recommendation="Eligible for approval; a manager must confirm" if decision == "RECOMMEND_APPROVE" else f"Requires manager review: {', '.join(reasons)}",
+        humanReviewRequired=True,
     )

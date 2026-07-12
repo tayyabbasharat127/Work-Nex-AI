@@ -2,7 +2,7 @@ const usersService = require('./users.service');
 const { apiResponse } = require('../../utils/ApiResponse');
 
 const getMe = async (req, res) => {
-  const user = await usersService.getUserById(req.user.id);
+  const user = await usersService.getUserById(req.user.id, req.user);
   apiResponse(res, 200, 'Profile fetched', user);
 };
 
@@ -62,8 +62,13 @@ const deleteDepartment = async (req, res) => {
   apiResponse(res, 200, 'Department deleted');
 };
 
+const purgeUserHrData = async (req, res) => {
+  const result = await usersService.purgeUserHrData(req.params.id, req.user);
+  apiResponse(res, 200, 'User HR records permanently deleted', result);
+};
+
 module.exports = {
   getMe, updateMe, getAllUsers, getUserById, getUsersByDepartment,
   createUser, updateUser, deactivateUser, getDepartments, createDepartment,
-  updateDepartment, deleteDepartment,
+  updateDepartment, deleteDepartment, purgeUserHrData,
 };

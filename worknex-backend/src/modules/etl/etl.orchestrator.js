@@ -19,6 +19,7 @@ class ETLOrchestrator {
   /* ─── Full pipeline ────────────────────────────────────────────────── */
 
   async runAll(month, year, organizationId = null, { incremental = false } = {}) {
+    if (!organizationId) throw new Error('organizationId is required for every ETL pipeline run');
     const startTime = new Date();
     logger.info(`[ETL Orchestrator] Starting full pipeline for ${year}-${month} [incremental=${incremental}]`);
 
@@ -96,7 +97,8 @@ class ETLOrchestrator {
     const job = jobs[jobName.toLowerCase()];
     if (!job) throw new Error(`Unknown ETL job: ${jobName}. Valid: ${Object.keys(jobs).join(', ')}`);
 
-    return job.run(month, year, opts.organizationId ?? null, opts);
+    if (!opts.organizationId) throw new Error('organizationId is required for every ETL job');
+    return job.run(month, year, opts.organizationId, opts);
   }
 
   /* ─── History + status helpers ─────────────────────────────────────── */

@@ -14,22 +14,27 @@ export function useUsers() {
       // Handle different response formats
       const usersData = Array.isArray(data) ? data : (data?.users || data?.data || []);
       
-      // Map backend format to frontend format
-      const roleMap = {
+      // `role` from the API is always one of the 4 fixed tiers (a custom
+      // role inherits one), so this bucket mapping is safe for badge/stat
+      // display even for custom roles — the *label* to show is `roleName`.
+      const tierBucket = {
         'SUPER_ADMIN': 0,
         'ADMIN': 1,
         'MANAGER': 2,
         'EMPLOYEE': 3
       };
-      
+
       const mappedUsers = usersData.map(user => ({
         ...user,
         id: user.id,
         user_id: user.id,
         name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
         email: user.email,
-        role_id: roleMap[user.role] || 3,
+        role_id: tierBucket[user.role] ?? 3,
         role: user.role,
+        roleId: user.roleId,
+        roleName: user.roleName || user.role,
+        permissions: user.permissions || [],
         department_id: user.departmentId || user.department?.id,
         department: user.department,
         manager_id: user.managerId || user.manager?.id,

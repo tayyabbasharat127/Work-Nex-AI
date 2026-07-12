@@ -5,23 +5,43 @@ const { assertCanAccessUser, getAccessibleUserIds, isPlatformAdmin } = require('
 const { assertOrganizationAccess, getOrganizationScope } = require('../../utils/tenant');
 const bcrypt = require('bcryptjs');
 const { sendEmail } = require('../../config/email');
+const { getSystemRoleId } = require('../../utils/systemRoles');
 
 const userSelect = {
   id: true, employeeId: true, firstName: true, lastName: true,
-  email: true, role: true, designation: true, phone: true,
+  email: true, designation: true, phone: true,
   joiningDate: true, isActive: true, twoFAEnabled: true,
   profilePicture: true, createdAt: true,
   departmentId: true, // Added: needed for frontend
   managerId: true, // Added: CRITICAL - needed for team filtering
   organizationId: true,
+  roleId: true,
+  customRole: { select: { id: true, name: true, tier: true, permissions: true } },
   department: { select: { id: true, name: true } },
   manager: { select: { id: true, firstName: true, lastName: true, email: true } },
+};
+
+// Flattens the fetched `customRole` relation into the same flat
+// role/roleId/roleName/permissions shape used everywhere else in the API
+// (see auth.service.js userPayload), so the frontend has one consistent contract.
+const serializeUser = (user) => {
+  if (!user) return user;
+  const { customRole, ...rest } = user;
+  if (!customRole) return rest;
+  return {
+    ...rest,
+    role: customRole.tier,
+    roleId: customRole.id,
+    roleName: customRole.name,
+    permissions: customRole.permissions,
+  };
 };
 
 const getAllUsers = async (query, requestingUser) => {
   const { skip, take, page, limit } = paginate(query);
   const where = {};
-  if (query.role) where.role = query.role;
+  if (query.roleId) where.roleId = query.roleId;
+  else if (query.role) where.customRole = { tier: query.role };
   if (query.departmentId) where.departmentId = query.departmentId;
   if (query.isActive !== undefined) where.isActive = query.isActive === 'true';
   Object.assign(where, getOrganizationScope(requestingUser));
@@ -45,7 +65,7 @@ const getAllUsers = async (query, requestingUser) => {
     prisma.user.count({ where }),
   ]);
 
-  return { users, meta: paginateMeta(total, page, limit) };
+  return { users: users.map(serializeUser), meta: paginateMeta(total, page, limit) };
 };
 
 const getUserById = async (id, requestingUser = null) => {
@@ -53,9 +73,9 @@ const getUserById = async (id, requestingUser = null) => {
     await assertCanAccessUser(requestingUser, id);
   }
 
-  const user = await prisma.user.findUnique({ where: { id }, select: userSelect });
+  const user = await prisma.user.findFirst({ where: { id, ...getOrganizationScope(requestingUser) }, select: userSelect });
   if (!user) throw new ApiError(404, 'User not found');
-  return user;
+  return serializeUser(user);
 };
 
 const getUsersByDepartment = async (deptId, requestingUser) => {
@@ -68,10 +88,11 @@ const getUsersByDepartment = async (deptId, requestingUser) => {
     where.id = { in: accessibleUserIds };
   }
 
-  return prisma.user.findMany({
+  const users = await prisma.user.findMany({
     where,
     select: userSelect,
   });
+  return users.map(serializeUser);
 };
 
 const createUser = async (data, requestingUser) => {
@@ -100,9 +121,12 @@ const createUser = async (data, requestingUser) => {
 
   // Validate manager exists and has correct role
   if (data.managerId) {
-    const manager = await prisma.user.findFirst({ where: { id: data.managerId, organizationId } });
+    const manager = await prisma.user.findFirst({
+      where: { id: data.managerId, organizationId },
+      select: { id: true, customRole: { select: { tier: true } } },
+    });
     if (!manager) throw new ApiError(400, 'Assigned manager not found');
-    if (!['MANAGER', 'ADMIN', 'SUPER_ADMIN'].includes(manager.role)) {
+    if (!['MANAGER', 'ADMIN', 'SUPER_ADMIN'].includes(manager.customRole.tier)) {
       throw new ApiError(400, 'Assigned manager must have MANAGER, ADMIN, or SUPER_ADMIN role');
     }
   }
@@ -121,18 +145,34 @@ const createUser = async (data, requestingUser) => {
   }
 
   // Prepare user data - remove password field, use passwordHash
-  const { password, ...userData } = data;
-  
+  const { password, roleId: requestedRoleId, role: requestedTier, ...userData } = data;
+
+  let roleId = requestedRoleId;
+  let tier = requestedTier;
+  if (roleId) {
+    const customRole = await prisma.role.findFirst({
+      where: { id: roleId, organizationId },
+      select: { id: true, tier: true },
+    });
+    if (!customRole) throw new ApiError(400, 'Role not found in organization');
+    tier = customRole.tier;
+  } else {
+    tier = ['ADMIN', 'MANAGER', 'EMPLOYEE'].includes(tier) ? tier : 'EMPLOYEE';
+    roleId = await getSystemRoleId(prisma, organizationId, tier);
+    if (!roleId) throw new ApiError(400, `No system role found for tier ${tier} in this organization`);
+  }
+
   // Convert joiningDate string to DateTime if provided
   if (userData.joiningDate) {
     userData.joiningDate = new Date(userData.joiningDate);
   }
-  
+
   const user = await prisma.user.create({
-    data: { 
-      ...userData, 
+    data: {
+      ...userData,
       organizationId,
       passwordHash,
+      roleId,
       joiningDate: userData.joiningDate || new Date(),
       isActive: userData.isActive !== undefined ? userData.isActive : true
     },
@@ -177,16 +217,29 @@ const createUser = async (data, requestingUser) => {
     // Non-blocking — user is created even if email fails
   }
 
-  return { user, tempPassword };
+  return { user: serializeUser(user), tempPassword };
 };
 
 const updateUser = async (id, data, requestingUser) => {
   await assertCanAccessUser(requestingUser, id);
-  const { password, passwordHash, ...safeData } = data;
+  const { password, passwordHash, roleId: requestedRoleId, role: requestedTier, ...safeData } = data;
   delete safeData.organizationId;
-  const target = await prisma.user.findUnique({ where: { id }, select: { organizationId: true } });
+  const target = await prisma.user.findFirst({ where: { id, ...getOrganizationScope(requestingUser) }, select: { organizationId: true } });
   if (!target) throw new ApiError(404, 'User not found');
-  
+
+  if (requestedRoleId) {
+    const customRole = await prisma.role.findFirst({
+      where: { id: requestedRoleId, organizationId: target.organizationId },
+      select: { id: true },
+    });
+    if (!customRole) throw new ApiError(400, 'Role not found in organization');
+    safeData.roleId = customRole.id;
+  } else if (requestedTier) {
+    const roleId = await getSystemRoleId(prisma, target.organizationId, requestedTier);
+    if (!roleId) throw new ApiError(400, `No system role found for tier ${requestedTier} in this organization`);
+    safeData.roleId = roleId;
+  }
+
   // Convert joiningDate string to DateTime if provided
   if (safeData.joiningDate) {
     safeData.joiningDate = new Date(safeData.joiningDate);
@@ -205,8 +258,9 @@ const updateUser = async (id, data, requestingUser) => {
     });
     if (!manager) throw new ApiError(400, 'Assigned manager not found');
   }
-  
-  return prisma.user.update({ where: { id }, data: safeData, select: userSelect });
+
+  const user = await prisma.user.update({ where: { id }, data: safeData, select: userSelect });
+  return serializeUser(user);
 };
 
 const deactivateUser = async (id, requestingUser) => {
@@ -217,7 +271,8 @@ const deactivateUser = async (id, requestingUser) => {
 const updateMe = async (userId, data) => {
   const allowed = ['firstName', 'lastName', 'phone', 'profilePicture'];
   const safeData = Object.fromEntries(Object.entries(data).filter(([k]) => allowed.includes(k)));
-  return prisma.user.update({ where: { id: userId }, data: safeData, select: userSelect });
+  const user = await prisma.user.update({ where: { id: userId }, data: safeData, select: userSelect });
+  return serializeUser(user);
 };
 
 const getDepartments = async (requestingUser) => {
@@ -241,7 +296,7 @@ const createDepartment = async (data, requestingUser) => {
 };
 
 const updateDepartment = async (id, data, requestingUser) => {
-  const department = await prisma.department.findUnique({ where: { id } });
+  const department = await prisma.department.findFirst({ where: { id, ...getOrganizationScope(requestingUser) } });
   if (!department) throw new ApiError(404, 'Department not found');
   assertOrganizationAccess(requestingUser, department.organizationId);
   const { organizationId, ...safeData } = data;
@@ -252,7 +307,7 @@ const updateDepartment = async (id, data, requestingUser) => {
 };
 
 const deleteDepartment = async (id, requestingUser) => {
-  const department = await prisma.department.findUnique({ where: { id } });
+  const department = await prisma.department.findFirst({ where: { id, ...getOrganizationScope(requestingUser) } });
   if (!department) throw new ApiError(404, 'Department not found');
   assertOrganizationAccess(requestingUser, department.organizationId);
   const activeUsers = await prisma.user.count({
@@ -265,8 +320,25 @@ const deleteDepartment = async (id, requestingUser) => {
   return { id };
 };
 
+const purgeUserHrData = async (id, requestingUser) => {
+  await assertCanAccessUser(requestingUser, id);
+  const organizationId = requestingUser.organizationId;
+  const target = await prisma.user.findFirst({ where: { id, organizationId }, select: { id: true } });
+  if (!target) throw new ApiError(404, 'User not found');
+  return prisma.$transaction(async (tx) => {
+    const attendance = await tx.attendance.deleteMany({ where: { organizationId, userId: id } });
+    const leaveRequests = await tx.leaveRequest.deleteMany({ where: { organizationId, employeeId: id } });
+    const leaveBalances = await tx.leaveBalance.deleteMany({ where: { organizationId, userId: id } });
+    const attrition = await tx.attritionRecord.deleteMany({ where: { organizationId, userId: id } });
+    const performance = await tx.performanceRecord.deleteMany({ where: { organizationId, userId: id } });
+    const counts = { attendance: attendance.count, leaveRequests: leaveRequests.count, leaveBalances: leaveBalances.count, performance: performance.count, attrition: attrition.count };
+    await tx.auditLog.create({ data: { organizationId, userId: requestingUser.id, action: 'DELETE', entity: 'UserHrData', entityId: id, newValues: counts } });
+    return counts;
+  });
+};
+
 module.exports = {
   getAllUsers, getUserById, getUsersByDepartment,
   createUser, updateUser, deactivateUser, updateMe,
-  getDepartments, createDepartment, updateDepartment, deleteDepartment,
+  getDepartments, createDepartment, updateDepartment, deleteDepartment, purgeUserHrData,
 };

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { analyticsAPI } from '@/lib/api';
+import { useLeaveTypeLabels, formatLeaveType } from '@/hooks/useLeaveTypeLabels';
 import { toast } from 'sonner';
 import { Users, TrendingUp, Clock, Calendar, BarChart3, RefreshCw } from 'lucide-react';
 import {
@@ -19,6 +20,7 @@ export default function AdminAnalytics() {
   const [leaveByType, setLeaveByType] = useState([]);
   const [deptAttendance, setDeptAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { labels: typeLabels } = useLeaveTypeLabels();
 
   useEffect(() => {
     loadAll();
@@ -71,6 +73,7 @@ export default function AdminAnalytics() {
         const arr = Array.isArray(raw) ? raw : (raw?.data || []);
         setLeaveByType(arr.map(r => ({
           leaveType: r.leaveType,
+          label: formatLeaveType(typeLabels, r.leaveType),
           count: r._count?.leaveType || r.count || 0,
           days: r._sum?.totalDays || r.totalDays || 0,
         })));
@@ -181,8 +184,8 @@ export default function AdminAnalytics() {
               {leaveByType.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
-                    <Pie data={leaveByType} cx="50%" cy="50%" outerRadius={100} dataKey="count" nameKey="leaveType"
-                      label={({ leaveType, count }) => `${leaveType}: ${count}`}>
+                    <Pie data={leaveByType} cx="50%" cy="50%" outerRadius={100} dataKey="count" nameKey="label"
+                      label={({ label, count }) => `${label}: ${count}`}>
                       {leaveByType.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                     </Pie>
                     <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} />

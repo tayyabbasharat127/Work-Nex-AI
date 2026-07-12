@@ -22,6 +22,7 @@ const prisma  = require('../../../config/db');
 const ETLLogger = require('../etl.logger');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const { aiServiceHeaders } = require('../../../utils/aiServiceAuth');
 const ML_TIMEOUT_MS  = 5000;
 
 class PerformanceETL {
@@ -148,6 +149,7 @@ class PerformanceETL {
     let mlPredictedScore = null;
     try {
       mlPredictedScore = await this._callMLPrediction({
+        organizationId:            orgId,
         employeeId:               user.employeeId,
         attendanceRate:           attendanceScore,
         lateCount:                metrics.lateDays,
@@ -279,7 +281,7 @@ class PerformanceETL {
     const response = await axios.post(
       `${AI_SERVICE_URL}/predict/performance`,
       { employeeId: features.employeeId, features },
-      { timeout: ML_TIMEOUT_MS },
+      { headers: aiServiceHeaders(features.organizationId), timeout: ML_TIMEOUT_MS },
     );
     return response.data?.predictedScore ?? null;
   }

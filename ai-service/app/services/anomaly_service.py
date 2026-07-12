@@ -11,6 +11,7 @@ from typing import Any, Optional
 import httpx
 
 from app.core.config import settings
+from app.core.auth import get_current_token
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +41,10 @@ def _load_anomaly_model():
 
 
 async def _fetch(path: str) -> Any:
-    if not settings.BACKEND_TOKEN:
+    token = get_current_token()
+    if not token:
         return None
-    headers = {"Authorization": f"Bearer {settings.BACKEND_TOKEN}"}
+    headers = {"Authorization": f"Bearer {token}"}
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             r = await client.get(f"{settings.BACKEND_URL}{path}", headers=headers)

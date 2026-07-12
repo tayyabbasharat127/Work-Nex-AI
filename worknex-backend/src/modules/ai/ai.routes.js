@@ -6,6 +6,7 @@ const { authenticate } = require('../../middleware/auth.middleware');
 const { validate } = require('../../middleware/validate.middleware');
 
 router.use(authenticate);
+router.get('/status', aiController.status);
 
 // Agentic chatbot
 router.post(

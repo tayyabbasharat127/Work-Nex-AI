@@ -12,7 +12,7 @@ class Settings:
 
     # Backend connection
     BACKEND_URL: str = os.getenv("BACKEND_URL", "http://localhost:5000/api/v1")
-    BACKEND_TOKEN: str = os.getenv("BACKEND_TOKEN", "")
+    JWT_SECRET: str = os.getenv("JWT_SECRET", "").strip()
 
     # AI Provider: "statistical" | "langchain"
     AI_PROVIDER: str = os.getenv("AI_PROVIDER", "statistical")

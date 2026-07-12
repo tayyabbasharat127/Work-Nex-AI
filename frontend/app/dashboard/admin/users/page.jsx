@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { Search, Plus, Eye, EyeOff, Edit, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
-import { departmentAPI } from '@/lib/api';
+import { departmentAPI, rolesAPI } from '@/lib/api';
 import { getRoleName } from '@/lib/helpers';
 import { toast } from 'sonner';
 
 export default function AdminUsers() {
   const { users, loading, fetchUsers, createUser, updateUser, deleteUser } = useUsers();
   const [departments, setDepartments] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -28,7 +29,7 @@ export default function AdminUsers() {
     name: '',
     email: '',
     password: '',
-    role_id: 3,
+    roleId: '',
     department_id: '',
     manager_id: '',
     designation: '',
@@ -37,11 +38,15 @@ export default function AdminUsers() {
     status: 'Active',
   });
 
+  const defaultRoleId = () => roles.find(r => r.tier === 'EMPLOYEE' && r.isSystem)?.id || '';
+
   async function loadData() {
     try {
       await fetchUsers();
       const depts = await departmentAPI.getAll();
       setDepartments(Array.isArray(depts) ? depts : []);
+      const roleList = await rolesAPI.getAll();
+      setRoles(Array.isArray(roleList) ? roleList : []);
     } catch (err) {
       toast.error('Failed to load data');
       setDepartments([]);
@@ -59,7 +64,7 @@ export default function AdminUsers() {
   const filteredUsers = usersArray.filter(user => {
     const matchesSearch = user.name?.toLowerCase().includes(search.toLowerCase()) ||
       user.email?.toLowerCase().includes(search.toLowerCase());
-    const matchesRole = filterRole === 'All' || user.role_id === parseInt(filterRole);
+    const matchesRole = filterRole === 'All' || user.roleId === filterRole;
     const matchesDept = filterDept === 'All' || user.department_id === filterDept;
     return matchesSearch && matchesRole && matchesDept;
   });
@@ -70,17 +75,17 @@ export default function AdminUsers() {
   const handleOpenAddModal = () => {
     setEditingUser(null);
     setShowPassword(false);
-    setFormData({ 
-      name: '', 
-      email: '', 
-      password: '', 
-      role_id: 3, 
-      department_id: '', 
+    setFormData({
+      name: '',
+      email: '',
+      password: '',
+      roleId: defaultRoleId(),
+      department_id: '',
       manager_id: '',
       designation: '',
       phone: '',
       joiningDate: '',
-      status: 'Active' 
+      status: 'Active'
     });
     setShowModal(true);
   };
@@ -92,7 +97,7 @@ export default function AdminUsers() {
       name: user.name,
       email: user.email,
       password: '',
-      role_id: user.role_id || 3,
+      roleId: user.roleId || defaultRoleId(),
       department_id: user.department_id || '',
       manager_id: user.manager_id || '',
       designation: user.designation || '',
@@ -184,9 +189,9 @@ export default function AdminUsers() {
                 className="px-4 py-3 rounded-xl border border-border bg-card text-foreground focus:outline-none focus:border-primary"
               >
                 <option value="All">All Roles</option>
-                <option value="1">Admin</option>
-                <option value="2">Manager</option>
-                <option value="3">Employee</option>
+                {roles.map(role => (
+                  <option key={role.id} value={role.id}>{role.name}</option>
+                ))}
               </select>
               <select
                 value={filterDept}
@@ -259,7 +264,7 @@ export default function AdminUsers() {
                               user.role_id === 3 ? 'bg-yellow-500/20 text-yellow-500' :
                               'bg-blue-500/20 text-blue-500'
                             }`}>
-                              {getRoleName(user.role_id)}
+                              {user.roleName || getRoleName(user.role_id)}
                             </span>
                           </td>
                           <td className="py-4 px-6 text-muted-foreground">
@@ -407,13 +412,13 @@ export default function AdminUsers() {
                   <div>
                     <label className="block text-sm font-medium mb-2">Role</label>
                     <select
-                      value={formData.role_id}
-                      onChange={(e) => setFormData({ ...formData, role_id: parseInt(e.target.value) })}
+                      value={formData.roleId}
+                      onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
                     >
-                      <option value={1}>Admin</option>
-                      <option value={2}>Manager</option>
-                      <option value={3}>Employee</option>
+                      {roles.filter(r => r.tier !== 'SUPER_ADMIN').map(role => (
+                        <option key={role.id} value={role.id}>{role.name}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
@@ -455,7 +460,7 @@ export default function AdminUsers() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  {formData.role_id !== 2 && (
+                  {roles.find(r => r.id === formData.roleId)?.tier !== 'MANAGER' && (
                   <div>
                     <label className="block text-sm font-medium mb-2">Manager</label>
                     <select
@@ -465,10 +470,10 @@ export default function AdminUsers() {
                     >
                       <option value="">No Manager</option>
                       {Array.isArray(users) && users
-                        .filter(u => u.role_id === 2 && u.id !== editingUser?.id)
+                        .filter(u => u.role === 'MANAGER' && u.id !== editingUser?.id)
                         .map(manager => (
                           <option key={manager.id} value={manager.id}>
-                            {manager.name} ({getRoleName(manager.role_id)})
+                            {manager.name} ({manager.roleName})
                           </option>
                         ))}
                     </select>
@@ -522,7 +527,7 @@ export default function AdminUsers() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold">{viewingUser.name}</h3>
-                    <p className="text-muted-foreground">{getRoleName(viewingUser.role_id)}</p>
+                    <p className="text-muted-foreground">{viewingUser.roleName || getRoleName(viewingUser.role_id)}</p>
                   </div>
                 </div>
                 <div className="space-y-4">

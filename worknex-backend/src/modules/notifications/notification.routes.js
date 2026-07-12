@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const notificationController = require('./notification.controller');
-const { authenticate, authorize } = require('../../middleware/auth.middleware');
+const { authenticate, requirePermission } = require('../../middleware/auth.middleware');
 
 router.use(authenticate);
 
@@ -13,6 +13,6 @@ router.put('/:id/read',     notificationController.markAsRead);
 router.delete('/:id',       notificationController.deleteNotification);
 
 // Admin: broadcast notification
-router.post('/broadcast', authorize('SUPER_ADMIN', 'ADMIN'), notificationController.broadcast);
+router.post('/broadcast', requirePermission('notifications:broadcast'), notificationController.broadcast);
 
 module.exports = router;

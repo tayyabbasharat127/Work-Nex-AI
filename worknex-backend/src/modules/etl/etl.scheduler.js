@@ -66,7 +66,9 @@ class ETLScheduler {
       const month = now.getMonth() + 1;
       const year = now.getFullYear();
 
-      const result = await etlOrchestrator.runAll(month, year);
+      const organizations = await prisma.organization.findMany({ select: { id: true } });
+      const results = await Promise.all(organizations.map(({ id }) => etlOrchestrator.runAll(month, year, id)));
+      const result = { success: results.every((item) => item.success), totalRecords: results.reduce((sum, item) => sum + (item.totalRecords || 0), 0), status: results.every((item) => item.success) ? 'SUCCESS' : 'PARTIAL' };
 
       if (result.success) {
         logger.info(`[ETL Scheduler] Nightly ETL completed — ${result.totalRecords} records processed`);
@@ -99,7 +101,9 @@ class ETLScheduler {
       const month = now.getMonth() === 0 ? 12 : now.getMonth();
       const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
 
-      const result = await etlOrchestrator.runAll(month, year);
+      const organizations = await prisma.organization.findMany({ select: { id: true } });
+      const results = await Promise.all(organizations.map(({ id }) => etlOrchestrator.runAll(month, year, id)));
+      const result = { success: results.every((item) => item.success), totalRecords: results.reduce((sum, item) => sum + (item.totalRecords || 0), 0), status: results.every((item) => item.success) ? 'SUCCESS' : 'PARTIAL' };
 
       if (result.success) {
         logger.info(`[ETL Scheduler] Monthly ETL completed — ${result.totalRecords} records processed`);
@@ -121,7 +125,7 @@ class ETLScheduler {
   async _notifyAdmins(title, message) {
     try {
       const admins = await prisma.user.findMany({
-        where:  { role: { in: ['ADMIN', 'SUPER_ADMIN'] }, isActive: true },
+        where:  { customRole: { tier: { in: ['ADMIN', 'SUPER_ADMIN'] } }, isActive: true },
         select: { id: true, organizationId: true },
       });
       await Promise.allSettled(

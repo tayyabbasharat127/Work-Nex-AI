@@ -6,6 +6,7 @@ const { assertOrganizationAccess, getOrganizationScope } = require('../../utils/
 const bcrypt = require('bcryptjs');
 const { sendEmail } = require('../../config/email');
 const { getSystemRoleId } = require('../../utils/systemRoles');
+const { getActivePolicyVersion } = require('../leave/leave.automation');
 
 const userSelect = {
   id: true, employeeId: true, firstName: true, lastName: true,
@@ -189,8 +190,16 @@ const createUser = async (data, requestingUser) => {
     select: userSelect,
   });
 
-  // Initialize leave balances for all active policies
-  const policies = await prisma.leavePolicy.findMany({ where: { organizationId } });
+  // Initialize leave balances — scoped to whatever the org's actual active
+  // LeavePolicyVersion configures (e.g. just CL/EL), not every legacy
+  // LeavePolicy row still sitting in the table from org registration
+  // defaults. Falls back to all legacy rows only if the org has never set
+  // up a real policy yet, so older/never-migrated orgs keep working as before.
+  const activeVersion = await getActivePolicyVersion(organizationId);
+  const activeLeaveTypes = activeVersion?.rulesJson?.leavePolicies?.map((rule) => rule.leaveType) || null;
+  const policies = await prisma.leavePolicy.findMany({
+    where: { organizationId, ...(activeLeaveTypes ? { leaveType: { in: activeLeaveTypes } } : {}) },
+  });
   const year = new Date().getFullYear();
   for (const policy of policies) {
     await prisma.leaveBalance.upsert({

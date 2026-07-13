@@ -9,7 +9,8 @@
  * Local/demo mode:
  * - Verification is allowed when WIFI_VERIFICATION_ENABLED is not "true".
  * - The observed request IP is still returned for audit/debug context.
- */
+*/
+const { config } = require('../config/env');
 
 const normalizeIp = (ip = '') => ip.replace(/^::ffff:/, '');
 
@@ -29,7 +30,7 @@ const getClientIP = (req) => {
 const ipInRange = (ip, cidr) => {
   try {
     if (!cidr.includes('/')) {
-      return ip.startsWith(cidr);
+      return ip === cidr;
     }
 
     const [range, bits] = cidr.split('/');
@@ -44,7 +45,7 @@ const ipInRange = (ip, cidr) => {
 };
 
 const verifyOfficeNetwork = (req) => {
-  if (process.env.WIFI_VERIFICATION_ENABLED !== 'true') {
+  if (!config.attendance.wifiVerificationEnabled) {
     return {
       allowed: true,
       ip: getClientIP(req),
@@ -53,13 +54,10 @@ const verifyOfficeNetwork = (req) => {
   }
 
   const clientIP = getClientIP(req);
-  const allowedRanges = (process.env.OFFICE_IP_RANGES || '')
-    .split(',')
-    .map((range) => range.trim())
-    .filter(Boolean);
+  const allowedRanges = config.attendance.officeIpRanges;
 
   if (allowedRanges.length === 0) {
-    return { allowed: true, ip: clientIP, reason: 'No IP ranges configured' };
+    return { allowed: false, ip: clientIP, reason: 'No office IP ranges configured' };
   }
 
   const isAllowed = allowedRanges.some((range) => ipInRange(clientIP, range));

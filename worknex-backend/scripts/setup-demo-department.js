@@ -29,7 +29,8 @@ const prisma = require('../src/config/db');
 const usersService = require('../src/modules/users/users.service');
 const { toAttendanceDate } = require('../src/modules/attendance/attendance.processor');
 
-const PASSWORD = 'Demo@1234';
+const PASSWORD = process.env.SEED_USER_PASSWORD;
+if (!PASSWORD) throw new Error('SEED_USER_PASSWORD is required');
 const DEPT_NAME = 'Operations';
 
 const MANAGER = { firstName: 'Imran', lastName: 'Chaudhry', email: 'imran.chaudhry.demo@example.com' };

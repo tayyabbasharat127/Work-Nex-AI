@@ -1,20 +1,16 @@
-const fs = require('fs');
 const path = require('path');
+const { TextDecoder } = require('util');
+const { randomUUID } = require('crypto');
 const axios = require('axios');
 const prisma = require('../../config/db');
+const { config } = require('../../config/env');
 const { ApiError } = require('../../utils/ApiError');
 const { countBusinessDays } = require('../../utils/dateHelpers');
+const storage = require('../../services/storage/storage.service');
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const AI_SERVICE_URL = config.aiServiceUrl;
 const { aiServiceHeaders } = require('../../utils/aiServiceAuth');
 const AI_TIMEOUT_MS  = 12000;
-
-const DATA_DIR = path.join(process.cwd(), 'storage', 'leave-automation');
-const DOC_DIR = path.join(DATA_DIR, 'documents');
-
-const ensureDocumentStorage = () => {
-  fs.mkdirSync(DOC_DIR, { recursive: true });
-};
 
 const normalizeLeaveType = (value = '') => value.toUpperCase().replace(/[^A-Z_]/g, '_');
 
@@ -47,9 +43,14 @@ const safeRequire = (pkg) => {
 };
 
 const extractText = async (doc) => {
-  if (!doc.filePath || !fs.existsSync(doc.filePath)) throw new ApiError(404, 'Policy document file not found');
+  if (!doc.filePath) throw new ApiError(404, 'Policy document file not found');
   const ext = path.extname(doc.fileName).toLowerCase();
-  const buffer = fs.readFileSync(doc.filePath);
+  let buffer;
+  try {
+    buffer = await storage.get(doc.filePath);
+  } catch {
+    throw new ApiError(404, 'Policy document file not found');
+  }
 
   if (ext === '.txt') return buffer.toString('utf8');
 
@@ -93,7 +94,7 @@ const deterministicParse = (text) => {
   const paragraphs = text.split(/\n\s*\n/);
 
   return {
-    parser: process.env.OPENAI_API_KEY ? 'deterministic-fallback-no-llm-call' : 'deterministic-fallback',
+    parser: config.modelKeysConfigured ? 'deterministic-fallback-no-llm-call' : 'deterministic-fallback',
     confidence: found.length ? 0.72 : 0.42,
     leavePolicies: types.map((leaveType) => {
       const lowerType = leaveType.toLowerCase();
@@ -203,7 +204,6 @@ const serializeDocument = (doc) => {
     originalName: doc.fileName,
     fileName: doc.fileName,
     fileType: doc.fileType,
-    path: doc.filePath,
     status,
     extractedText: doc.extractedText,
     parsedRules,
@@ -218,29 +218,52 @@ const serializeDocument = (doc) => {
 
 const uploadPolicyDocument = async (file, user) => {
   if (!file) throw new ApiError(400, 'Policy document file is required');
-  const ext = path.extname(file.originalname).toLowerCase();
+  const originalName = path.basename(file.originalname || '');
+  if (!originalName || originalName.length > 255) throw new ApiError(400, 'Policy document filename is invalid');
+  const ext = path.extname(originalName).toLowerCase();
   if (!['.txt', '.pdf', '.docx'].includes(ext)) {
     throw new ApiError(400, 'Only .txt, .pdf, and .docx policy documents are supported');
   }
-  ensureDocumentStorage();
-  const documentId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  const destination = path.join(DOC_DIR, `${documentId}${ext}`);
-  fs.copyFileSync(file.path, destination);
-  fs.unlinkSync(file.path);
 
-  const doc = await prisma.policyDocument.create({
-    data: {
-      id: documentId,
-      organizationId: user.organizationId,
-      uploadedById: user.id,
-      fileName: file.originalname,
-      fileType: ext.slice(1),
-      filePath: destination,
-      status: 'UPLOADED',
-    },
-    include: { extractedRules: true, policyVersions: { orderBy: { version: 'desc' } } },
-  });
-  return serializeDocument(doc);
+  const buffer = file.buffer;
+  const validPdf = ext !== '.pdf' || buffer.subarray(0, 5).toString('ascii') === '%PDF-';
+  const validDocx = ext !== '.docx'
+    || (buffer[0] === 0x50 && buffer[1] === 0x4b && buffer.includes(Buffer.from('[Content_Types].xml')));
+  let validText = true;
+  if (ext === '.txt') {
+    try {
+      if (buffer.includes(0)) throw new Error('binary');
+      new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+    } catch {
+      validText = false;
+    }
+  }
+  if (!validPdf || !validDocx || !validText) {
+    throw new ApiError(400, 'Policy document contents do not match the file type');
+  }
+
+  const documentId = randomUUID();
+  const storageKey = `organizations/${user.organizationId}/policy-documents/${documentId}${ext}`;
+  await storage.put(storageKey, buffer, file.mimetype);
+
+  try {
+    const doc = await prisma.policyDocument.create({
+      data: {
+        id: documentId,
+        organizationId: user.organizationId,
+        uploadedById: user.id,
+        fileName: originalName,
+        fileType: ext.slice(1),
+        filePath: storageKey,
+        status: 'UPLOADED',
+      },
+      include: { extractedRules: true, policyVersions: { orderBy: { version: 'desc' } } },
+    });
+    return serializeDocument(doc);
+  } catch (error) {
+    await storage.remove(storageKey).catch(() => {});
+    throw error;
+  }
 };
 
 const extractPolicyDocument = async (documentId, user) => {
@@ -260,7 +283,7 @@ const aiParsePolicyDocument = async (documentId, user) => {
 
   // Attempt AI service LLM extraction (Groq/OpenAI); fall back to deterministic
   let parsedRules;
-  if (process.env.AI_SERVICE_URL || process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY) {
+  if (config.aiServiceUrl || config.modelKeysConfigured) {
     try {
       const resp = await axios.post(
         `${AI_SERVICE_URL}/predict/leave-policy`,

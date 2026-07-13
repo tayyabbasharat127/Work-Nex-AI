@@ -1,22 +1,10 @@
 import { useState } from 'react';
 import { authAPI } from '@/lib/api';
+import { getStoredUser } from '@/lib/authStorage';
 import { useRouter } from 'next/navigation';
 
-function readStoredUser() {
-  if (typeof window === 'undefined') return null;
-  const storedUser = localStorage.getItem('user');
-  if (!storedUser) return null;
-  try {
-    return JSON.parse(storedUser);
-  } catch (error) {
-    console.error('Error parsing user data:', error);
-    localStorage.removeItem('user');
-    return null;
-  }
-}
-
 export function useAuth() {
-  const [user, setUser] = useState(readStoredUser);
+  const [user, setUser] = useState(getStoredUser);
   const [loading] = useState(false);
   const router = useRouter();
 

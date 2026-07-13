@@ -3,23 +3,12 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { analyticsAPI, attendanceAPI, etlAPI, notificationsAPI } from '@/lib/api';
+import { getStoredUser } from '@/lib/authStorage';
 import { useLeaveTypeLabels, formatLeaveType } from '@/hooks/useLeaveTypeLabels';
 import { Users, Clock, CalendarX, TrendingUp, AlertCircle, RefreshCw } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const COLORS = ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#64748b'];
-
-function getStoredUser() {
-  if (typeof window === 'undefined') return null;
-  const userData = localStorage.getItem('user');
-  if (!userData) return null;
-  try {
-    return JSON.parse(userData);
-  } catch {
-    localStorage.removeItem('user');
-    return null;
-  }
-}
 
 function normalizeArray(value) {
   if (Array.isArray(value)) return value;

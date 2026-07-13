@@ -3,10 +3,13 @@ const jwt = require('jsonwebtoken');
 const { authenticator } = require('otplib');
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const prisma = require('../../config/db');
+const { config } = require('../../config/env');
 const { ApiError } = require('../../utils/ApiError');
 const { sendEmail } = require('../../config/email');
 const { getSystemRoleId } = require('../../utils/systemRoles');
+const { encrypt, decrypt } = require('../../utils/encryption');
 
 const userPayload = (user) => ({
   id: user.id,
@@ -20,14 +23,85 @@ const userPayload = (user) => ({
   organizationId: user.organizationId,
 });
 
-const generateTokens = (userId, role, organizationId) => {
-  const accessToken = jwt.sign({ userId, role, organizationId }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN,
+const tokenHash = (token) => crypto.createHash('sha256').update(token).digest('hex');
+
+const sessionMetadata = (metadata = {}) => ({
+  ipAddress: metadata.ipAddress ? String(metadata.ipAddress).slice(0, 64) : null,
+  userAgent: metadata.userAgent ? String(metadata.userAgent).slice(0, 512) : null,
+});
+
+const signTokens = (user) => {
+  const common = {
+    userId: user.id,
+    organizationId: user.organizationId,
+    role: user.customRole.tier,
+    version: user.authVersion || 0,
+  };
+  const accessToken = jwt.sign(
+    { ...common, tokenType: 'access' },
+    config.jwt.accessSecret,
+    {
+      algorithm: 'HS256',
+      expiresIn: config.jwt.accessExpiresIn,
+      issuer: config.jwt.issuer,
+      audience: config.jwt.audience,
+      jwtid: uuidv4(),
+    },
+  );
+  const refreshToken = jwt.sign(
+    { userId: user.id, organizationId: user.organizationId, tokenType: 'refresh' },
+    config.jwt.refreshSecret,
+    {
+      algorithm: 'HS256',
+      expiresIn: config.jwt.refreshExpiresIn,
+      issuer: config.jwt.issuer,
+      audience: config.jwt.audience,
+      jwtid: uuidv4(),
+    },
+  );
+  const decodedRefresh = jwt.decode(refreshToken);
+  return {
+    accessToken,
+    refreshToken,
+    refreshExpiresAt: new Date(decodedRefresh.exp * 1000),
+  };
+};
+
+const persistSession = async (db, user, metadata = {}) => {
+  const tokens = signTokens(user);
+  await db.refreshToken.create({
+    data: {
+      tokenHash: tokenHash(tokens.refreshToken),
+      userId: user.id,
+      expiresAt: tokens.refreshExpiresAt,
+      ...sessionMetadata(metadata),
+    },
   });
-  const refreshToken = jwt.sign({ userId, organizationId }, process.env.JWT_REFRESH_SECRET, {
-    expiresIn: process.env.JWT_REFRESH_EXPIRES_IN,
-  });
-  return { accessToken, refreshToken };
+  return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
+};
+
+const verifyRefreshJwt = (token) => {
+  try {
+    return jwt.verify(token, config.jwt.refreshSecret, {
+      algorithms: ['HS256'],
+      issuer: config.jwt.issuer,
+      audience: config.jwt.audience,
+    });
+  } catch (strictError) {
+    try {
+      const legacy = jwt.verify(token, config.jwt.refreshSecret, { algorithms: ['HS256'] });
+      if (legacy.tokenType) throw strictError;
+      return legacy;
+    } catch {
+      throw new ApiError(401, 'Invalid refresh token');
+    }
+  }
+};
+
+const encryptTwoFactorSecret = (secret) => `enc:${encrypt(secret)}`;
+const decryptTwoFactorSecret = (stored) => {
+  if (!stored) return null;
+  return stored.startsWith('enc:') ? decrypt(stored.slice(4)) : stored;
 };
 
 const register = async (data, requestingUser = null) => {
@@ -54,7 +128,9 @@ const register = async (data, requestingUser = null) => {
   const existing = await prisma.user.findUnique({ where: { email: data.email } });
   if (existing) throw new ApiError(409, 'Email already registered');
 
-  const empExists = await prisma.user.findUnique({ where: { employeeId: data.employeeId } });
+  const empExists = await prisma.user.findFirst({
+    where: { employeeId: data.employeeId, organizationId: data.organizationId },
+  });
   if (empExists) throw new ApiError(409, 'Employee ID already exists');
 
   const passwordHash = await bcrypt.hash(data.password, 12);
@@ -103,7 +179,7 @@ const register = async (data, requestingUser = null) => {
   return { ...user, role: user.customRole.tier, roleId: user.customRole.id, roleName: user.customRole.name };
 };
 
-const login = async (email, password) => {
+const login = async (email, password, metadata = {}) => {
   const user = await prisma.user.findUnique({ where: { email }, include: { customRole: true } });
   if (!user || !user.isActive) throw new ApiError(401, 'Invalid credentials');
 
@@ -111,56 +187,108 @@ const login = async (email, password) => {
   if (!valid) throw new ApiError(401, 'Invalid credentials');
 
   if (user.twoFAEnabled) {
-    return { requires2FA: true, userId: user.id };
+    const challengeId = uuidv4();
+    const challengeToken = jwt.sign(
+      { userId: user.id, tokenType: '2fa-challenge' },
+      config.jwt.accessSecret,
+      {
+        algorithm: 'HS256',
+        expiresIn: config.jwt.twoFactorChallengeExpiresIn,
+        issuer: config.jwt.issuer,
+        audience: `${config.jwt.audience}:2fa`,
+        jwtid: challengeId,
+      },
+    );
+    const decoded = jwt.decode(challengeToken);
+    await prisma.authenticationChallenge.create({
+      data: {
+        id: challengeId,
+        userId: user.id,
+        type: 'LOGIN_2FA',
+        expiresAt: new Date(decoded.exp * 1000),
+      },
+    });
+    return { requires2FA: true, userId: challengeToken };
   }
 
-  const { accessToken, refreshToken } = generateTokens(user.id, user.customRole.tier, user.organizationId);
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-  await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt } });
+  const tokens = await persistSession(prisma, user, metadata);
 
   return {
-    accessToken,
-    refreshToken,
+    ...tokens,
     user: userPayload(user),
   };
 };
 
-const refreshToken = async (token) => {
+const refreshToken = async (token, metadata = {}) => {
   if (!token) throw new ApiError(401, 'Invalid refresh token');
-  const stored = await prisma.refreshToken.findUnique({ where: { token } });
+  const decoded = verifyRefreshJwt(token);
+  if (decoded.tokenType && decoded.tokenType !== 'refresh') throw new ApiError(401, 'Invalid refresh token');
+
+  const digest = tokenHash(token);
+  const stored = await prisma.refreshToken.findFirst({
+    where: { OR: [{ tokenHash: digest }, { token }] },
+  });
   if (!stored || stored.expiresAt < new Date()) throw new ApiError(401, 'Invalid refresh token');
+  if (stored.userId !== decoded.userId) throw new ApiError(401, 'Invalid refresh token');
 
-  const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+  if (stored.revokedAt) {
+    await prisma.$transaction([
+      prisma.refreshToken.updateMany({
+        where: { userId: stored.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+      prisma.user.update({ where: { id: stored.userId }, data: { authVersion: { increment: 1 } } }),
+    ]);
+    throw new ApiError(401, 'Refresh token replay detected');
+  }
+
   const user = await prisma.user.findUnique({ where: { id: decoded.userId }, include: { customRole: true } });
-  if (!user || !user.isActive) throw new ApiError(401, 'User not found');
+  if (!user || !user.isActive || !user.customRole) throw new ApiError(401, 'User not found');
 
-  const tokens = generateTokens(user.id, user.customRole.tier, user.organizationId);
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const tokens = signTokens(user);
+  const replacementHash = tokenHash(tokens.refreshToken);
 
-  await prisma.refreshToken.update({
-    where: { token },
-    data: { token: tokens.refreshToken, expiresAt },
+  await prisma.$transaction(async (tx) => {
+    await tx.refreshToken.update({
+      where: { id: stored.id },
+      data: {
+        revokedAt: new Date(),
+        lastUsedAt: new Date(),
+        replacedByTokenHash: replacementHash,
+      },
+    });
+    await tx.refreshToken.create({
+      data: {
+        tokenHash: replacementHash,
+        userId: user.id,
+        expiresAt: tokens.refreshExpiresAt,
+        ...sessionMetadata(metadata),
+      },
+    });
   });
 
-  return tokens;
+  return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
 };
 
 const logout = async (userId, refreshToken) => {
   if (refreshToken) {
-    await prisma.refreshToken.deleteMany({ where: { userId, token: refreshToken } });
+    await prisma.refreshToken.updateMany({
+      where: { userId, OR: [{ tokenHash: tokenHash(refreshToken) }, { token: refreshToken }], revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
   } else {
-    // Fallback: invalidate all sessions for this user
-    await prisma.refreshToken.deleteMany({ where: { userId } });
+    await prisma.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
   }
 };
 
 const setup2FA = async (userId) => {
   const secret = authenticator.generateSecret();
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  const otpauth = authenticator.keyuri(user.email, process.env.TWO_FA_APP_NAME, secret);
+  if (!user) throw new ApiError(404, 'User not found');
+  const otpauth = authenticator.keyuri(user.email, config.twoFactorAppName, secret);
   const qrCode = await QRCode.toDataURL(otpauth);
 
-  await prisma.user.update({ where: { id: userId }, data: { twoFASecret: secret } });
+  await prisma.user.update({ where: { id: userId }, data: { twoFASecret: encryptTwoFactorSecret(secret) } });
   return { secret, qrCode };
 };
 
@@ -168,7 +296,7 @@ const verify2FA = async (userId, token) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user.twoFASecret) throw new ApiError(400, '2FA not set up');
 
-  const valid = authenticator.verify({ token, secret: user.twoFASecret });
+  const valid = authenticator.verify({ token, secret: decryptTwoFactorSecret(user.twoFASecret) });
   if (!valid) throw new ApiError(400, 'Invalid 2FA token');
 
   await prisma.user.update({ where: { id: userId }, data: { twoFAEnabled: true } });
@@ -178,21 +306,47 @@ const verify2FA = async (userId, token) => {
 const disable2FA = async (userId, token) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user.twoFAEnabled || !user.twoFASecret) throw new ApiError(400, '2FA is not enabled');
-  const valid = authenticator.verify({ token, secret: user.twoFASecret });
+  const valid = authenticator.verify({ token, secret: decryptTwoFactorSecret(user.twoFASecret) });
   if (!valid) throw new ApiError(400, 'Invalid 2FA token');
   await prisma.user.update({ where: { id: userId }, data: { twoFAEnabled: false, twoFASecret: null } });
 };
 
-const validate2FA = async (userId, token) => {
-  const user = await prisma.user.findUnique({ where: { id: userId }, include: { customRole: true } });
+const validate2FA = async (challengeToken, token, metadata = {}) => {
+  let claims;
+  try {
+    claims = jwt.verify(challengeToken, config.jwt.accessSecret, {
+      algorithms: ['HS256'],
+      issuer: config.jwt.issuer,
+      audience: `${config.jwt.audience}:2fa`,
+    });
+  } catch {
+    throw new ApiError(401, 'Invalid or expired 2FA challenge');
+  }
+  if (claims.tokenType !== '2fa-challenge' || !claims.jti) {
+    throw new ApiError(401, 'Invalid or expired 2FA challenge');
+  }
+
+  const challenge = await prisma.authenticationChallenge.findFirst({
+    where: { id: claims.jti, userId: claims.userId, type: 'LOGIN_2FA' },
+  });
+  if (!challenge || challenge.usedAt || challenge.expiresAt < new Date()) {
+    throw new ApiError(401, 'Invalid or expired 2FA challenge');
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: claims.userId }, include: { customRole: true } });
   if (!user || !user.twoFAEnabled) throw new ApiError(400, '2FA not enabled');
 
-  const valid = authenticator.verify({ token, secret: user.twoFASecret });
+  const valid = authenticator.verify({ token, secret: decryptTwoFactorSecret(user.twoFASecret) });
   if (!valid) throw new ApiError(400, 'Invalid 2FA token');
 
-  const tokens = generateTokens(user.id, user.customRole.tier, user.organizationId);
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-  await prisma.refreshToken.create({ data: { token: tokens.refreshToken, userId: user.id, expiresAt } });
+  const tokens = await prisma.$transaction(async (tx) => {
+    const consumed = await tx.authenticationChallenge.updateMany({
+      where: { id: challenge.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    if (consumed.count !== 1) throw new ApiError(401, '2FA challenge already used');
+    return persistSession(tx, user, metadata);
+  });
   return { ...tokens, user: userPayload(user) };
 };
 
@@ -200,15 +354,20 @@ const forgotPassword = async (email) => {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) return; // Silent — don't reveal if email exists
 
-  const resetToken = uuidv4();
+  const resetToken = crypto.randomBytes(32).toString('base64url');
   const expiry = new Date(Date.now() + 60 * 60 * 1000);
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { twoFASecret: `reset:${resetToken}:${expiry.getTime()}` },
-  });
+  await prisma.$transaction([
+    prisma.passwordResetToken.updateMany({
+      where: { userId: user.id, usedAt: null },
+      data: { usedAt: new Date() },
+    }),
+    prisma.passwordResetToken.create({
+      data: { userId: user.id, tokenHash: tokenHash(resetToken), expiresAt: expiry },
+    }),
+  ]);
 
-  const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+  const resetUrl = `${config.frontendUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
   try {
     await sendEmail(email, 'Password Reset - WorkNex AI', `
       <p>Click the link below to reset your password (valid for 1 hour):</p>
@@ -220,21 +379,26 @@ const forgotPassword = async (email) => {
 };
 
 const resetPassword = async (token, newPassword) => {
-  const users = await prisma.user.findMany({
-    where: { twoFASecret: { startsWith: 'reset:' } },
+  const stored = await prisma.passwordResetToken.findUnique({
+    where: { tokenHash: tokenHash(token) },
   });
-
-  const user = users.find((u) => {
-    const parts = u.twoFASecret?.split(':');
-    return parts?.[1] === token && parseInt(parts?.[2]) > Date.now();
-  });
-
-  if (!user) throw new ApiError(400, 'Invalid or expired reset token');
+  if (!stored || stored.usedAt || stored.expiresAt < new Date()) throw new ApiError(400, 'Invalid or expired reset token');
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { passwordHash, twoFASecret: null },
+  await prisma.$transaction(async (tx) => {
+    const consumed = await tx.passwordResetToken.updateMany({
+      where: { id: stored.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    if (consumed.count !== 1) throw new ApiError(400, 'Reset token already used');
+    await tx.user.update({
+      where: { id: stored.userId },
+      data: { passwordHash, authVersion: { increment: 1 } },
+    });
+    await tx.refreshToken.updateMany({
+      where: { userId: stored.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
   });
 };
 
@@ -244,7 +408,10 @@ const changePassword = async (userId, oldPassword, newPassword) => {
   if (!valid) throw new ApiError(400, 'Current password is incorrect');
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: userId }, data: { passwordHash, authVersion: { increment: 1 } } }),
+    prisma.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } }),
+  ]);
 };
 
 module.exports = {

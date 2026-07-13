@@ -234,18 +234,18 @@ const manualEntry = async (data, requestingUser, req = null) => {
 };
 
 const updateAttendance = async (id, data, requestingUser, req = null) => {
-  const orgId = requestingUser.role === 'SUPER_ADMIN'
-    ? data.organizationId
-    : requestingUser.organizationId;
-  const record = orgId
-    ? await tenantRepository(prisma, orgId).model('attendance').findById(id)
-    : null;
+  const record = requestingUser.role === 'SUPER_ADMIN'
+    ? await prisma.attendance.findUnique({ where: { id } })
+    : await tenantRepository(prisma, requestingUser.organizationId).model('attendance').findById(id);
   if (!record) throw new ApiError(404, 'Attendance not found');
   if (requestingUser.role !== 'SUPER_ADMIN' && record.organizationId !== requestingUser.organizationId) {
     throw new ApiError(403, 'Not authorized for this organization');
   }
 
-  const { organizationId, userId, date, ...safeData } = data;
+  const safeData = {};
+  for (const field of ['status', 'checkIn', 'checkOut', 'notes']) {
+    if (Object.prototype.hasOwnProperty.call(data, field)) safeData[field] = data[field];
+  }
   if (safeData.status) safeData.status = normalizeStatus(safeData.status);
   if (safeData.checkIn) safeData.checkIn = new Date(safeData.checkIn);
   if (safeData.checkOut) safeData.checkOut = new Date(safeData.checkOut);
@@ -304,7 +304,15 @@ const getHolidays = async (requestingUser) => {
 };
 
 const createHoliday = async (data, requestingUser) => {
-  return prisma.holiday.create({ data: { ...data, organizationId: requestingUser.organizationId, date: toAttendanceDate(data.date) } });
+  return prisma.holiday.create({
+    data: {
+      organizationId: requestingUser.organizationId,
+      name: data.name,
+      date: toAttendanceDate(data.date),
+      description: data.description || null,
+      isRecurring: Boolean(data.isRecurring),
+    },
+  });
 };
 
 module.exports = {

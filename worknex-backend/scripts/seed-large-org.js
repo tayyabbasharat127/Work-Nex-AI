@@ -18,7 +18,8 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const prisma = require('../src/config/db');
 const usersService = require('../src/modules/users/users.service');
 
-const PASSWORD = 'Demo@1234';
+const PASSWORD = process.env.SEED_USER_PASSWORD;
+if (!PASSWORD) throw new Error('SEED_USER_PASSWORD is required');
 
 const FIRST_MALE = [
   'Ali', 'Hamza', 'Bilal', 'Usman', 'Omer', 'Fahad', 'Ahmed', 'Zeeshan', 'Kamran', 'Danish',

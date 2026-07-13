@@ -2,11 +2,21 @@ const prisma = require('../../config/db');
 const axios = require('axios');
 const { ApiError } = require('../../utils/ApiError');
 const { encrypt, decrypt } = require('../../utils/encryption');
+const { assertSafeOutboundHost, assertSafeOutboundUrl } = require('../../utils/outboundNetwork');
 
 const DEFAULT_FIELD_MAPPING = { employeeId: 'USERID', checkIn: 'CHECKTIME', checkOut: 'CHECKTIME', status: 'CHECKTYPE' };
 
 // Fields that are encrypted on the way in and must never be sent back out.
 const CREDENTIAL_FIELDS = ['dbPasswordEncrypted', 'apiKeyEncrypted', 'admsCommunicationKeyEncrypted'];
+const SQL_IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_$]*$/;
+
+const validateTableIdentifier = (value) => {
+  const table = value || 'iclock_transaction';
+  if (!SQL_IDENTIFIER_PATTERN.test(table)) {
+    throw new ApiError(400, 'Biometric database table name is invalid');
+  }
+  return table;
+};
 
 const stripCredentials = (integration) => {
   if (!integration) return integration;
@@ -30,11 +40,15 @@ const upsertIntegration = async (data, organizationId) => {
     admsCommunicationKey,
   } = data;
 
+  const safeDbHost = integrationType === 'DATABASE' ? await assertSafeOutboundHost(dbHost) : dbHost;
+  const safeApiBaseUrl = integrationType === 'API' ? await assertSafeOutboundUrl(apiBaseUrl) : apiBaseUrl;
+  const safeTableName = integrationType === 'DATABASE' ? validateTableIdentifier(dbTableName) : dbTableName;
+
   const writeData = {
     integrationType, enabled, syncIntervalMinutes,
     fieldMapping: fieldMapping || DEFAULT_FIELD_MAPPING,
-    dbType, dbHost, dbPort: dbPort ? Number(dbPort) : null, dbName, dbUsername, dbTableName,
-    apiBaseUrl,
+    dbType, dbHost: safeDbHost, dbPort: dbPort ? Number(dbPort) : null, dbName, dbUsername, dbTableName: safeTableName,
+    apiBaseUrl: safeApiBaseUrl,
   };
 
   // Only overwrite a credential if a new value was actually provided —
@@ -58,6 +72,8 @@ const upsertIntegration = async (data, organizationId) => {
 const testDatabaseConnection = async (config) => {
   const steps = { reachable: false, portOpen: false, authenticated: false, testRead: false };
   const password = decrypt(config.dbPasswordEncrypted);
+  await assertSafeOutboundHost(config.dbHost);
+  const table = validateTableIdentifier(config.dbTableName);
 
   if (config.dbType === 'MYSQL') {
     const mysql = require('mysql2/promise');
@@ -68,7 +84,6 @@ const testDatabaseConnection = async (config) => {
         database: config.dbName, connectTimeout: 5000,
       });
       steps.reachable = true; steps.portOpen = true; steps.authenticated = true;
-      const table = config.dbTableName || 'iclock_transaction';
       await conn.query(`SELECT 1 FROM \`${table}\` LIMIT 1`);
       steps.testRead = true;
     } finally {
@@ -84,7 +99,6 @@ const testDatabaseConnection = async (config) => {
         options: { trustServerCertificate: true },
       });
       steps.reachable = true; steps.portOpen = true; steps.authenticated = true;
-      const table = config.dbTableName || 'iclock_transaction';
       await pool.request().query(`SELECT TOP 1 1 FROM [${table}]`);
       steps.testRead = true;
     } finally {
@@ -100,7 +114,6 @@ const testDatabaseConnection = async (config) => {
     try {
       await client.connect();
       steps.reachable = true; steps.portOpen = true; steps.authenticated = true;
-      const table = config.dbTableName || 'iclock_transaction';
       await client.query(`SELECT 1 FROM "${table}" LIMIT 1`);
       steps.testRead = true;
     } finally {
@@ -114,14 +127,16 @@ const testDatabaseConnection = async (config) => {
 const testApiConnection = async (config) => {
   const steps = { reachable: false, portOpen: false, authenticated: false, testRead: false };
   const apiKey = decrypt(config.apiKeyEncrypted);
+  const apiBaseUrl = await assertSafeOutboundUrl(config.apiBaseUrl);
 
-  const res = await axios.get(config.apiBaseUrl, { timeout: 5000, validateStatus: () => true });
+  const res = await axios.get(apiBaseUrl, { timeout: 5000, maxRedirects: 0, validateStatus: () => true });
   steps.reachable = true;
   steps.portOpen = true;
 
-  const authRes = await axios.get(`${config.apiBaseUrl}/attendance`, {
+  const authRes = await axios.get(`${apiBaseUrl}/attendance`, {
     headers: apiKey ? { 'x-api-key': apiKey } : {},
     timeout: 5000,
+    maxRedirects: 0,
     params: { date: new Date().toISOString().slice(0, 10), limit: 1 },
     validateStatus: () => true,
   });

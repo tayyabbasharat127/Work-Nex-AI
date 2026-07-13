@@ -1,10 +1,8 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/db');
 const logger = require('../config/logger');
+const { config } = require('../config/env');
 const { ensurePlatformSuperAdminRole } = require('../utils/systemRoles');
-
-const DEFAULT_EMAIL = 'platform@worknexai.com';
-const DEFAULT_PASSWORD = 'SuperAdmin@2026';
 
 /**
  * Bootstraps the first WorkNex platform Super Admin account on a brand-new
@@ -19,11 +17,12 @@ const DEFAULT_PASSWORD = 'SuperAdmin@2026';
  * a no-op once any Super Admin already exists, so it's safe on every boot.
  */
 async function ensureSuperAdmin() {
+  if (!config.bootstrapSuperAdmin) return;
   const existing = await prisma.user.findFirst({ where: { customRole: { tier: 'SUPER_ADMIN' } } });
   if (existing) return;
 
-  const email = process.env.SUPER_ADMIN_EMAIL || DEFAULT_EMAIL;
-  const password = process.env.SUPER_ADMIN_PASSWORD || DEFAULT_PASSWORD;
+  const email = config.superAdminEmail;
+  const password = config.superAdminPassword;
 
   const platformOrg = await prisma.organization.upsert({
     where: { slug: 'worknex-platform' },
@@ -48,11 +47,7 @@ async function ensureSuperAdmin() {
     },
   });
 
-  logger.info('=== First-run: Super Admin account created ===');
-  logger.info(`  Email:    ${email}`);
-  logger.info(`  Password: ${password}`);
-  logger.info('  Change this password after first login. Override future defaults via SUPER_ADMIN_EMAIL / SUPER_ADMIN_PASSWORD env vars.');
-  logger.info('================================================');
+  logger.info('Initial platform Super Admin account created', { bootstrapAction: true });
 }
 
 module.exports = { ensureSuperAdmin };

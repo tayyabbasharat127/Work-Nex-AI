@@ -9,15 +9,21 @@
  *   node seed.js
  *
  * Requires:
- *   - Backend running at http://localhost:5000
+ *   - BACKEND_URL points to a running backend
  *   - An existing admin account (set ADMIN_EMAIL / ADMIN_PASSWORD below)
  */
 
-const API = 'http://localhost:5000/api/v1';
+const requiredEnv = (name) => {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+};
+const API = `${requiredEnv('BACKEND_URL').replace(/\/$/, '')}/api/v1`;
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const ADMIN_EMAIL    = 'tbasharat804@gmail.com';
-const ADMIN_PASSWORD = 'tayyab123@GMAIL';     // ← change if different
+const ADMIN_EMAIL = requiredEnv('SEED_ADMIN_EMAIL');
+const ADMIN_PASSWORD = requiredEnv('SEED_ADMIN_PASSWORD');
+const USER_PASSWORD = requiredEnv('SEED_USER_PASSWORD');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 let adminToken = '';
@@ -189,7 +195,7 @@ async function createUsers(deptMap) {
         email,
         employeeId:  empId,
         role,
-        password:    'WorkNex@2025',
+        password:    USER_PASSWORD,
         departmentId: deptId,
         designation: pick(DESIGNATIONS[role]),
         joiningDate: dateStr(daysAgo(rand(180, 730))),
@@ -314,7 +320,7 @@ async function seedLeaves(users) {
       const loginRes = await fetch(`${API}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user.email, password: 'WorkNex@2025' }),
+        body: JSON.stringify({ email: user.email, password: USER_PASSWORD }),
       });
       const loginJson = await loginRes.json();
       userToken = loginJson.data?.accessToken;
@@ -430,7 +436,7 @@ function printSummary(users, deptMap) {
 ║  Employees   : ${String(employees.length).padEnd(32)} ║
 ║  Total Users : ${String(users.length).padEnd(32)} ║
 ╠══════════════════════════════════════════════════╣
-║  All user password: WorkNex@2025                 ║
+║  User password supplied through SEED_USER_PASSWORD ║
 ╠══════════════════════════════════════════════════╣
 ║  What to test next:                              ║
 ║  1. Admin  → Analytics, ETL, Reports             ║
@@ -443,11 +449,11 @@ function printSummary(users, deptMap) {
 
   console.log('  Sample manager logins:');
   managers.slice(0, 5).forEach(u => {
-    console.log(`    ${u.email.padEnd(42)} password: WorkNex@2025  dept: ${u.deptName}`);
+    console.log(`    ${u.email.padEnd(42)} dept: ${u.deptName}`);
   });
   console.log('\n  Sample employee logins:');
   employees.slice(0, 5).forEach(u => {
-    console.log(`    ${u.email.padEnd(42)} password: WorkNex@2025  dept: ${u.deptName}`);
+    console.log(`    ${u.email.padEnd(42)} dept: ${u.deptName}`);
   });
 }
 

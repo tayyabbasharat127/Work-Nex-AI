@@ -3,22 +3,11 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { analyticsAPI, attendanceAPI, leaveAPI, notificationsAPI, performanceAPI, userAPI } from '@/lib/api';
+import { getStoredUser } from '@/lib/authStorage';
 import { Users, Clock, CalendarX, TrendingUp, Check, X, AlertCircle, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const COLORS = { present: '#10b981', absent: '#ef4444', late: '#f59e0b', leave: '#06b6d4' };
-
-function getStoredUser() {
-  if (typeof window === 'undefined') return null;
-  const userData = localStorage.getItem('user');
-  if (!userData) return null;
-  try {
-    return JSON.parse(userData);
-  } catch {
-    localStorage.removeItem('user');
-    return null;
-  }
-}
 
 function normalizeArray(value) {
   if (Array.isArray(value)) return value;

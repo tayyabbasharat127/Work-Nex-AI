@@ -1,7 +1,7 @@
 /**
  * End-to-end test for AI-driven Leave Forecasting.
  *
- * Calls the real AI service (http://localhost:8000/predict/leave-forecast)
+ * Calls the configured AI service leave-forecast endpoint.
  * through aiService.leaveForecast() exactly the way a real dashboard request
  * would, using a freshly minted JWT (same signing secret as a real login) so
  * no hardcoded password is needed. Also sanity-checks the backend

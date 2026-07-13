@@ -5,10 +5,8 @@
  * Monday, employee was absent the preceding Friday) swallows the weekend/holiday
  * gap into the leave too — 4 days deducted instead of 1."
  *
- * This module only *detects* the pattern (pure reads). The actual balance/leave
- * mutation lives in leave.service.js's applySandwichPenalty, which this module
- * calls via a lazy require to avoid a circular dependency (leave.service.js also
- * calls back into this module for the mirror-direction check on approval).
+ * This module only detects the pattern using read operations. Callers own the
+ * balance mutation, keeping detection independent from leave.service.js.
  */
 
 const prisma = require('../../config/db');
@@ -107,23 +105,7 @@ const detectSandwichForNewLeave = async (leave, organizationId) => {
   };
 };
 
-const runSandwichCheckForAbsence = async (absentDate, employeeId, organizationId) => {
-  const match = await detectSandwichForAbsence(absentDate, employeeId, organizationId);
-  if (!match) return null;
-  const leaveService = require('./leave.service');
-  return leaveService.applySandwichPenalty(match.leaveRequestId, match.extraDays, match.gapDescription, organizationId);
-};
-
-const runSandwichCheckForNewLeave = async (leave, organizationId) => {
-  const match = await detectSandwichForNewLeave(leave, organizationId);
-  if (!match) return null;
-  const leaveService = require('./leave.service');
-  return leaveService.applySandwichPenalty(match.leaveRequestId, match.extraDays, match.gapDescription, organizationId);
-};
-
 module.exports = {
   detectSandwichForAbsence,
   detectSandwichForNewLeave,
-  runSandwichCheckForAbsence,
-  runSandwichCheckForNewLeave,
 };

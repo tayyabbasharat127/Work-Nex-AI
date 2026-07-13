@@ -34,9 +34,10 @@
 
 const axios      = require('axios');
 const prisma     = require('../../../config/db');
+const { config } = require('../../../config/env');
 const ETLLogger  = require('../etl.logger');
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const AI_SERVICE_URL = config.aiServiceUrl;
 const { aiServiceHeaders } = require('../../../utils/aiServiceAuth');
 const AI_TIMEOUT_MS  = 8000;
 

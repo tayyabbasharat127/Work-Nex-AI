@@ -5,12 +5,13 @@
  *   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
  */
 const crypto = require('crypto');
+const { config } = require('../config/env');
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12; // recommended for GCM
 
 const getKey = () => {
-  const raw = process.env.ENCRYPTION_KEY;
+  const raw = config.encryptionKey;
   if (!raw) throw new Error('ENCRYPTION_KEY is not set — required to store integration credentials');
   const key = Buffer.from(raw, 'base64');
   if (key.length !== 32) throw new Error('ENCRYPTION_KEY must decode to exactly 32 bytes (generate with crypto.randomBytes(32))');

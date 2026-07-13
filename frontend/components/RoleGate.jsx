@@ -2,22 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-
-function readUser() {
-  if (typeof window === 'undefined') return null;
-  const raw = localStorage.getItem('user');
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    localStorage.removeItem('user');
-    return null;
-  }
-}
+import { getStoredUser } from '@/lib/authStorage';
 
 export default function RoleGate({ allow = [], children }) {
   const router = useRouter();
-  const [user] = useState(readUser);
+  const [user] = useState(getStoredUser);
   const role = user?.role;
   const allowed = role && allow.includes(role);
 

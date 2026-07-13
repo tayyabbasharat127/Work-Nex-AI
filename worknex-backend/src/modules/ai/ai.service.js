@@ -1,8 +1,15 @@
 const axios = require('axios');
 const prisma = require('../../config/db');
-const { assertCanAccessUser } = require('../../utils/rbac');
+const { config } = require('../../config/env');
+const { ApiError } = require('../../utils/ApiError');
+const { assertCanAccessUser, getAccessibleUserIds } = require('../../utils/rbac');
 
-const AI_SERVICE = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const AI_SERVICE = config.aiServiceUrl;
+
+const requireAiServiceUrl = () => {
+  if (!AI_SERVICE) throw new ApiError(503, 'AI service is not configured');
+  return AI_SERVICE;
+};
 
 const normalizeChatResponse = (data) => ({
   answer: data.answer || data.message || data.response || '',
@@ -16,7 +23,7 @@ const normalizeChatResponse = (data) => ({
 });
 
 const status = async (authorization) => {
-  const response = await axios.get(`${AI_SERVICE}/chat/status`, { headers: { Authorization: authorization }, timeout: 5000 });
+  const response = await axios.get(`${requireAiServiceUrl()}/chat/status`, { headers: { Authorization: authorization }, timeout: 5000 });
   return response.data;
 };
 
@@ -30,7 +37,7 @@ const chat = async (userId, message, authToken = '') => {
     },
   });
   try {
-    const response = await axios.post(`${AI_SERVICE}/chat`, { message,
+    const response = await axios.post(`${requireAiServiceUrl()}/chat`, { message,
     }, { headers: { Authorization: `Bearer ${authToken}` }, timeout: 30000 });
     return normalizeChatResponse(response.data);
   } catch {
@@ -90,9 +97,22 @@ const buildFallbackChat = (message, user) => {
 };
 
 const leaveForecast = async (requestingUser, departmentId, authorization) => {
+  if (departmentId) {
+    const department = await prisma.department.findFirst({
+      where: { id: departmentId, organizationId: requestingUser.organizationId },
+      select: { id: true },
+    });
+    if (!department) throw new ApiError(404, 'Department not found');
+  }
+
   try {
-    const response = await axios.get(`${AI_SERVICE}/predict/leave-forecast`, {
-      params: { departmentId },
+    const accessibleUserIds = await getAccessibleUserIds(requestingUser);
+    const response = await axios.get(`${requireAiServiceUrl()}/predict/leave-forecast`, {
+      params: {
+        departmentId,
+        organizationId: requestingUser.organizationId,
+        userIds: accessibleUserIds || undefined,
+      },
       headers: { Authorization: authorization },
       timeout: 15000,
     });
@@ -107,9 +127,13 @@ const buildStatisticalForecast = async (requestingUser, departmentId) => {
   const threeMonthsAgo = new Date(now);
   threeMonthsAgo.setMonth(now.getMonth() - 3);
 
+  const accessibleUserIds = await getAccessibleUserIds(requestingUser);
+
   const historicalLeaves = await prisma.leaveRequest.findMany({
     where: {
-      ...(requestingUser.role === 'SUPER_ADMIN' ? {} : { organizationId: requestingUser.organizationId }),
+      organizationId: requestingUser.organizationId,
+      ...(accessibleUserIds === null ? {} : { employeeId: { in: accessibleUserIds } }),
+      ...(departmentId ? { employee: { departmentId } } : {}),
       status: 'APPROVED',
       startDate: { gte: threeMonthsAgo },
     },
@@ -151,21 +175,28 @@ const buildStatisticalForecast = async (requestingUser, departmentId) => {
 const attendanceAnomaly = async (requestingUser, userId, authorization) => {
   await assertCanAccessUser(requestingUser, userId);
   try {
-    const response = await axios.get(`${AI_SERVICE}/predict/attendance-anomaly`, {
-      params: { userId },
+    const response = await axios.get(`${requireAiServiceUrl()}/predict/attendance-anomaly`, {
+      params: { userId, organizationId: requestingUser.organizationId },
       headers: { Authorization: authorization },
       timeout: 15000,
     });
     return response.data;
   } catch {
-    return await buildAttendanceAnomalies(userId);
+    return await buildAttendanceAnomalies(requestingUser, userId);
   }
 };
 
-const buildAttendanceAnomalies = async (userId) => {
+const buildAttendanceAnomalies = async (requestingUser, userId) => {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const records = await prisma.attendance.findMany({ where: { userId, date: { gte: thirtyDaysAgo } }, orderBy: { date: 'desc' } });
+  const records = await prisma.attendance.findMany({
+    where: {
+      userId,
+      organizationId: requestingUser.organizationId,
+      date: { gte: thirtyDaysAgo },
+    },
+    orderBy: { date: 'desc' },
+  });
   const anomalies = [];
 
   if (records.length > 0) {
@@ -189,7 +220,15 @@ const buildAttendanceAnomalies = async (userId) => {
 
 const attritionRisk = async (requestingUser, authorization) => {
   try {
-    const response = await axios.get(`${AI_SERVICE}/predict/attrition-risk`, { headers: { Authorization: authorization }, timeout: 15000 });
+    const accessibleUserIds = await getAccessibleUserIds(requestingUser);
+    const response = await axios.get(`${requireAiServiceUrl()}/predict/attrition-risk`, {
+      params: {
+        organizationId: requestingUser.organizationId,
+        userIds: accessibleUserIds || undefined,
+      },
+      headers: { Authorization: authorization },
+      timeout: 15000,
+    });
     return response.data;
   } catch {
     return await buildAttritionRisk(requestingUser);
@@ -197,9 +236,11 @@ const attritionRisk = async (requestingUser, authorization) => {
 };
 
 const buildAttritionRisk = async (requestingUser) => {
+  const accessibleUserIds = await getAccessibleUserIds(requestingUser);
   const perfRecords = await prisma.performanceRecord.findMany({
     where: {
-      ...(requestingUser.role === 'SUPER_ADMIN' ? {} : { organizationId: requestingUser.organizationId }),
+      organizationId: requestingUser.organizationId,
+      ...(accessibleUserIds === null ? {} : { userId: { in: accessibleUserIds } }),
       year: new Date().getFullYear(), month: new Date().getMonth() + 1,
     },
     include: { user: { select: { id: true, firstName: true, lastName: true, department: { select: { name: true } } } } },
@@ -245,17 +286,17 @@ const getPerformanceFeatures = async (employeeId, requestingUser) => {
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
   const [attendance, leaves, previousPerformance, employee] = await Promise.all([
-    prisma.attendance.findMany({ where: { userId: employeeId, date: { gte: start, lte: end } } }),
-    prisma.leaveRequest.findMany({ where: { employeeId, startDate: { gte: start, lte: end }, status: { in: ['PENDING', 'APPROVED'] } } }),
-    prisma.performanceRecord.findFirst({ where: { userId: employeeId }, orderBy: [{ year: 'desc' }, { month: 'desc' }] }),
-    prisma.user.findUnique({ where: { id: employeeId }, select: { departmentId: true } }),
+    prisma.attendance.findMany({ where: { userId: employeeId, organizationId: requestingUser.organizationId, date: { gte: start, lte: end } } }),
+    prisma.leaveRequest.findMany({ where: { employeeId, organizationId: requestingUser.organizationId, startDate: { gte: start, lte: end }, status: { in: ['PENDING', 'APPROVED'] } } }),
+    prisma.performanceRecord.findFirst({ where: { userId: employeeId, organizationId: requestingUser.organizationId }, orderBy: [{ year: 'desc' }, { month: 'desc' }] }),
+    prisma.user.findFirst({ where: { id: employeeId, organizationId: requestingUser.organizationId }, select: { departmentId: true } }),
   ]);
 
   let departmentAverage = previousPerformance?.overallScore || 75;
   if (employee?.departmentId) {
     const peerRecords = await prisma.performanceRecord.findMany({
       where: {
-        ...(requestingUser.role === 'SUPER_ADMIN' ? {} : { organizationId: requestingUser.organizationId }),
+        organizationId: requestingUser.organizationId,
         year: now.getFullYear(),
         month: now.getMonth() + 1,
         user: { departmentId: employee.departmentId },
@@ -310,7 +351,7 @@ const deterministicPerformancePrediction = (employeeId, features) => {
 const predictPerformance = async (requestingUser, employeeId, authorization) => {
   const features = await getPerformanceFeatures(employeeId, requestingUser);
   try {
-    const response = await axios.post(`${AI_SERVICE}/predict/performance`, { employeeId, features }, {
+    const response = await axios.post(`${requireAiServiceUrl()}/predict/performance`, { employeeId, features }, {
       headers: { Authorization: authorization }, timeout: 15000,
     });
     return response.data;

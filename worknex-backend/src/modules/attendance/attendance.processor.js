@@ -17,6 +17,7 @@
 
 const prisma = require('../../config/db');
 const { ApiError } = require('../../utils/ApiError');
+const { config } = require('../../config/env');
 
 const getLocalParts = (date = new Date(), timeZone = getAttendanceTimeZone()) => {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -33,12 +34,7 @@ const getLocalParts = (date = new Date(), timeZone = getAttendanceTimeZone()) =>
   return Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
 };
 
-const getAttendanceTimeZone = () => (
-  process.env.ATTENDANCE_TIMEZONE
-  || process.env.ORGANIZATION_TIMEZONE
-  || process.env.TZ
-  || 'Asia/Karachi'
-);
+const getAttendanceTimeZone = () => config.attendance.timezone;
 
 const toAttendanceDate = (value = new Date()) => {
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -97,7 +93,7 @@ const computeCheckInStatus = (checkInTime = new Date(), lateThresholdTime = null
   const overrideMinutes = parseTimeToMinutes(lateThresholdTime);
   const lateMinutes = overrideMinutes !== null
     ? overrideMinutes
-    : (parseInt(process.env.LATE_THRESHOLD_HOUR || '9', 10) * 60) + parseInt(process.env.LATE_THRESHOLD_MIN || '30', 10);
+    : (config.attendance.lateThresholdHour * 60) + config.attendance.lateThresholdMinute;
   return currentMinutes > lateMinutes ? 'LATE' : 'PRESENT';
 };
 
@@ -135,7 +131,7 @@ const computeWorkingHours = (checkIn, checkOut) => {
 };
 
 const computeCheckOutStatus = (record, workingHours) => {
-  const halfDayHrs = parseFloat(process.env.HALF_DAY_HOURS || '4');
+  const halfDayHrs = config.attendance.halfDayHours;
   if (workingHours !== null && workingHours < halfDayHrs) return 'HALF_DAY';
   return record.status === 'ABSENT' ? 'PRESENT' : record.status;
 };

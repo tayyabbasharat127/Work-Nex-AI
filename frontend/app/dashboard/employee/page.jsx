@@ -3,21 +3,10 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { attendanceAPI, leaveAPI, notificationsAPI, performanceAPI, userAPI } from '@/lib/api';
+import { getStoredUser } from '@/lib/authStorage';
 import { useLeaveTypeLabels, formatLeaveType } from '@/hooks/useLeaveTypeLabels';
 import { Clock, Calendar, TrendingUp, CheckCircle, LogIn, LogOut, AlertCircle, RefreshCw } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-function getStoredUser() {
-  if (typeof window === 'undefined') return null;
-  const userData = localStorage.getItem('user');
-  if (!userData) return null;
-  try {
-    return JSON.parse(userData);
-  } catch {
-    localStorage.removeItem('user');
-    return null;
-  }
-}
 
 function normalizeArray(value) {
   if (Array.isArray(value)) return value;

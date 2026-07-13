@@ -1,24 +1,26 @@
 const { createLogger, format, transports } = require('winston');
-const { combine, timestamp, printf, colorize, errors } = format;
+const { combine, timestamp, json, errors } = format;
+const { config } = require('./env');
+const { getRequestContext } = require('../middleware/requestContext.middleware');
 
-const logFormat = printf(({ level, message, timestamp, stack }) => {
-  return `${timestamp} [${level}]: ${stack || message}`;
-});
+const addRequestContext = format((info) => Object.assign(info, getRequestContext()));
+
+const configuredTransports = [new transports.Console()];
+if (config.logToFile) {
+  configuredTransports.push(new transports.File({ filename: 'logs/error.log', level: 'error' }));
+  configuredTransports.push(new transports.File({ filename: 'logs/combined.log' }));
+}
 
 const logger = createLogger({
-  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+  level: config.logLevel,
+  defaultMeta: { service: 'worknex-backend', environment: config.env },
   format: combine(
-    timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     errors({ stack: true }),
-    logFormat
+    addRequestContext(),
+    timestamp(),
+    json(),
   ),
-  transports: [
-    new transports.Console({
-      format: combine(colorize(), timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), logFormat),
-    }),
-    new transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new transports.File({ filename: 'logs/combined.log' }),
-  ],
+  transports: configuredTransports,
 });
 
 module.exports = logger;

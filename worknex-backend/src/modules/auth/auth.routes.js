@@ -4,6 +4,7 @@ const { body } = require('express-validator');
 const authController = require('./auth.controller');
 const { authenticate, authorize } = require('../../middleware/auth.middleware');
 const { validate } = require('../../middleware/validate.middleware');
+const { strongPassword, oneTimePassword } = require('../../middleware/validationRules');
 
 router.post(
   '/register',
@@ -11,7 +12,7 @@ router.post(
   authorize('SUPER_ADMIN', 'ADMIN'),
   [
     body('email').isEmail().withMessage('Valid email required'),
-    body('password').isLength({ min: 8 }).withMessage('Password min 8 chars'),
+    strongPassword('password'),
     body('firstName').notEmpty(),
     body('lastName').notEmpty(),
     body('employeeId').notEmpty(),
@@ -32,18 +33,18 @@ router.post(
   authController.login
 );
 
-router.post('/refresh-token', authController.refreshToken);
+router.post('/refresh-token', body('refreshToken').optional({ nullable: true }).isString().isLength({ max: 4096 }), validate, authController.refreshToken);
 router.post('/logout', authenticate, authController.logout);
 
 // 2FA
 router.post('/2fa/setup', authenticate, authController.setup2FA);
-router.post('/2fa/verify', authenticate, authController.verify2FA);
-router.post('/2fa/disable', authenticate, authController.disable2FA);
-router.post('/2fa/validate', authController.validate2FA);
+router.post('/2fa/verify', authenticate, oneTimePassword(), validate, authController.verify2FA);
+router.post('/2fa/disable', authenticate, oneTimePassword(), validate, authController.disable2FA);
+router.post('/2fa/validate', body('userId').isString().isLength({ min: 20, max: 4096 }), oneTimePassword(), validate, authController.validate2FA);
 
 // Password
-router.post('/forgot-password', [body('email').isEmail()], validate, authController.forgotPassword);
-router.post('/reset-password', authController.resetPassword);
-router.post('/change-password', authenticate, authController.changePassword);
+router.post('/forgot-password', [body('email').isEmail().normalizeEmail()], validate, authController.forgotPassword);
+router.post('/reset-password', body('token').isString().isLength({ min: 20, max: 512 }), strongPassword('newPassword'), validate, authController.resetPassword);
+router.post('/change-password', authenticate, body('oldPassword').isString().notEmpty(), strongPassword('newPassword'), validate, authController.changePassword);
 
 module.exports = router;

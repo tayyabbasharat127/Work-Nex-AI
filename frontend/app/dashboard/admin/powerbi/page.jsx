@@ -95,6 +95,13 @@ export default function PowerBIPage() {
         pbi.factories.wpmpFactory,
         pbi.factories.routerFactory,
       );
+      // Reset first — React Strict Mode (dev) invokes this effect twice, and
+      // the "Reload embed" button re-runs it too. Without resetting, embed()
+      // on a container that already has a component throws "could not find
+      // the existing component in the list of active components".
+      if (reportRef.current) {
+        try { powerbiService.reset(reportRef.current); } catch { /* nothing embedded yet — fine */ }
+      }
       powerbiService.embed(reportRef.current, {
         type: 'report',
         id: data.reportId,

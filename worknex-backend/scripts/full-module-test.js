@@ -7,12 +7,18 @@
 const fs = require('fs');
 const path = require('path');
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-const AI_URL = process.env.AI_URL || 'http://localhost:8000';
+const requiredUrl = (name) => {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value.replace(/\/$/, '');
+};
+const BACKEND_URL = requiredUrl('BACKEND_URL');
+const FRONTEND_URL = requiredUrl('FRONTEND_URL');
+const AI_URL = requiredUrl('AI_SERVICE_URL');
 const API = `${BACKEND_URL}/api/v1`;
 const TEST_PREFIX = process.env.TEST_PREFIX || `worknex_e2e_${Date.now()}`;
-const TEST_PASSWORD = 'NovaPay@2025';
+const TEST_PASSWORD = process.env.TEST_USER_PASSWORD;
+if (!TEST_PASSWORD) throw new Error('TEST_USER_PASSWORD is required');
 const REPORT_DIR = path.join(process.cwd(), 'reports');
 const JSON_REPORT = path.join(REPORT_DIR, 'full-module-test-report.json');
 const MD_REPORT = path.join(REPORT_DIR, 'full-module-test-report.md');

@@ -1,6 +1,7 @@
 ﻿const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
 const prisma = require('../../config/db');
+const { config } = require('../../config/env');
 const { ApiError } = require('../../utils/ApiError');
 const { sendEmail } = require('../../config/email');
 const { organizationWelcomeEmail } = require('../../utils/emailTemplates');
@@ -146,7 +147,7 @@ const registerOrganization = async (data) => {
     trialEndsAt: trialEnd,
     licenseKey,
     loginEmail: ownerEmail,
-    loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`,
+    loginUrl: `${config.frontendUrl}/login`,
   });
   await trySendEmail(ownerEmail, subject, html);
 

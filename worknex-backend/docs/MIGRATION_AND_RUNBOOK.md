@@ -6,7 +6,7 @@
 |---|---|---:|---:|---:|---|
 | Organization settings | `OrganizationSettings` table | Yes | Yes | Added in `20260517130000_add_durable_settings_leave_automation` | Production deploy requires tenant backfill if legacy sidecar settings must be preserved. |
 | Attendance policy/settings | `OrganizationSettings.attendancePolicyJson` | Yes | Yes | Added | Validate policy JSON before expanding into typed columns later. |
-| Leave policy documents | `PolicyDocument` table plus local uploaded file | Yes | Yes | Added | File bytes remain on disk/local storage; metadata and extracted text are durable in DB. |
+| Leave policy documents | `PolicyDocument` metadata plus StorageService object | Yes | Yes | Added | Production bytes reside in private S3 storage; local storage is development-only. |
 | Extracted leave policy rules | `ExtractedPolicyRule` table | Yes | Yes | Added | Rules are drafts until admin approval. |
 | Leave policy versions | `LeavePolicyVersion` table | Yes | Yes | Added | Only approved versions become `ACTIVE`; older versions are archived. |
 | Leave decision logs | `LeaveDecisionLog` table | Yes | Yes | Added | Automated and human decisions persist in DB. |

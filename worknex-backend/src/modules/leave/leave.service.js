@@ -7,6 +7,8 @@ const { getOrganizationScope } = require('../../utils/tenant');
 const notificationService = require('../notifications/notification.service');
 const { sendEmail } = require('../../config/email');
 const automation = require('./leave.automation');
+const leaveSandwich = require('./leave.sandwich');
+const logger = require('../../config/logger');
 
 const fmtDate = (d) => new Date(d).toISOString().slice(0, 10);
 
@@ -291,12 +293,15 @@ const rejectLeave = async (approver, leaveId, note) => {
   return attachDecision(updated);
 };
 
-// Lazy require — leave.sandwich.js calls back into applySandwichPenalty below,
-// so requiring it at module load time here would create a require cycle.
 const triggerMirrorSandwichCheck = (leave) => {
-  const leaveSandwich = require('./leave.sandwich');
-  leaveSandwich.runSandwichCheckForNewLeave(leave, leave.organizationId)
-    .catch((err) => console.error('[Sandwich] mirror-check failed:', err.message));
+  leaveSandwich.detectSandwichForNewLeave(leave, leave.organizationId)
+    .then((match) => match && applySandwichPenalty(
+      match.leaveRequestId,
+      match.extraDays,
+      match.gapDescription,
+      leave.organizationId,
+    ))
+    .catch((error) => logger.error('Sandwich mirror check failed', { error: error.message, stack: error.stack }));
 };
 
 const applySandwichPenalty = async (leaveRequestId, extraDays, gapDescription, organizationId) => {
@@ -445,14 +450,17 @@ const getDailyLeaveCounts = async (requestingUser, days = 14) => {
 };
 
 const createPolicy = async (data, requestingUser) => {
-  return prisma.leavePolicy.create({ data: { ...data, organizationId: requestingUser.organizationId } });
+  const allowed = ['leaveType', 'totalDays', 'carryForward', 'maxCarryForward', 'applicableRoleIds', 'description'];
+  const safeData = Object.fromEntries(Object.entries(data).filter(([key]) => allowed.includes(key)));
+  return prisma.leavePolicy.create({ data: { ...safeData, organizationId: requestingUser.organizationId } });
 };
 
 const updatePolicy = async (id, data, requestingUser) => {
   const policy = await prisma.leavePolicy.findFirst({ where: { id, ...getOrganizationScope(requestingUser) }, select: { organizationId: true } });
   if (!policy) throw new ApiError(404, 'Policy not found');
   if (requestingUser.role !== 'SUPER_ADMIN' && policy.organizationId !== requestingUser.organizationId) throw new ApiError(403, 'Not authorized for this organization');
-  const { organizationId, ...safeData } = data;
+  const allowed = ['leaveType', 'totalDays', 'carryForward', 'maxCarryForward', 'applicableRoleIds', 'description'];
+  const safeData = Object.fromEntries(Object.entries(data).filter(([key]) => allowed.includes(key)));
   return prisma.leavePolicy.update({ where: { id }, data: safeData });
 };
 

@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const logger = require('../config/logger');
 
 /**
  * Logs every mutating request to the AuditLog table
@@ -15,13 +16,18 @@ const auditLog = (entity, action) => {
               action,
               entity,
               entityId: req.params?.id || res.locals?.entityId || null,
-              newValues: res.locals?.auditData || null,
+              newValues: {
+                auditId: req.auditId,
+                ...(res.locals?.auditData && typeof res.locals.auditData === 'object'
+                  ? res.locals.auditData
+                  : {}),
+              },
               ipAddress: req.ip,
               userAgent: req.headers['user-agent'],
             },
           });
-        } catch {
-          // Non-blocking — audit failure should not break the request
+        } catch (error) {
+          logger.error('Audit log persistence failed', { error: error.message, auditId: req.auditId, entity, action });
         }
       }
     });

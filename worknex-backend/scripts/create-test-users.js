@@ -16,7 +16,8 @@
 const prisma = require('../src/config/db');
 const usersService = require('../src/modules/users/users.service');
 
-const PASSWORD = 'Test@1234';
+const PASSWORD = process.env.TEST_USER_PASSWORD;
+if (!PASSWORD) throw new Error('TEST_USER_PASSWORD is required');
 
 const PLAN = [
   {

@@ -8,6 +8,8 @@ const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
+const SEED_PASSWORD = process.env.SEED_USER_PASSWORD;
+if (!SEED_PASSWORD) throw new Error('SEED_USER_PASSWORD is required');
 
 const d = (y, m, day) => new Date(y, m - 1, day);
 const dt = (y, m, day, h, min) => new Date(y, m - 1, day, h, min, 0);
@@ -84,7 +86,7 @@ async function main() {
     hods[name] = await prisma.user.findFirstOrThrow({ where: { organizationId: org.id, departmentId: depts[name].id, roleId: hodRole.id } });
   }
 
-  const pw = await hash('DSU@2025');
+  const pw = await hash(SEED_PASSWORD);
   const newUsers = [];
 
   for (const [deptName, list] of Object.entries(moreFaculty)) {
@@ -183,7 +185,7 @@ async function main() {
   }
   console.log(`   ✓ ${attendanceCount} attendance records created`);
 
-  console.log('\n✅ Added more users to DSU University. Password for all: DSU@2025\n');
+  console.log('\n✅ Added more users to DSU University. Password supplied through SEED_USER_PASSWORD.\n');
 }
 
 main()

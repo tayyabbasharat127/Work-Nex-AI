@@ -28,8 +28,8 @@ router.post(
   [
     body('email').isEmail().withMessage('Valid email required'),
     body('employeeId').notEmpty().withMessage('Employee ID required'),
-    body('firstName').notEmpty().withMessage('First name required'),
-    body('lastName').notEmpty().withMessage('Last name required'),
+    body('firstName').trim().notEmpty().withMessage('First name required'),
+    body('lastName').trim().notEmpty().withMessage('Last name required'),
     body('role').optional().isIn(['ADMIN', 'MANAGER', 'EMPLOYEE']).withMessage('Invalid role'),
     body('roleId').optional({ nullable: true, checkFalsy: true }).isString().withMessage('roleId must be a string'),
     body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
@@ -48,6 +48,8 @@ router.post(
 router.put(
   '/:id',
   requirePermission('users:manage'),
+  body('password').optional({ checkFalsy: true }).isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  validate,
   auditLog('User', 'UPDATE'),
   usersController.updateUser
 );

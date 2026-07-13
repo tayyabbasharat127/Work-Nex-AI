@@ -502,7 +502,7 @@ const evaluateLeaveRequest = async ({ leave, draft, actor = null, excludeLeaveId
     where: { id: employeeId, organizationId },
     select: {
       id: true, roleId: true, managerId: true, organizationId: true, joiningDate: true, departmentId: true,
-      customRole: { select: { name: true } },
+      customRole: { select: { name: true, tier: true } },
     },
   });
   if (!employee) throw new ApiError(404, 'Employee not found in organization');
@@ -510,7 +510,7 @@ const evaluateLeaveRequest = async ({ leave, draft, actor = null, excludeLeaveId
   const start = new Date(request.startDate);
   const end = new Date(request.endDate);
   const reasons = [];
-  const requiredApprovals = [];
+  let requiredApprovals = [];
 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
     reasons.push('Invalid leave date range');
@@ -605,6 +605,28 @@ const evaluateLeaveRequest = async ({ leave, draft, actor = null, excludeLeaveId
     }
   } else {
     requiredApprovals.push(employee.managerId ? 'MANAGER' : 'ADMIN');
+  }
+
+  // Who reviews a request escalates with the REQUESTER's own position in the
+  // hierarchy, not a flat policy flag applied identically to everyone:
+  //   - a plain employee's request only ever needs their manager — an
+  //     admin-approval flag on the policy is meant for the level above a
+  //     manager, not stacked onto ordinary employee requests, so it's
+  //     dropped here rather than stalling a routine 1-day CL on an admin's
+  //     desk;
+  //   - a manager's own request skips "manager" review entirely (reviewing
+  //     a peer manager doesn't fit the model) and escalates straight to
+  //     admin, whether it was the manager-approval or admin-approval flag
+  //     that triggered it;
+  //   - an admin's own request has no one above it in the normal org
+  //     hierarchy, so it's never held for approval at all.
+  const requesterTier = employee.customRole?.tier;
+  if (requesterTier === 'ADMIN' || requesterTier === 'SUPER_ADMIN') {
+    requiredApprovals = requiredApprovals.filter((level) => level !== 'MANAGER' && level !== 'ADMIN');
+  } else if (requesterTier === 'MANAGER') {
+    requiredApprovals = requiredApprovals.map((level) => (level === 'MANAGER' ? 'ADMIN' : level));
+  } else {
+    requiredApprovals = requiredApprovals.filter((level) => level !== 'ADMIN');
   }
 
   let decision = 'NEEDS_HUMAN_REVIEW';

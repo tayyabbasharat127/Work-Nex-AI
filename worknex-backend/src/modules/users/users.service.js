@@ -285,6 +285,10 @@ const updateUser = async (id, data, requestingUser) => {
     if (!manager) throw new ApiError(400, 'Assigned manager not found');
   }
 
+  if (password) {
+    safeData.passwordHash = await bcrypt.hash(password, 12);
+  }
+
   const user = await prisma.user.update({ where: { id }, data: safeData, select: userSelect });
   return serializeUser(user);
 };

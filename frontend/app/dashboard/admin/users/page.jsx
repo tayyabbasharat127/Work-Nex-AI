@@ -57,7 +57,8 @@ export default function AdminUsers() {
   const itemsPerPage = 10;
 
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     roleId: '',
@@ -110,7 +111,8 @@ export default function AdminUsers() {
     setEditingUser(null);
     setShowPassword(false);
     setFormData({
-      name: '',
+      firstName: '',
+      lastName: '',
       email: '',
       password: '',
       roleId: defaultRoleId(),
@@ -129,7 +131,8 @@ export default function AdminUsers() {
     setEditingUser(user);
     setShowPassword(false);
     setFormData({
-      name: user.name,
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
       email: user.email,
       password: '',
       roleId: user.roleId || defaultRoleId(),
@@ -396,16 +399,33 @@ export default function AdminUsers() {
                 </button>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
-                    placeholder="Enter full name"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="user-first-name" className="block text-sm font-medium mb-2">First Name</label>
+                    <input
+                      id="user-first-name"
+                      type="text"
+                      required
+                      autoComplete="given-name"
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
+                      placeholder="e.g. Babar"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="user-last-name" className="block text-sm font-medium mb-2">Last Name</label>
+                    <input
+                      id="user-last-name"
+                      type="text"
+                      required
+                      autoComplete="family-name"
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
+                      placeholder="e.g. Azam"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Email</label>
@@ -418,16 +438,18 @@ export default function AdminUsers() {
                     placeholder="Enter email address"
                   />
                 </div>
-                {!editingUser && (
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Password</label>
+                <div>
+                    <label className="block text-sm font-medium mb-2">
+                      {editingUser ? 'New Password' : 'Password'}
+                    </label>
                     <div className="relative">
                       <input
                         type={showPassword ? 'text' : 'password'}
+                        minLength={6}
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         className="w-full px-4 py-3 pr-12 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
-                        placeholder="Enter password (optional)"
+                        placeholder={editingUser ? 'Leave blank to keep current password' : 'Enter password (optional)'}
                       />
                       <button
                         type="button"
@@ -440,10 +462,11 @@ export default function AdminUsers() {
                       </button>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Leave empty to auto-generate. User will receive password via email.
+                      {editingUser
+                        ? 'Leave blank to keep the current password. New password must be at least 6 characters.'
+                        : 'Leave empty to auto-generate. User will receive password via email.'}
                     </p>
                   </div>
-                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Role</label>

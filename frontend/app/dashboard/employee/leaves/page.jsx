@@ -1,14 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { Plus, X } from 'lucide-react';
+import { ArrowRight, CalendarDays, CalendarRange, FileText, Inbox, Plus, ShieldCheck, X } from 'lucide-react';
 import { useLeaves } from '@/hooks/useLeaves';
 import { useLeaveTypeLabels, formatLeaveType } from '@/hooks/useLeaveTypeLabels';
 import { leaveAPI } from '@/lib/api';
 import { toast } from 'sonner';
-
-const FALLBACK_LEAVE_TYPES = ['ANNUAL', 'SICK', 'CASUAL', 'MATERNITY', 'PATERNITY', 'UNPAID', 'OTHER'];
 
 export default function EmployeeLeaves() {
   const { leaves, loading, fetchMyLeaves, createLeave, cancelLeave } = useLeaves();
@@ -41,6 +39,16 @@ export default function EmployeeLeaves() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const configuredLeaveTypes = useMemo(() => balances
+    .map((balance) => balance.policy?.leaveType)
+    .filter(Boolean), [balances]);
+
+  useEffect(() => {
+    if (configuredLeaveTypes.length && !configuredLeaveTypes.includes(formData.type)) {
+      setFormData((current) => ({ ...current, type: configuredLeaveTypes[0] }));
+    }
+  }, [configuredLeaveTypes, formData.type]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -72,7 +80,7 @@ export default function EmployeeLeaves() {
       
       toast.success('Leave application submitted successfully');
       setShowModal(false);
-      setFormData({ startDate: '', endDate: '', type: 'ANNUAL', reason: '' });
+      setFormData({ startDate: '', endDate: '', type: configuredLeaveTypes[0] || 'ANNUAL', reason: '' });
       
       // Force reload the leaves list
       await loadLeaves();
@@ -105,9 +113,10 @@ export default function EmployeeLeaves() {
   // Ensure leaves is always an array
   const leavesArray = Array.isArray(leaves) ? leaves : [];
 
-  const balanceByType = Object.fromEntries(
-    balances.map((balance) => [balance.policy?.leaveType, balance.remainingDays])
-  );
+  const formatMonthlyEquivalent = (annualDays) => {
+    const monthly = Number(annualDays || 0) / 12;
+    return Number.isInteger(monthly) ? monthly : Number(monthly.toFixed(1));
+  };
 
   return (
     <div className="flex h-screen bg-background">
@@ -122,7 +131,8 @@ export default function EmployeeLeaves() {
             </div>
             <button
               onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition"
+              disabled={!balances.length}
+              className="mr-14 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Plus size={20} />
               Apply Leave
@@ -132,31 +142,63 @@ export default function EmployeeLeaves() {
 
         <div className="p-6 space-y-6">
           {/* Leave Balance */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-card border border-border rounded-lg p-6">
-              <p className="text-muted-foreground text-sm mb-2">{formatLeaveType(typeLabels, 'CASUAL')} Leave Balance</p>
-              <p className="text-3xl font-bold text-primary">{balanceByType.CASUAL ?? 0} days</p>
+          {balances.length > 0 ? (
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {balances.map((balance) => {
+                const leaveType = balance.policy?.leaveType;
+                if (!leaveType) return null;
+                const annualDays = Number(balance.totalDays ?? balance.policy?.totalDays ?? 0);
+                const usedDays = Number(balance.usedDays || 0);
+                return (
+                  <div key={balance.id || leaveType} className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                    <div className="h-1 bg-gradient-to-r from-sky-500 to-primary" />
+                    <div className="p-6">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-muted-foreground">{formatLeaveType(typeLabels, leaveType)} Leave</p>
+                          <p className="mt-2 text-3xl font-bold text-primary">{balance.remainingDays} <span className="text-base font-medium text-muted-foreground">days left</span></p>
+                        </div>
+                        <div className="rounded-xl bg-primary/10 p-2.5 text-primary"><CalendarRange size={20} /></div>
+                      </div>
+                      <div className="mt-5 grid grid-cols-3 gap-2 border-t border-border pt-4 text-center">
+                        <div><p className="text-lg font-bold">{formatMonthlyEquivalent(annualDays)}</p><p className="text-[11px] text-muted-foreground">Per month*</p></div>
+                        <div><p className="text-lg font-bold">{annualDays}</p><p className="text-[11px] text-muted-foreground">Per year</p></div>
+                        <div><p className="text-lg font-bold">{usedDays}</p><p className="text-[11px] text-muted-foreground">Used</p></div>
+                      </div>
+                      <p className="mt-3 text-[11px] text-muted-foreground">*Monthly figure is the yearly allocation divided by 12; balance is granted yearly, not accrued monthly.</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div className="bg-card border border-border rounded-lg p-6">
-              <p className="text-muted-foreground text-sm mb-2">{formatLeaveType(typeLabels, 'ANNUAL')} Leave Balance</p>
-              <p className="text-3xl font-bold text-primary">{balanceByType.ANNUAL ?? 0} days</p>
+          ) : !loading ? (
+            <div className="rounded-2xl border border-dashed border-border bg-card/40 p-8 text-center text-muted-foreground">
+              No leave policy or balance is configured for your account.
             </div>
-            <div className="bg-card border border-border rounded-lg p-6">
-              <p className="text-muted-foreground text-sm mb-2">{formatLeaveType(typeLabels, 'SICK')} Leave Balance</p>
-              <p className="text-3xl font-bold text-primary">{balanceByType.SICK ?? 0} days</p>
-            </div>
-          </div>
+          ) : null}
 
           {/* Leave Requests */}
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-lg font-bold mb-6">Leave Requests</h2>
+          <section>
+            <div className="mb-5 flex items-end justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold">Leave Requests</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Track the status and policy review of your applications.</p>
+              </div>
+              <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">{leavesArray.length} total</span>
+            </div>
             
             {loading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading...</div>
-            ) : leavesArray.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No leave requests found</div>
-            ) : (
               <div className="space-y-4">
+                {[1, 2].map((item) => <div key={item} className="h-64 animate-pulse rounded-2xl border border-border bg-card/60" />)}
+              </div>
+            ) : leavesArray.length === 0 ? (
+              <div className="flex flex-col items-center rounded-3xl border border-dashed border-border bg-card/40 px-8 py-16 text-center">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Inbox size={26} /></div>
+                <h3 className="text-lg font-bold">No leave requests yet</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Your submitted leave applications will appear here.</p>
+              </div>
+            ) : (
+              <div className="space-y-5">
                 {leavesArray.map((leave) => {
                   // Handle different field name formats from backend
                   const leaveType = leave.leaveType || leave.leave_type || leave.type || 'N/A';
@@ -165,27 +207,38 @@ export default function EmployeeLeaves() {
                   const status = leave.status || 'PENDING';
                   const reason = leave.reason || '';
                   const decision = leave.decisionExplanation;
+                  const totalDays = leave.totalDays || leave.days || calculateDays(startDate, endDate);
+                  const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-US', {
+                    month: 'short', day: 'numeric', year: 'numeric',
+                  }) : 'N/A';
                   
                   return (
-                    <div key={leave.id} className="p-6 border border-border rounded-lg hover:border-primary transition">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="font-semibold">{formatLeaveType(typeLabels, leaveType)}</h3>
-                          <p className="text-sm text-muted-foreground">{reason}</p>
+                    <article key={leave.id} className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5">
+                      <div className={`h-1 ${status === 'APPROVED' ? 'bg-emerald-500' : status === 'REJECTED' ? 'bg-red-500' : status === 'CANCELLED' ? 'bg-muted' : 'bg-gradient-to-r from-sky-500 via-primary to-violet-500'}`} />
+                      <div className="p-5 sm:p-6">
+                      <div className="flex flex-wrap justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500/25 to-violet-500/20 text-base font-bold text-sky-300 ring-1 ring-sky-400/20">
+                            {formatLeaveType(typeLabels, leaveType).slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-bold">{formatLeaveType(typeLabels, leaveType)} Leave</h3>
+                            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground"><CalendarDays size={13} /> {totalDays} {totalDays === 1 ? 'day' : 'days'}</div>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            status === 'APPROVED' || status === 'Approved' ? 'bg-green-500/20 text-green-400' :
-                            status === 'PENDING' || status === 'Pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                            status === 'REJECTED' || status === 'Rejected' ? 'bg-red-500/20 text-red-400' :
-                            'bg-muted/20 text-muted-foreground'
+                          <span className={`rounded-full border px-3 py-1.5 text-xs font-bold tracking-wide ${
+                            status === 'APPROVED' || status === 'Approved' ? 'border-green-500/20 bg-green-500/10 text-green-400' :
+                            status === 'PENDING' || status === 'Pending' ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400' :
+                            status === 'REJECTED' || status === 'Rejected' ? 'border-red-500/20 bg-red-500/10 text-red-400' :
+                            'border-border bg-muted/20 text-muted-foreground'
                           }`}>
                             {status}
                           </span>
                           {(status === 'PENDING' || status === 'Pending') && (
                             <button
                               onClick={() => handleDelete(leave.id)}
-                              className="p-2 hover:bg-red-500/10 rounded-lg text-red-400 hover:text-red-300 transition"
+                              className="rounded-lg border border-red-500/20 p-2 text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
                               title="Cancel leave request"
                             >
                               <X size={18} />
@@ -193,46 +246,39 @@ export default function EmployeeLeaves() {
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-6 text-sm">
-                        <div>
-                          <p className="text-muted-foreground mb-1">From</p>
-                          <p className="font-semibold">
-                            {startDate ? new Date(startDate).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric', 
-                              year: 'numeric' 
-                            }) : '---'}
-                          </p>
+                      <div className="my-5 grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-center">
+                        <div className="rounded-xl border border-border bg-muted/20 p-4">
+                          <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">Starts</p>
+                          <p className="font-bold">{formatDate(startDate)}</p>
                         </div>
-                        <div>
-                          <p className="text-muted-foreground mb-1">To</p>
-                          <p className="font-semibold">
-                            {endDate ? new Date(endDate).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric', 
-                              year: 'numeric' 
-                            }) : '---'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground mb-1">Days</p>
-                          <p className="font-semibold">
-                            {leave.totalDays || leave.days || calculateDays(startDate, endDate)}
-                          </p>
+                        <ArrowRight className="hidden text-muted-foreground md:block" size={18} />
+                        <div className="rounded-xl border border-border bg-muted/20 p-4">
+                          <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">Ends</p>
+                          <p className="font-bold">{formatDate(endDate)}</p>
                         </div>
                       </div>
-                      {decision && (
-                        <div className="mt-4 rounded-lg border border-border bg-muted/20 p-4 text-sm">
-                          <p className="font-semibold">Decision: {decision.decision}</p>
-                          <p className="text-muted-foreground mt-1">{(decision.reasons || []).join('; ')}</p>
+                      {reason && (
+                        <div className="mb-4 flex gap-3 rounded-xl bg-muted/25 p-4">
+                          <FileText size={18} className="mt-0.5 shrink-0 text-primary" />
+                          <div><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Your reason</p><p className="mt-1 text-sm">{reason}</p></div>
                         </div>
                       )}
-                    </div>
+                      {decision && (
+                        <div className="flex gap-3 rounded-xl border border-sky-500/15 bg-sky-500/5 p-4 text-sm">
+                          <ShieldCheck size={20} className="mt-0.5 shrink-0 text-sky-400" />
+                          <div>
+                            <p className="font-semibold">Policy check <span className="ml-2 rounded-md bg-sky-500/10 px-2 py-0.5 text-xs text-sky-300">{String(decision.decision || '').replaceAll('_', ' ')}</span></p>
+                            <p className="mt-1 text-muted-foreground">{(decision.reasons || []).join('; ')}</p>
+                          </div>
+                        </div>
+                      )}
+                      </div>
+                    </article>
                   );
                 })}
               </div>
             )}
-          </div>
+          </section>
         </div>
 
         {/* Apply Leave Modal */}
@@ -255,7 +301,7 @@ export default function EmployeeLeaves() {
                     className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
                     required
                   >
-                    {(Object.keys(typeLabels).length ? Object.keys(typeLabels) : FALLBACK_LEAVE_TYPES).map((type) => (
+                    {configuredLeaveTypes.map((type) => (
                       <option key={type} value={type}>{formatLeaveType(typeLabels, type)} Leave</option>
                     ))}
                   </select>

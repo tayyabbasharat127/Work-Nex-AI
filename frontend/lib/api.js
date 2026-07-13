@@ -538,7 +538,7 @@ export const userAPI = {
   
   create: async (userData) => {
     // Transform frontend data to backend format
-    const [firstName, ...lastNameParts] = (userData.name || '').split(' ');
+    const [firstName, ...lastNameParts] = (userData.name || '').trim().split(/\s+/);
     const lastName = lastNameParts.join(' ') || '';
     
     // Map role_id to role string
@@ -556,6 +556,12 @@ export const userAPI = {
     if (!userData.email || !userData.email.trim()) {
       throw new Error('Email is required');
     }
+    if (!(userData.firstName || firstName || '').trim()) {
+      throw new Error('First name is required');
+    }
+    if (!(userData.lastName || lastName || '').trim()) {
+      throw new Error('Last name is required');
+    }
     
     // Helper function to convert to string or return undefined (not null, not empty string)
     const toStringOrUndefined = (value) => {
@@ -567,8 +573,8 @@ export const userAPI = {
     
     const backendData = {
       email: userData.email.trim(),
-      firstName: userData.firstName || firstName || '',
-      lastName: userData.lastName || lastName,
+      firstName: (userData.firstName || firstName || '').trim(),
+      lastName: (userData.lastName || lastName || '').trim(),
       employeeId: employeeId,
       role: userData.role || roleMap[userData.role_id] || 'EMPLOYEE',
     };
@@ -597,8 +603,6 @@ export const userAPI = {
     // Include password if provided (optional - backend will auto-generate if not provided)
     const password = userData.password?.trim();
     if (password) backendData.password = password;
-    
-    console.log('Creating user with data:', backendData);
     
     const response = await apiFetch('/users', {
       method: 'POST',
@@ -633,8 +637,8 @@ export const userAPI = {
 
     // Map other fields
     if (userData.email) updateData.email = userData.email;
-    if (userData.firstName) updateData.firstName = userData.firstName;
-    if (userData.lastName) updateData.lastName = userData.lastName;
+    if (userData.firstName) updateData.firstName = userData.firstName.trim();
+    if (userData.lastName) updateData.lastName = userData.lastName.trim();
     if (userData.employeeId) updateData.employeeId = userData.employeeId;
     if (userData.role) updateData.role = userData.role;
     
@@ -657,6 +661,9 @@ export const userAPI = {
     if (userData.designation !== undefined) updateData.designation = userData.designation || null;
     if (userData.phone !== undefined) updateData.phone = userData.phone || null;
     if (userData.joiningDate !== undefined) updateData.joiningDate = userData.joiningDate || null;
+
+    const password = userData.password?.trim();
+    if (password) updateData.password = password;
     
     // Handle status -> isActive conversion
     if (userData.status !== undefined) {

@@ -47,7 +47,7 @@ export default function LandingPage() {
     },
     {
       title: 'Real-Time Attendance',
-      description: 'Live clock-in/out tracking with TMS sync, IP-based network verification, and daily status monitoring.',
+      description: 'Live clock-in/out tracking with TMS webhook sync, biometric integration, and daily status monitoring.',
       icon: Clock,
     },
     {

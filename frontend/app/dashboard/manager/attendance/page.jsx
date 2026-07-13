@@ -192,7 +192,6 @@ export default function ManagerAttendance() {
                       <th className="text-left py-4 px-6 font-semibold">Check In</th>
                       <th className="text-left py-4 px-6 font-semibold">Check Out</th>
                       <th className="text-left py-4 px-6 font-semibold">Work Hours</th>
-                      <th className="text-left py-4 px-6 font-semibold">IP Address</th>
                       <th className="text-center py-4 px-6 font-semibold">Status</th>
                     </tr>
                   </thead>
@@ -220,9 +219,6 @@ export default function ManagerAttendance() {
                         </td>
                         <td className="py-4 px-6 font-medium">
                           {formatHours(record.workingHours)}
-                        </td>
-                        <td className="py-4 px-6 text-muted-foreground text-xs font-mono">
-                          {record.ipAddress || '---'}
                         </td>
                         <td className="py-4 px-6 text-center">
                           <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${getStatusColor(record.status)}`}>

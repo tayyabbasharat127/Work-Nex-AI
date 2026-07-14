@@ -295,24 +295,71 @@ const generateAbsences = async (date = new Date(), requestingUser = null) => {
   return { date: formatAttendanceDate(attendanceDate), scanned: employees.length, created, skippedAttendance, skippedLeave, skippedHoliday, createdRecords };
 };
 
-const getHolidays = async (requestingUser) => {
-  const year = Number(getLocalParts().year);
+const requireHolidayOrganization = (requestingUser) => {
+  if (!requestingUser?.organizationId) throw new ApiError(403, 'Organization context required');
+  return requestingUser.organizationId;
+};
+
+const getHolidays = async (requestingUser, requestedYear) => {
+  const organizationId = requireHolidayOrganization(requestingUser);
+  const year = Number(requestedYear || getLocalParts().year);
   return prisma.holiday.findMany({
-    where: { ...getOrganizationScope(requestingUser), date: { gte: new Date(Date.UTC(year, 0, 1)), lte: new Date(Date.UTC(year, 11, 31)) } },
+    where: {
+      organizationId,
+      OR: [
+        { date: { gte: new Date(Date.UTC(year, 0, 1)), lte: new Date(Date.UTC(year, 11, 31)) } },
+        { isRecurring: true },
+      ],
+    },
     orderBy: { date: 'asc' },
   });
 };
 
 const createHoliday = async (data, requestingUser) => {
+  const organizationId = requireHolidayOrganization(requestingUser);
+  const date = toAttendanceDate(data.date);
+  const existing = await prisma.holiday.findFirst({ where: { organizationId, date } });
+  if (existing) throw new ApiError(409, `A holiday already exists on ${formatAttendanceDate(date)}`);
   return prisma.holiday.create({
     data: {
-      organizationId: requestingUser.organizationId,
+      organizationId,
       name: data.name,
-      date: toAttendanceDate(data.date),
+      date,
       description: data.description || null,
       isRecurring: Boolean(data.isRecurring),
     },
   });
+};
+
+const getHolidayForManagement = async (id, requestingUser) => {
+  const organizationId = requireHolidayOrganization(requestingUser);
+  const holiday = await prisma.holiday.findFirst({ where: { id, organizationId } });
+  if (!holiday) throw new ApiError(404, 'Holiday not found');
+  return holiday;
+};
+
+const updateHoliday = async (id, data, requestingUser) => {
+  const holiday = await getHolidayForManagement(id, requestingUser);
+  const date = data.date ? toAttendanceDate(data.date) : holiday.date;
+  const duplicate = await prisma.holiday.findFirst({
+    where: { organizationId: holiday.organizationId, date, id: { not: id } },
+  });
+  if (duplicate) throw new ApiError(409, `A holiday already exists on ${formatAttendanceDate(date)}`);
+
+  return prisma.holiday.update({
+    where: { id },
+    data: {
+      ...(data.name !== undefined ? { name: data.name } : {}),
+      ...(data.date !== undefined ? { date } : {}),
+      ...(data.description !== undefined ? { description: data.description || null } : {}),
+      ...(data.isRecurring !== undefined ? { isRecurring: Boolean(data.isRecurring) } : {}),
+    },
+  });
+};
+
+const deleteHoliday = async (id, requestingUser) => {
+  await getHolidayForManagement(id, requestingUser);
+  return prisma.holiday.delete({ where: { id } });
 };
 
 module.exports = {
@@ -331,6 +378,8 @@ module.exports = {
   generateAbsences,
   getHolidays,
   createHoliday,
+  updateHoliday,
+  deleteHoliday,
   toAttendanceDate,
   getAttendanceTimeZone,
 };

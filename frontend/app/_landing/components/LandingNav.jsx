@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
+import ThemeSwitcher from '@/components/theme/ThemeSwitcher';
 
 export default function LandingNav({ mobileMenuOpen, setMobileMenuOpen, nav }) {
   return (
@@ -22,7 +23,8 @@ export default function LandingNav({ mobileMenuOpen, setMobileMenuOpen, nav }) {
             <button onClick={() => nav('contact')} className="hover:text-primary transition font-medium text-sm lg:text-base">Contact</button>
           </div>
 
-          <div className="hidden md:flex gap-3">
+          <div className="hidden md:flex items-center gap-3">
+            <ThemeSwitcher compact />
             <Link href="/login" className="px-4 py-2 rounded-xl border border-border hover:border-primary hover:text-primary transition font-medium text-sm">
               Login
             </Link>
@@ -49,6 +51,9 @@ export default function LandingNav({ mobileMenuOpen, setMobileMenuOpen, nav }) {
             <div className="flex gap-3 pt-3">
               <Link href="/login" className="flex-1 px-4 py-2.5 rounded-xl border border-border hover:border-primary text-center transition text-sm font-medium">Login</Link>
               <Link href="/register" className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground text-center transition text-sm font-medium">Sign Up Free</Link>
+            </div>
+            <div className="pt-3">
+              <ThemeSwitcher />
             </div>
           </div>
         )}

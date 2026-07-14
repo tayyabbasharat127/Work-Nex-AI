@@ -31,7 +31,7 @@ const getDashboardKPIs = async (requestingUser) => {
   ] = await Promise.all([
     prisma.user.count({ where: { ...userScope, isActive: true, customRole: { tier: 'EMPLOYEE' } } }),
     prisma.attendance.count({ where: { ...attendanceScope, date: today, status: { in: ['PRESENT', 'LATE'] } } }),
-    prisma.leaveRequest.count({ where: { ...leaveScope, status: 'PENDING' } }),
+    prisma.leaveRequest.count({ where: { ...leaveScope, status: { in: ['PENDING', 'PENDING_MANAGER', 'PENDING_ADMIN'] } } }),
     prisma.attendance.count({ where: { ...attendanceScope, date: today, status: 'ABSENT' } }),
   ]);
 

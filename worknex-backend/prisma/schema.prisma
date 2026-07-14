@@ -125,6 +125,8 @@ model User {
   auditLogs        AuditLog[]
   leaveBalances    LeaveBalance[]
   approvedLeaves   LeaveRequest[]      @relation("ApproverLeaves")
+  managerReviewedLeaves LeaveRequest[] @relation("ManagerReviewedLeaves")
+  adminReviewedLeaves   LeaveRequest[] @relation("AdminReviewedLeaves")
   leaveRequests    LeaveRequest[]      @relation("EmployeeLeaves")
   notifications    Notification[]
   performance      PerformanceRecord[]
@@ -243,6 +245,9 @@ model LeaveRequest {
   employeeId   String
   approverId   String?
   leaveType    LeaveType
+  otherLeaveName String?
+  balanceLeaveType LeaveType?
+  emergencyRecoveryDate DateTime?
   startDate    DateTime
   endDate      DateTime
   totalDays    Int
@@ -251,15 +256,24 @@ model LeaveRequest {
   approverNote String?
   appliedAt    DateTime    @default(now())
   reviewedAt   DateTime?
+  managerApproverId String?
+  managerReviewedAt DateTime?
+  managerNote       String?
+  adminApproverId   String?
+  adminReviewedAt   DateTime?
+  adminNote         String?
   updatedAt    DateTime    @updatedAt
   isSandwiched      Boolean @default(false)
   sandwichExtraDays Int     @default(0)
   approver     User?       @relation("ApproverLeaves", fields: [approverId, organizationId], references: [id, organizationId])
+  managerApprover User?    @relation("ManagerReviewedLeaves", fields: [managerApproverId, organizationId], references: [id, organizationId])
+  adminApprover   User?    @relation("AdminReviewedLeaves", fields: [adminApproverId, organizationId], references: [id, organizationId])
   employee     User        @relation("EmployeeLeaves", fields: [employeeId, organizationId], references: [id, organizationId])
   organization Organization @relation(fields: [organizationId], references: [id])
   decisionLogs LeaveDecisionLog[]
 
   @@index([organizationId, status])
+  @@index([organizationId, emergencyRecoveryDate])
   @@unique([id, organizationId])
 }
 
@@ -711,12 +725,15 @@ model Role {
 
 enum LeaveStatus {
   PENDING
+  PENDING_MANAGER
+  PENDING_ADMIN
   APPROVED
   REJECTED
   CANCELLED
 }
 
 enum LeaveType {
+  EMERGENCY
   ANNUAL
   SICK
   CASUAL

@@ -6,6 +6,8 @@ const prisma = require('../../config/db');
 const { config } = require('../../config/env');
 const { ApiError } = require('../../utils/ApiError');
 const { countBusinessDays } = require('../../utils/dateHelpers');
+const { getHolidaysInRange } = require('../attendance/attendance.processor');
+const leaveWorkflow = require('./leave.workflow');
 const storage = require('../../services/storage/storage.service');
 
 const AI_SERVICE_URL = config.aiServiceUrl;
@@ -149,6 +151,26 @@ const deterministicParse = (text) => {
   };
 };
 
+// Whichever rule for a given leaveType has real configuration on it — used
+// to resolve duplicates without needing to guess submission order/intent.
+const isMeaningfulRule = (rule) => rule.autoApproveMaxDays != null || rule.annualQuota != null || rule.maxConsecutiveDays != null;
+
+// Collapses multiple entries for the same leaveType down to one, keeping
+// whichever is meaningfully configured — a stray blank block (e.g. left
+// over from "Add another leave type" in the policy builder UI, or a
+// duplicate/lower-confidence extraction from a parsed document) must never
+// silently overwrite a fully-configured rule for the same type.
+const dedupeRulesByType = (rules) => {
+  const byType = new Map();
+  for (const rule of rules) {
+    const existing = byType.get(rule.leaveType);
+    if (!existing || (!isMeaningfulRule(existing) && isMeaningfulRule(rule))) {
+      byType.set(rule.leaveType, rule);
+    }
+  }
+  return [...byType.values()];
+};
+
 const validateParsedRules = (parsed) => {
   if (!parsed || !Array.isArray(parsed.leavePolicies)) {
     throw new ApiError(400, 'Parsed policy rules must include leavePolicies array');
@@ -156,7 +178,7 @@ const validateParsedRules = (parsed) => {
   return {
     parser: parsed.parser || 'unknown',
     confidence: Number(parsed.confidence || 0),
-    leavePolicies: parsed.leavePolicies.map((rule) => ({
+    leavePolicies: dedupeRulesByType(parsed.leavePolicies.map((rule) => ({
       leaveType: normalizeLeaveType(rule.leaveType || 'OTHER'),
       displayName: rule.displayName && String(rule.displayName).trim() ? String(rule.displayName).trim() : null,
       annualQuota: rule.annualQuota === null || rule.annualQuota === undefined ? null : Number(rule.annualQuota),
@@ -175,7 +197,7 @@ const validateParsedRules = (parsed) => {
       maxConcurrentLeavePercent: rule.maxConcurrentLeavePercent === null || rule.maxConcurrentLeavePercent === undefined
         ? null
         : Number(rule.maxConcurrentLeavePercent),
-    })),
+    }))),
   };
 };
 
@@ -341,12 +363,19 @@ const aiParsePolicyDocument = async (documentId, user) => {
 // new-user provisioning (see users.service.js createUser).
 const syncLegacyLeavePolicies = async (tx, organizationId, leavePolicies) => {
   const roles = await tx.role.findMany({ where: { organizationId }, select: { id: true, tier: true } });
-  const roleIdByTier = Object.fromEntries(roles.map((r) => [r.tier, r.id]));
+  // A tier can have more than one Role row (the system role plus any custom
+  // roles an org defines at that same tier, e.g. a custom "Internee" role
+  // alongside the system "Employee" role) — a policy that applies to the
+  // EMPLOYEE tier must cover every role at that tier, not just whichever
+  // one happened to be the last row Object.fromEntries kept.
+  const roleIdsByTier = {};
+  for (const r of roles) {
+    (roleIdsByTier[r.tier] ??= []).push(r.id);
+  }
 
   for (const rule of leavePolicies) {
     const applicableRoleIds = (rule.applicableRoles || [])
-      .map((tier) => roleIdByTier[tier])
-      .filter(Boolean);
+      .flatMap((tier) => roleIdsByTier[tier] || []);
     const description = rule.displayName ? `${rule.displayName} — synced from active leave policy` : undefined;
     await tx.leavePolicy.upsert({
       where: { organizationId_leaveType: { organizationId, leaveType: rule.leaveType } },
@@ -449,7 +478,15 @@ const getActiveRulesByType = async (organizationId) => {
   });
   const rules = {};
   if (!active?.rulesJson?.leavePolicies) return rules;
+  // If rulesJson somehow contains more than one entry for the same
+  // leaveType (e.g. a blank block left over from the policy-builder UI),
+  // prefer whichever entry actually has values set over one that's mostly
+  // null — a later blank duplicate should never silently blank out an
+  // earlier, fully-configured rule.
+  const isMeaningful = (rule) => rule.autoApproveMaxDays != null || rule.annualQuota != null || rule.maxConsecutiveDays != null;
   active.rulesJson.leavePolicies.forEach((rule) => {
+    const existing = rules[rule.leaveType];
+    if (existing && isMeaningful(existing) && !isMeaningful(rule)) return;
     rules[rule.leaveType] = { ...rule, policyVersionId: active.id };
   });
   return rules;
@@ -541,13 +578,25 @@ const evaluateLeaveRequest = async ({ leave, draft, actor = null, excludeLeaveId
 
   const totalDays = request.totalDays || countBusinessDays(start, end);
   if (totalDays <= 0) reasons.push('Leave range has no working days');
+  if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end >= start) {
+    const holidays = await getHolidaysInRange(organizationId, start, end);
+    if (holidays.length) {
+      const holiday = holidays[0];
+      reasons.push(`Holiday conflict: ${holiday.name} on ${holiday.observedDate.toISOString().slice(0, 10)}`);
+    }
+  }
 
+  const balanceLeaveType = request.balanceLeaveType || leaveWorkflow.getBalanceLeaveType(request.leaveType);
   const rulesByType = await getActiveRulesByType(organizationId);
-  const approvedRules = rulesByType[request.leaveType];
-  const leaveLabel = approvedRules?.displayName || titleCaseLeaveType(request.leaveType);
+  const approvedRules = rulesByType[balanceLeaveType];
+  const leaveLabel = request.leaveType === 'EMERGENCY'
+    ? 'Emergency Leave'
+    : request.leaveType === 'OTHER' && request.otherLeaveName
+      ? request.otherLeaveName
+      : approvedRules?.displayName || titleCaseLeaveType(request.leaveType);
 
   const policy = await prisma.leavePolicy.findFirst({
-    where: { organizationId, leaveType: request.leaveType },
+    where: { organizationId, leaveType: balanceLeaveType },
   });
   if (!policy) reasons.push(`No active ${leaveLabel} leave policy exists`);
   if (policy && !policy.applicableRoleIds.includes(employee.roleId)) {
@@ -559,8 +608,18 @@ const evaluateLeaveRequest = async ({ leave, draft, actor = null, excludeLeaveId
     ? await prisma.leaveBalance.findFirst({ where: { organizationId, userId: employeeId, policyId: policy.id, year } })
     : null;
   if (!balance) reasons.push(`Leave balance for ${leaveLabel} does not exist for ${year}`);
-  if (balance && balance.remainingDays < totalDays) {
-    reasons.push(`Insufficient leave balance. Required ${totalDays}, available ${balance.remainingDays}`);
+  // Insufficient balance is NOT an auto-reject — it's routed to an admin as an
+  // emergency-advance request (see the ADMIN re-add right after the
+  // role-aware remap below — pushing it here alone isn't enough, since the
+  // employee-tier branch of that remap strips a plain 'ADMIN' entry). If
+  // approved, the balance goes negative and is paid back automatically out
+  // of whatever this employee earns/is granted next — the admin is the
+  // human judgment call on whether the advance is warranted, not a rule the
+  // system enforces itself.
+  const balanceInsufficient = Boolean(balance && balance.remainingDays < totalDays);
+  const appliesStandardThresholds = leaveWorkflow.appliesStandardPolicyThresholds(request.leaveType);
+  if (balanceInsufficient) {
+    reasons.push(`Balance insufficient (required ${totalDays}, available ${balance.remainingDays}) — routed to admin as an emergency advance request; approving will take the balance negative`);
   }
 
   const overlap = await prisma.leaveRequest.findFirst({
@@ -568,7 +627,7 @@ const evaluateLeaveRequest = async ({ leave, draft, actor = null, excludeLeaveId
       organizationId,
       employeeId,
       id: excludeLeaveId ? { not: excludeLeaveId } : undefined,
-      status: { in: ['PENDING', 'APPROVED'] },
+      status: { in: ['PENDING', 'PENDING_MANAGER', 'PENDING_ADMIN', 'APPROVED'] },
       startDate: { lte: end },
       endDate: { gte: start },
     },
@@ -576,10 +635,13 @@ const evaluateLeaveRequest = async ({ leave, draft, actor = null, excludeLeaveId
   if (overlap) reasons.push('Leave overlaps an existing pending or approved request');
 
   if (approvedRules) {
-    if (approvedRules.maxConsecutiveDays && totalDays > approvedRules.maxConsecutiveDays) {
+    // Emergency leave deliberately bypasses ordinary notice and duration
+    // thresholds. The admin remains the human safety gate, while invalid
+    // dates, holidays, overlaps, role scope, and missing funding still fail.
+    if (appliesStandardThresholds && approvedRules.maxConsecutiveDays && totalDays > approvedRules.maxConsecutiveDays) {
       reasons.push(`Exceeds max consecutive days (${approvedRules.maxConsecutiveDays})`);
     }
-    if (approvedRules.minNoticeDays) {
+    if (appliesStandardThresholds && approvedRules.minNoticeDays) {
       const noticeMs = start.getTime() - Date.now();
       const noticeDays = Math.ceil(noticeMs / (1000 * 60 * 60 * 24));
       if (noticeDays < approvedRules.minNoticeDays) {
@@ -630,37 +692,40 @@ const evaluateLeaveRequest = async ({ leave, draft, actor = null, excludeLeaveId
     requiredApprovals.push(employee.managerId ? 'MANAGER' : 'ADMIN');
   }
 
-  // Who reviews a request escalates with the REQUESTER's own position in the
-  // hierarchy, not a flat policy flag applied identically to everyone:
-  //   - a plain employee's request only ever needs their manager — an
-  //     admin-approval flag on the policy is meant for the level above a
-  //     manager, not stacked onto ordinary employee requests, so it's
-  //     dropped here rather than stalling a routine 1-day CL on an admin's
-  //     desk;
-  //   - a manager's own request skips "manager" review entirely (reviewing
-  //     a peer manager doesn't fit the model) and escalates straight to
-  //     admin, whether it was the manager-approval or admin-approval flag
-  //     that triggered it;
-  //   - an admin's own request has no one above it in the normal org
-  //     hierarchy, so it's never held for approval at all.
+  // Normalize policy flags into the mandatory organization hierarchy:
+  // employee -> assigned manager -> admin, manager -> admin, while an
+  // admin's own request has no additional human stage above it.
   const requesterTier = employee.customRole?.tier;
-  if (requesterTier === 'ADMIN' || requesterTier === 'SUPER_ADMIN') {
-    requiredApprovals = requiredApprovals.filter((level) => level !== 'MANAGER' && level !== 'ADMIN');
+  const documentRequired = requiredApprovals.includes('DOCUMENT');
+  if (request.leaveType === 'EMERGENCY' && requesterTier !== 'ADMIN' && requesterTier !== 'SUPER_ADMIN') {
+    requiredApprovals = [...(documentRequired ? ['DOCUMENT'] : []), 'ADMIN'];
+    reasons.push('Emergency leave bypasses manager review and requires final admin approval');
+  } else if (requesterTier === 'ADMIN' || requesterTier === 'SUPER_ADMIN') {
+    requiredApprovals = documentRequired ? ['DOCUMENT'] : [];
   } else if (requesterTier === 'MANAGER') {
-    requiredApprovals = requiredApprovals.map((level) => (level === 'MANAGER' ? 'ADMIN' : level));
+    requiredApprovals = [...(documentRequired ? ['DOCUMENT'] : []), 'ADMIN'];
   } else {
-    requiredApprovals = requiredApprovals.filter((level) => level !== 'ADMIN');
+    requiredApprovals = [
+      ...(documentRequired ? ['DOCUMENT'] : []),
+      ...(employee.managerId ? ['MANAGER'] : []),
+      'ADMIN',
+    ];
+  }
+
+  // An emergency advance always retains explicit admin review.
+  if (balanceInsufficient && requesterTier !== 'ADMIN' && requesterTier !== 'SUPER_ADMIN' && !requiredApprovals.includes('ADMIN')) {
+    requiredApprovals.push('ADMIN');
   }
 
   let decision = 'NEEDS_HUMAN_REVIEW';
-  if (reasons.some((reason) => /Invalid|No active|not applicable|does not exist|Insufficient|overlaps|Exceeds|notice/i.test(reason))) {
+  if (reasons.some((reason) => /Invalid|No active|not applicable|does not exist|overlaps|Exceeds|notice|Holiday conflict/i.test(reason))) {
     decision = 'AUTO_REJECTED';
   } else if (requiredApprovals.includes('DOCUMENT')) {
     decision = 'REQUIRES_DOCUMENT';
-  } else if (requiredApprovals.includes('ADMIN')) {
-    decision = 'PENDING_ADMIN';
   } else if (requiredApprovals.includes('MANAGER')) {
     decision = 'PENDING_MANAGER';
+  } else if (requiredApprovals.includes('ADMIN')) {
+    decision = 'PENDING_ADMIN';
   } else {
     decision = 'AUTO_APPROVED';
   }

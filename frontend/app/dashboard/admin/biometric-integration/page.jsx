@@ -188,7 +188,7 @@ export default function BiometricIntegrationPage() {
                           className="sr-only peer"
                         />
                         <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:bg-primary transition-colors" />
-                        <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5" />
+                        <div className="absolute left-1 top-1 w-4 h-4 bg-elevated rounded-full transition-transform peer-checked:translate-x-5" />
                       </label>
                     </div>
 
@@ -447,7 +447,7 @@ export default function BiometricIntegrationPage() {
                         {syncLogs.map((log) => (
                           <tr key={log.id}>
                             <td className="py-3 px-4">
-                              <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${log.status === 'SUCCESS' ? 'bg-success/20 text-success' : log.status === 'FAILED' ? 'bg-destructive/20 text-destructive' : 'bg-yellow-500/20 text-yellow-500'}`}>
+                              <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${log.status === 'SUCCESS' ? 'bg-success/20 text-success' : log.status === 'FAILED' ? 'bg-destructive/20 text-destructive' : 'bg-warning/20 text-warning'}`}>
                                 {log.status}
                               </span>
                             </td>

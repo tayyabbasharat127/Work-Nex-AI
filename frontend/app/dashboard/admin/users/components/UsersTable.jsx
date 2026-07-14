@@ -40,10 +40,10 @@ export default function UsersTable({ loading, paginatedUsers, departments, onVie
               </td>
               <td className="py-4 px-6">
                 <span className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
-                  user.role_id === 1 ? 'bg-red-500/20 text-red-500' :
-                  user.role_id === 2 ? 'bg-green-500/20 text-green-500' :
-                  user.role_id === 3 ? 'bg-yellow-500/20 text-yellow-500' :
-                  'bg-blue-500/20 text-blue-500'
+                  user.role_id === 1 ? 'bg-destructive/20 text-destructive' :
+                  user.role_id === 2 ? 'bg-success/20 text-success' :
+                  user.role_id === 3 ? 'bg-warning/20 text-warning' :
+                  'bg-info/20 text-info'
                 }`}>
                   {user.roleName || getRoleName(user.role_id)}
                 </span>
@@ -54,7 +54,7 @@ export default function UsersTable({ loading, paginatedUsers, departments, onVie
               <td className="py-4 px-6 text-center">
                 <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${
                   user.status === 'Active'
-                    ? 'bg-green-500/20 text-green-400'
+                    ? 'bg-success/20 text-success'
                     : 'bg-muted text-muted-foreground'
                 }`}>
                   {user.status}

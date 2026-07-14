@@ -7,10 +7,20 @@ const { getOrganizationScope } = require('../../utils/tenant');
 const notificationService = require('../notifications/notification.service');
 const { sendEmail } = require('../../config/email');
 const automation = require('./leave.automation');
+const { getHolidaysInRange } = require('../attendance/attendance.processor');
 const leaveSandwich = require('./leave.sandwich');
 const logger = require('../../config/logger');
+const leaveWorkflow = require('./leave.workflow');
 
 const fmtDate = (d) => new Date(d).toISOString().slice(0, 10);
+const { PENDING_LEAVE_STATUSES } = leaveWorkflow;
+
+const getRequestLeaveLabel = async (leave) => {
+  if (leave.leaveType === 'EMERGENCY') return 'Emergency Leave';
+  if (leave.leaveType === 'OTHER' && leave.otherLeaveName) return leave.otherLeaveName;
+  const labels = await automation.getLeaveTypeLabels(leave.organizationId);
+  return labels[leave.leaveType] || leave.leaveType;
+};
 
 // Fire-and-forget — a broken SMTP config must never block a leave decision.
 const notifyByEmail = (to, subject, html) => {
@@ -53,6 +63,45 @@ const assertApproverCanAct = async (approver, leave, action) => {
   if (!['SUPER_ADMIN', 'ADMIN', 'MANAGER'].includes(approver.role)) {
     throw new ApiError(403, 'Not authorized');
   }
+
+  const approvalAction = leaveWorkflow.getApprovalAction({
+    actorRole: approver.role,
+    status: leave.status,
+    managerId: leave.employee.managerId,
+  });
+  if (approver.role === 'MANAGER' && approvalAction !== 'MANAGER_FORWARD') {
+    throw new ApiError(409, `Manager cannot ${action} a leave that is not awaiting manager review`);
+  }
+  if (['ADMIN', 'SUPER_ADMIN'].includes(approver.role) && approvalAction !== 'ADMIN_FINAL') {
+    throw new ApiError(409, `Admin cannot ${action} this leave until manager approval is complete`);
+  }
+};
+
+const getOrganizationAdmins = (organizationId) => prisma.user.findMany({
+  where: {
+    organizationId,
+    isActive: true,
+    customRole: { tier: { in: ['ADMIN', 'SUPER_ADMIN'] } },
+  },
+  select: { id: true, email: true, firstName: true },
+});
+
+const notifyAdminsForFinalReview = async (leave, employee) => {
+  const leaveLabel = await getRequestLeaveLabel(leave);
+  const admins = await getOrganizationAdmins(leave.organizationId);
+  await Promise.all(admins.map(async (admin) => {
+    await notificationService.create(
+      admin.id,
+      'LEAVE_APPLIED',
+      'Leave Awaiting Final Approval',
+      `${employee.firstName} ${employee.lastName}'s ${leaveLabel} is ready for final admin approval`,
+    );
+    notifyByEmail(
+      admin.email,
+      'Leave awaiting final approval',
+      `<p>Hi ${admin.firstName},</p><p><b>${employee.firstName} ${employee.lastName}</b>'s <b>${leaveLabel}</b> (${fmtDate(leave.startDate)} to ${fmtDate(leave.endDate)}) is ready for final admin approval.</p>`,
+    );
+  }));
 };
 
 const loadPolicyAndBalance = async (organizationId, userId, leaveType, year) => {
@@ -68,30 +117,31 @@ const loadPolicyAndBalance = async (organizationId, userId, leaveType, year) => 
 
 const deductBalance = async (tx, leave) => {
   const year = leave.startDate.getFullYear();
+  const balanceLeaveType = leave.balanceLeaveType || leaveWorkflow.getBalanceLeaveType(leave.leaveType);
   const policy = await tx.leavePolicy.findFirst({
-    where: { organizationId: leave.organizationId, leaveType: leave.leaveType },
+    where: { organizationId: leave.organizationId, leaveType: balanceLeaveType },
   });
-  if (!policy) throw new ApiError(400, `No active ${leave.leaveType} leave policy exists`);
+  if (!policy) throw new ApiError(400, `No active ${balanceLeaveType} leave policy exists to fund this request`);
+  // No `remainingDays >= totalDays` guard here on purpose: a balance can be
+  // deducted into negative territory. The automation engine only lets this
+  // path run for AUTO_APPROVED (balance was already sufficient) or for a
+  // request an admin explicitly approved as an emergency advance — by the
+  // time either happens, the "is this OK" decision has already been made.
   const result = await tx.leaveBalance.updateMany({
-    where: {
-      organizationId: leave.organizationId,
-      userId: leave.employeeId,
-      policyId: policy.id,
-      year,
-      remainingDays: { gte: leave.totalDays },
-    },
+    where: { organizationId: leave.organizationId, userId: leave.employeeId, policyId: policy.id, year },
     data: {
       usedDays: { increment: leave.totalDays },
       remainingDays: { decrement: leave.totalDays },
     },
   });
-  if (result.count !== 1) throw new ApiError(400, 'Insufficient leave balance');
+  if (result.count !== 1) throw new ApiError(400, `${leave.leaveType} balance record for ${year} not found`);
 };
 
 const restoreBalance = async (tx, leave) => {
   const year = leave.startDate.getFullYear();
+  const balanceLeaveType = leave.balanceLeaveType || leaveWorkflow.getBalanceLeaveType(leave.leaveType);
   const policy = await tx.leavePolicy.findFirst({
-    where: { organizationId: leave.organizationId, leaveType: leave.leaveType },
+    where: { organizationId: leave.organizationId, leaveType: balanceLeaveType },
   });
   if (!policy) return;
   await tx.leaveBalance.updateMany({
@@ -108,6 +158,17 @@ const validateDraftOrThrow = async (user, data) => {
   const end = new Date(data.endDate);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) throw new ApiError(400, 'Invalid date range');
   if (end < start) throw new ApiError(400, 'End date must be after start date');
+  const otherLeaveName = data.leaveType === 'OTHER' ? String(data.otherLeaveName || '').trim() : null;
+  if (data.leaveType === 'OTHER' && (otherLeaveName.length < 2 || otherLeaveName.length > 100)) {
+    throw new ApiError(400, 'Other leave name must be between 2 and 100 characters');
+  }
+
+  const holidays = await getHolidaysInRange(user.organizationId, start, end);
+  if (holidays.length) {
+    const holiday = holidays[0];
+    const observedDate = holiday.observedDate.toISOString().slice(0, 10);
+    throw new ApiError(400, `Leave cannot be applied across ${holiday.name} (${observedDate}), which is a configured holiday`);
+  }
 
   const totalDays = countBusinessDays(start, end);
   if (totalDays <= 0) throw new ApiError(400, 'No working days in selected range');
@@ -116,42 +177,64 @@ const validateDraftOrThrow = async (user, data) => {
     where: { id: user.id, organizationId: user.organizationId },
     select: {
       id: true, roleId: true, managerId: true, organizationId: true, firstName: true, lastName: true, email: true,
-      customRole: { select: { name: true } },
+      customRole: { select: { name: true, tier: true } },
     },
   });
   if (!employee) throw new ApiError(404, 'Employee not found');
 
-  const { policy, balance } = await loadPolicyAndBalance(user.organizationId, user.id, data.leaveType, start.getFullYear());
+  const balanceLeaveType = leaveWorkflow.getBalanceLeaveType(data.leaveType);
+  const { policy, balance } = await loadPolicyAndBalance(user.organizationId, user.id, balanceLeaveType, start.getFullYear());
   if (!policy.applicableRoleIds.includes(employee.roleId)) {
     const label = (await automation.getLeaveTypeLabels(user.organizationId))[data.leaveType] || data.leaveType;
     throw new ApiError(400, `${label} leave is not applicable to ${employee.customRole.name}`);
   }
-  if (balance.remainingDays < totalDays) {
-    throw new ApiError(400, `Insufficient leave balance. Available: ${balance.remainingDays} days`);
-  }
+  // Insufficient balance no longer blocks submission outright — it's allowed
+  // through as a potential emergency-advance request; the automation engine
+  // (evaluateLeaveRequest) routes it to an admin instead of auto-rejecting or
+  // auto-approving it. The admin's decision, not this draft check, is what
+  // actually permits the balance to go negative.
 
   const overlap = await prisma.leaveRequest.findFirst({
     where: {
       organizationId: user.organizationId,
       employeeId: user.id,
-      status: { in: ['PENDING', 'APPROVED'] },
+      status: { in: [...PENDING_LEAVE_STATUSES, 'APPROVED'] },
       startDate: { lte: end },
       endDate: { gte: start },
     },
   });
   if (overlap) throw new ApiError(409, 'You already have a leave request overlapping these dates');
 
-  return { start, end, totalDays, employee };
+  const now = new Date();
+  const emergencyRecoveryDate = data.leaveType === 'EMERGENCY'
+    ? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
+    : null;
+  return { start, end, totalDays, employee, otherLeaveName, balanceLeaveType, emergencyRecoveryDate };
 };
 
 const applyAutomation = async (leave, employee, actor) => {
-  const leaveLabel = (await automation.getLeaveTypeLabels(leave.organizationId))[leave.leaveType] || leave.leaveType;
+  const leaveLabel = await getRequestLeaveLabel(leave);
   const decision = await automation.evaluateLeaveRequest({
     leave,
     actor,
     excludeLeaveId: leave.id,
   });
   decision.leaveRequestId = leave.id;
+
+  const requesterTier = employee.customRole?.tier || actor.role;
+  const requiresApprovalHierarchy = !['ADMIN', 'SUPER_ADMIN'].includes(requesterTier);
+  if (decision.decision !== 'AUTO_REJECTED' && requiresApprovalHierarchy) {
+    const initialStage = leaveWorkflow.getInitialApprovalStage({ requesterTier, managerId: employee.managerId, leaveType: leave.leaveType });
+    const startsWithManager = initialStage === 'PENDING_MANAGER';
+    decision.decision = initialStage;
+    decision.requiredApprovals = startsWithManager ? ['MANAGER', 'ADMIN'] : ['ADMIN'];
+    decision.reasons = [
+      startsWithManager
+        ? 'Two-stage approval required: manager review followed by final admin approval'
+        : 'Final admin approval required',
+      ...decision.reasons,
+    ];
+  }
 
   // AUTO_APPROVED/AUTO_REJECTED are the engine's decision, not the applicant's —
   // attribute them to the system, not the employee who happened to submit.
@@ -206,20 +289,34 @@ const applyAutomation = async (leave, employee, actor) => {
     return attachDecision(updated);
   }
 
-  if (employee.managerId) {
+  const pendingStatus = decision.decision === 'PENDING_MANAGER' ? 'PENDING_MANAGER' : 'PENDING_ADMIN';
+  const updated = await prisma.leaveRequest.update({
+    where: { id: leave.id },
+    data: {
+      status: pendingStatus,
+      approverId: pendingStatus === 'PENDING_MANAGER' ? employee.managerId : null,
+    },
+    include: leaveInclude,
+  });
+
+  if (pendingStatus === 'PENDING_MANAGER' && employee.managerId) {
     await notificationService.create(employee.managerId, 'LEAVE_APPLIED', 'New Leave Request', `${employee.firstName} ${employee.lastName} applied for ${leaveLabel} leave`);
+  } else {
+    await notifyAdminsForFinalReview(updated, employee);
   }
   await audit('UPDATE', leave.id, leave.organizationId, actor.id, savedDecision);
-  return attachDecision({ ...leave, decisionExplanation: savedDecision });
+  return attachDecision({ ...updated, decisionExplanation: savedDecision });
 };
 
 const leaveInclude = {
   employee: { select: { id: true, firstName: true, lastName: true, employeeId: true, email: true, managerId: true, department: true } },
   approver: { select: { id: true, firstName: true, lastName: true } },
+  managerApprover: { select: { id: true, firstName: true, lastName: true } },
+  adminApprover: { select: { id: true, firstName: true, lastName: true } },
 };
 
 const applyLeave = async (user, data) => {
-  const { start, end, totalDays, employee } = await validateDraftOrThrow(user, data);
+  const { start, end, totalDays, employee, otherLeaveName, balanceLeaveType, emergencyRecoveryDate } = await validateDraftOrThrow(user, data);
 
   const leave = await prisma.leaveRequest.create({
     data: {
@@ -227,6 +324,9 @@ const applyLeave = async (user, data) => {
       employeeId: user.id,
       approverId: employee.managerId || null,
       leaveType: data.leaveType,
+      otherLeaveName,
+      balanceLeaveType,
+      emergencyRecoveryDate,
       startDate: start,
       endDate: end,
       totalDays,
@@ -239,15 +339,62 @@ const applyLeave = async (user, data) => {
 };
 
 const approveLeave = async (approver, leaveId, note) => {
-  const leave = await getLeaveOrThrow(leaveId, approver.organizationId, { employee: { select: { managerId: true } } });
+  const leave = await getLeaveOrThrow(leaveId, approver.organizationId, {
+    employee: { select: { managerId: true, firstName: true, lastName: true, email: true } },
+  });
   await assertApproverCanAct(approver, leave, 'approve');
-  if (leave.status !== 'PENDING') throw new ApiError(400, 'Leave is not in pending state');
+  const leaveLabel = await getRequestLeaveLabel(leave);
+
+  if (approver.role === 'MANAGER') {
+    const managerReviewedAt = new Date();
+    const updated = await prisma.leaveRequest.update({
+      where: { id: leaveId },
+      data: {
+        status: 'PENDING_ADMIN',
+        managerApproverId: approver.id,
+        managerReviewedAt,
+        managerNote: note || null,
+        approverId: approver.id,
+        approverNote: note || 'Approved by manager; awaiting final admin approval',
+        reviewedAt: managerReviewedAt,
+      },
+      include: leaveInclude,
+    });
+
+    const decision = await automation.saveDecision({
+      leaveRequestId: leaveId,
+      organizationId: leave.organizationId,
+      employeeId: leave.employeeId,
+      decision: 'PENDING_ADMIN',
+      confidence: 1,
+      reasons: [note || 'Manager approved; awaiting final admin approval'],
+      requiredApprovals: ['ADMIN'],
+      policyVersionId: null,
+    }, approver);
+    await audit('APPROVE', leaveId, leave.organizationId, approver.id, decision);
+    await notificationService.create(
+      leave.employeeId,
+      'LEAVE_APPLIED',
+      'Manager Approved Your Leave',
+      `Your ${leaveLabel} passed manager review and is awaiting final admin approval`,
+    );
+    await notifyAdminsForFinalReview(updated, leave.employee);
+    return attachDecision(updated);
+  }
 
   const updated = await prisma.$transaction(async (tx) => {
     await deductBalance(tx, leave);
     return tx.leaveRequest.update({
       where: { id: leaveId },
-      data: { status: 'APPROVED', approverId: approver.id, approverNote: note, reviewedAt: new Date() },
+      data: {
+        status: 'APPROVED',
+        adminApproverId: approver.id,
+        adminReviewedAt: new Date(),
+        adminNote: note || null,
+        approverId: approver.id,
+        approverNote: note,
+        reviewedAt: new Date(),
+      },
       include: leaveInclude,
     });
   });
@@ -258,38 +405,51 @@ const approveLeave = async (approver, leaveId, note) => {
     employeeId: leave.employeeId,
     decision: 'APPROVED',
     confidence: 1,
-    reasons: [note || 'Approved by authorized approver'],
+    reasons: [note || 'Final approval granted by admin'],
     requiredApprovals: [],
     policyVersionId: null,
   }, approver);
   await audit('APPROVE', leaveId, leave.organizationId, approver.id, decision);
-  await notificationService.create(leave.employeeId, 'LEAVE_APPROVED', 'Leave Approved', `Your ${leave.leaveType} leave request has been approved`);
+  await notificationService.create(leave.employeeId, 'LEAVE_APPROVED', 'Leave Finally Approved', `Your ${leaveLabel} request has received final admin approval`);
   triggerMirrorSandwichCheck(updated);
   return attachDecision(updated);
 };
 
 const rejectLeave = async (approver, leaveId, note) => {
-  const leave = await getLeaveOrThrow(leaveId, approver.organizationId, { employee: { select: { managerId: true } } });
+  const leave = await getLeaveOrThrow(leaveId, approver.organizationId, {
+    employee: { select: { managerId: true, firstName: true, lastName: true, email: true } },
+  });
   await assertApproverCanAct(approver, leave, 'reject');
-  if (leave.status !== 'PENDING') throw new ApiError(400, 'Leave is not in pending state');
+  const leaveLabel = await getRequestLeaveLabel(leave);
+
+  const isManagerDecision = approver.role === 'MANAGER';
+  const reviewedAt = new Date();
 
   const updated = await prisma.leaveRequest.update({
     where: { id: leaveId },
-    data: { status: 'REJECTED', approverId: approver.id, approverNote: note, reviewedAt: new Date() },
+    data: {
+      status: 'REJECTED',
+      approverId: approver.id,
+      approverNote: note,
+      reviewedAt,
+      ...(isManagerDecision
+        ? { managerApproverId: approver.id, managerReviewedAt: reviewedAt, managerNote: note || null }
+        : { adminApproverId: approver.id, adminReviewedAt: reviewedAt, adminNote: note || null }),
+    },
     include: leaveInclude,
   });
   const decision = await automation.saveDecision({
     leaveRequestId: leaveId,
     organizationId: leave.organizationId,
     employeeId: leave.employeeId,
-    decision: 'REJECTED',
+    decision: isManagerDecision ? 'REJECTED_BY_MANAGER' : 'REJECTED_BY_ADMIN',
     confidence: 1,
-    reasons: [note || 'Rejected by authorized approver'],
+    reasons: [note || `Rejected by ${isManagerDecision ? 'manager' : 'admin'}`],
     requiredApprovals: [],
     policyVersionId: null,
   }, approver);
   await audit('REJECT', leaveId, leave.organizationId, approver.id, decision);
-  await notificationService.create(leave.employeeId, 'LEAVE_REJECTED', 'Leave Rejected', `Your ${leave.leaveType} leave request has been rejected. Reason: ${note || 'N/A'}`);
+  await notificationService.create(leave.employeeId, 'LEAVE_REJECTED', 'Leave Rejected', `Your ${leaveLabel} request was rejected by ${isManagerDecision ? 'your manager' : 'an admin'}. Reason: ${note || 'N/A'}`);
   return attachDecision(updated);
 };
 
@@ -311,7 +471,8 @@ const applySandwichPenalty = async (leaveRequestId, extraDays, gapDescription, o
   const year = leave.startDate.getFullYear();
 
   const updated = await prisma.$transaction(async (tx) => {
-    const policy = await tx.leavePolicy.findFirst({ where: { organizationId: leave.organizationId, leaveType: leave.leaveType } });
+    const balanceLeaveType = leave.balanceLeaveType || leaveWorkflow.getBalanceLeaveType(leave.leaveType);
+    const policy = await tx.leavePolicy.findFirst({ where: { organizationId: leave.organizationId, leaveType: balanceLeaveType } });
     if (policy) {
       await tx.leaveBalance.updateMany({
         where: { organizationId: leave.organizationId, userId: leave.employeeId, policyId: policy.id, year },
@@ -342,7 +503,7 @@ const cancelLeave = async (user, leaveId) => {
   const leave = await getLeaveOrThrow(leaveId, user.organizationId);
   if (leave.organizationId !== user.organizationId) throw new ApiError(403, 'Not authorized');
   if (leave.employeeId !== user.id) throw new ApiError(403, 'Not authorized');
-  if (!['PENDING', 'APPROVED'].includes(leave.status)) throw new ApiError(400, 'Cannot cancel this leave');
+  if (![...PENDING_LEAVE_STATUSES, 'APPROVED'].includes(leave.status)) throw new ApiError(400, 'Cannot cancel this leave');
 
   const updated = await prisma.$transaction(async (tx) => {
     if (leave.status === 'APPROVED') await restoreBalance(tx, leave);
@@ -375,8 +536,16 @@ const getLeaves = async (query, user) => {
 const getMyLeaves = async (user, query) => getLeaves(query, { ...user, role: 'EMPLOYEE' });
 
 const getPendingLeaves = async (user) => {
-  const where = { status: 'PENDING', ...getOrganizationScope(user) };
-  if (user.role === 'MANAGER') where.employeeId = { in: await getAccessibleUserIds(user) };
+  const where = { ...getOrganizationScope(user) };
+  if (user.role === 'MANAGER') {
+    where.status = { in: ['PENDING_MANAGER', 'PENDING'] };
+    where.employeeId = { in: await getAccessibleUserIds(user) };
+  } else {
+    where.OR = [
+      { status: 'PENDING_ADMIN' },
+      { status: 'PENDING', employee: { managerId: null } },
+    ];
+  }
   const leaves = await prisma.leaveRequest.findMany({ where, include: leaveInclude, orderBy: { appliedAt: 'asc' } });
   return Promise.all(leaves.map(attachDecision));
 };
@@ -415,7 +584,8 @@ const getDailyLeaveCounts = async (requestingUser, days = 14) => {
   start.setUTCDate(start.getUTCDate() - (days - 1));
   start.setUTCHours(0, 0, 0, 0);
 
-  const leaves = await prisma.leaveRequest.findMany({
+  const [leaves, holidays] = await Promise.all([
+    prisma.leaveRequest.findMany({
     where: {
       ...getOrganizationScope(requestingUser),
       status: 'APPROVED',
@@ -423,13 +593,17 @@ const getDailyLeaveCounts = async (requestingUser, days = 14) => {
       endDate: { gte: start },
     },
     select: { startDate: true, endDate: true },
-  });
+    }),
+    getHolidaysInRange(requestingUser.organizationId, start, end),
+  ]);
+  const holidayDates = new Set(holidays.map((holiday) => holiday.observedDate.toISOString().slice(0, 10)));
 
   const counts = {};
   for (let i = 0; i < days; i += 1) {
     const d = new Date(start);
     d.setUTCDate(d.getUTCDate() + i);
-    counts[d.toISOString().slice(0, 10)] = 0;
+    const key = d.toISOString().slice(0, 10);
+    if (d.getUTCDay() !== 0 && d.getUTCDay() !== 6 && !holidayDates.has(key)) counts[key] = 0;
   }
 
   leaves.forEach((leave) => {

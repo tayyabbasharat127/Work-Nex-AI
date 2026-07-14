@@ -12,7 +12,7 @@ export default function LeavePolicySetup({
   selectPolicyFile, clearPolicyFile, handlePolicyUpload, handleApprovePolicyRules,
 }) {
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 space-y-5">
+    <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
       <div>
         <h2 className="font-bold">Leave Policy Setup</h2>
         <p className="text-sm text-muted-foreground mt-1">Configure your organization&apos;s leave rules — quotas, approvals, auto-approval, carry-forward.</p>
@@ -21,10 +21,10 @@ export default function LeavePolicySetup({
       <button
         type="button"
         onClick={openManualModal}
-        className="w-full flex items-center gap-4 p-5 rounded-2xl border-2 border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary transition text-left"
+        className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary transition text-left"
       >
-        <div className="w-12 h-12 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
-          <Settings2 size={24} />
+        <div className="w-10 h-10 rounded-lg bg-primary/15 text-primary flex items-center justify-center shrink-0">
+          <Settings2 size={20} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold">Set Up Leave Policy</p>
@@ -167,7 +167,7 @@ export default function LeavePolicySetup({
                 </div>
               ))}
               {policyDocument.status !== 'APPROVED_RULES_ACTIVE' && (
-                <button onClick={handleApprovePolicyRules} className="px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-400 text-sm font-medium">
+                <button onClick={handleApprovePolicyRules} className="px-4 py-2 rounded-xl bg-success/20 text-success text-sm font-medium">
                   Approve Rules
                 </button>
               )}

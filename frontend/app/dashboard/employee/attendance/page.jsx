@@ -115,7 +115,7 @@ export default function EmployeeAttendance() {
                   <button
                     onClick={handleCheckIn}
                     disabled={loading}
-                    className="px-6 py-3 rounded-lg bg-success text-white font-semibold hover:bg-success/90 transition disabled:opacity-50"
+                    className="px-6 py-3 rounded-lg bg-success text-success-foreground font-semibold hover:bg-success/90 transition disabled:opacity-50"
                   >
                     Check In
                   </button>
@@ -123,7 +123,7 @@ export default function EmployeeAttendance() {
                   <button
                     onClick={handleCheckOut}
                     disabled={loading}
-                    className="px-6 py-3 rounded-lg bg-destructive text-white font-semibold hover:bg-destructive/90 transition disabled:opacity-50"
+                    className="px-6 py-3 rounded-lg bg-destructive text-destructive-foreground font-semibold hover:bg-destructive/90 transition disabled:opacity-50"
                   >
                     Check Out
                   </button>

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { attendancePing } from '@/services/attendancePing';
 import MultiAgentChatWidget from '@/components/MultiAgentChatWidget';
 import NotificationBell from '@/components/NotificationBell';
+import ThemeSwitcher from '@/components/theme/ThemeSwitcher';
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
@@ -22,8 +23,11 @@ export default function DashboardLayout({ children }) {
   return (
     <>
       {children}
-      <div className="fixed right-5 top-4 z-[70] rounded-xl border border-border bg-card/95 p-1.5 shadow-xl backdrop-blur-md">
-        <NotificationBell role={role} />
+      <div className="fixed right-6 top-4 z-[70] flex items-center gap-2">
+        <ThemeSwitcher compact />
+        <div className="rounded-xl border border-border bg-card/95 shadow-lg backdrop-blur-md">
+          <NotificationBell role={role} />
+        </div>
       </div>
       <MultiAgentChatWidget />
     </>

@@ -30,7 +30,7 @@ function ChartTooltip({ active, payload, label }) {
     <div className="bg-card border border-border rounded-lg p-3 shadow-xl">
       <p className="font-semibold text-foreground mb-2">{label}</p>
       {payload.map((entry, index) => (
-        <p key={index} className="text-sm" style={{ color: entry.color || '#06b6d4' }}>
+        <p key={index} className="text-sm" style={{ color: entry.color || 'var(--info)' }}>
           {entry.name}: {entry.value}{entry.dataKey === 'hours' ? 'h' : ''}
         </p>
       ))}
@@ -155,16 +155,16 @@ export default function EmployeeDashboard() {
   }, {});
 
   const leaveBalance = [
-    { name: 'Used', value: usedLeave, color: '#06b6d4' },
-    { name: 'Remaining', value: remainingLeave, color: '#10b981' },
+    { name: 'Used', value: usedLeave, color: 'var(--info)' },
+    { name: 'Remaining', value: remainingLeave, color: 'var(--success)' },
   ].filter((item) => item.value > 0);
 
   const latestPerformance = performance[0];
   const stats = [
-    { label: 'Days Present', value: presentDays, subtext: 'This month', icon: CheckCircle, color: 'text-emerald-400' },
-    { label: 'Leave Balance', value: remainingLeave, subtext: 'Days remaining', icon: Calendar, color: 'text-cyan-400' },
+    { label: 'Days Present', value: presentDays, subtext: 'This month', icon: CheckCircle, color: 'text-success' },
+    { label: 'Leave Balance', value: remainingLeave, subtext: 'Days remaining', icon: Calendar, color: 'text-info' },
     { label: 'Avg. Work Hours', value: `${avgHours}h`, subtext: 'Recorded days', icon: Clock, color: 'text-violet-400' },
-    { label: 'Attendance Rate', value: `${attendanceRate}%`, subtext: `${absentDays} absent day${absentDays === 1 ? '' : 's'}`, icon: TrendingUp, color: 'text-amber-400' },
+    { label: 'Attendance Rate', value: `${attendanceRate}%`, subtext: `${absentDays} absent day${absentDays === 1 ? '' : 's'}`, icon: TrendingUp, color: 'text-warning' },
   ];
 
   const activity = [
@@ -252,11 +252,11 @@ export default function EmployeeDashboard() {
                 <div className="h-64 min-w-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={weeklyHours}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                      <XAxis dataKey="day" stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#888" fontSize={12} tickLine={false} axisLine={false} domain={[0, 12]} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <XAxis dataKey="day" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} domain={[0, 12]} />
                       <Tooltip content={<ChartTooltip />} />
-                      <Area type="monotone" dataKey="hours" name="Hours" stroke="#06b6d4" strokeWidth={3} fill="#06b6d433" />
+                      <Area type="monotone" dataKey="hours" name="Hours" stroke="var(--info)" strokeWidth={3} fill="var(--info)33" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -287,12 +287,12 @@ export default function EmployeeDashboard() {
                 <div className="h-56 min-w-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={Object.values(weeklyAttendance)}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                      <XAxis dataKey="week" stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <XAxis dataKey="week" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
                       <Tooltip content={<ChartTooltip />} />
-                      <Bar dataKey="present" name="Present" fill="#10b981" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="absent" name="Absent" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="present" name="Present" fill="var(--success)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="absent" name="Absent" fill="var(--destructive)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

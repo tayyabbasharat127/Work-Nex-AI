@@ -68,18 +68,18 @@ export default function AdminAttendance() {
 
   // Calculate stats from actual data
   const stats = [
-    { label: 'Present Today', value: attendanceRecords.filter(r => ['PRESENT', 'LATE'].includes(r.status)).length, icon: UserCheck, color: 'text-emerald-400', bg: 'bg-emerald-500/20' },
-    { label: 'Absent', value: attendanceRecords.filter(r => r.status === 'ABSENT').length, icon: UserX, color: 'text-red-400', bg: 'bg-red-500/20' },
-    { label: 'Late Arrivals', value: attendanceRecords.filter(r => r.status === 'LATE').length, icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/20' },
-    { label: 'On Leave', value: attendanceRecords.filter(r => r.status === 'ON_LEAVE').length, icon: Calendar, color: 'text-cyan-400', bg: 'bg-cyan-500/20' },
+    { label: 'Present Today', value: attendanceRecords.filter(r => ['PRESENT', 'LATE'].includes(r.status)).length, icon: UserCheck, color: 'text-success', bg: 'bg-success/20' },
+    { label: 'Absent', value: attendanceRecords.filter(r => r.status === 'ABSENT').length, icon: UserX, color: 'text-destructive', bg: 'bg-destructive/20' },
+    { label: 'Late Arrivals', value: attendanceRecords.filter(r => r.status === 'LATE').length, icon: AlertTriangle, color: 'text-warning', bg: 'bg-warning/20' },
+    { label: 'On Leave', value: attendanceRecords.filter(r => r.status === 'ON_LEAVE').length, icon: Calendar, color: 'text-info', bg: 'bg-info/20' },
   ];
 
   // Calculate status distribution from actual data
   const statusDistribution = [
-    { name: 'Present', value: attendanceRecords.filter(r => r.status === 'PRESENT').length, color: '#10b981' },
-    { name: 'Late', value: attendanceRecords.filter(r => r.status === 'LATE').length, color: '#f59e0b' },
-    { name: 'Absent', value: attendanceRecords.filter(r => r.status === 'ABSENT').length, color: '#ef4444' },
-    { name: 'On Leave', value: attendanceRecords.filter(r => r.status === 'ON_LEAVE').length, color: '#06b6d4' },
+    { name: 'Present', value: attendanceRecords.filter(r => r.status === 'PRESENT').length, color: 'var(--success)' },
+    { name: 'Late', value: attendanceRecords.filter(r => r.status === 'LATE').length, color: 'var(--warning)' },
+    { name: 'Absent', value: attendanceRecords.filter(r => r.status === 'ABSENT').length, color: 'var(--destructive)' },
+    { name: 'On Leave', value: attendanceRecords.filter(r => r.status === 'ON_LEAVE').length, color: 'var(--info)' },
   ].filter(item => item.value > 0);
 
   const weeklyData = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => ({
@@ -185,13 +185,13 @@ export default function AdminAttendance() {
               {weeklyData.length ? <div className="h-64 min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={weeklyData} barGap={4}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                    <XAxis dataKey="day" stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="day" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="present" name="Present" fill="#10b981" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="late" name="Late" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="absent" name="Absent" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="present" name="Present" fill="var(--success)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="late" name="Late" fill="var(--warning)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="absent" name="Absent" fill="var(--destructive)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div> : <EmptyChart loading={loading} label="No weekly attendance data for this date" />}
@@ -227,11 +227,11 @@ export default function AdminAttendance() {
             {hourlyTrend.length ? <div className="h-48 min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={hourlyTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                  <XAxis dataKey="time" stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="time" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Line type="monotone" dataKey="count" name="Check-ins" stroke="#06b6d4" strokeWidth={3} dot={{ fill: '#06b6d4', strokeWidth: 2 }} />
+                  <Line type="monotone" dataKey="count" name="Check-ins" stroke="var(--info)" strokeWidth={3} dot={{ fill: 'var(--info)', strokeWidth: 2 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div> : <EmptyChart loading={loading} label="No check-in times recorded for this date" />}

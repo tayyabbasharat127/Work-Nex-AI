@@ -13,8 +13,6 @@ const defaultSettings = {
   workingHours: { start: '09:00', end: '17:00' },
   lateThreshold: { hour: 9, minute: 30 },
   attendancePolicy: { halfDayHours: 4, workWindowStart: '', workWindowEnd: '' },
-  leaveAutomationEnabled: true,
-  sandwichLeaveEnabled: false,
 };
 
 const normalizeSettings = (value = {}) => ({
@@ -83,19 +81,20 @@ export default function AdminSettings() {
     <div className="flex h-screen bg-background">
       <Sidebar role="admin" />
       <main className="flex-1 overflow-auto md:ml-64">
-        <div className="sticky top-0 bg-card border-b border-border p-6 z-20">
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground mt-1">Manage organization settings and preferences.</p>
+        <div className="sticky top-0 bg-card border-b border-border px-5 py-4 z-20">
+          <h1 className="text-2xl font-bold">Settings</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Organization, attendance and account preferences.</p>
         </div>
 
-        <div className="p-6">
-          <div className="max-w-2xl">
-            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+        <div className="p-5">
+          <div className="grid max-w-6xl items-start gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+            <div className="bg-card border border-border rounded-xl p-5 space-y-5">
               {loading ? (
                 <div className="text-muted-foreground">Loading settings...</div>
               ) : (
                 <>
                   <Section title="Organization">
+                    <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Organization Name">
                       <input value={settings.name || ''} onChange={(event) => update('name', event.target.value)} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
                     </Field>
@@ -107,6 +106,7 @@ export default function AdminSettings() {
                         <option value="Europe/London">Europe/London</option>
                       </select>
                     </Field>
+                    </div>
                   </Section>
 
                   <Section title="Attendance">
@@ -136,20 +136,9 @@ export default function AdminSettings() {
                     </div>
                   </Section>
 
-                  <Section title="Leave Automation">
-                    <label className="flex items-center gap-3">
-                      <input type="checkbox" checked={Boolean(settings.leaveAutomationEnabled)} onChange={(event) => update('leaveAutomationEnabled', event.target.checked)} />
-                      <span>Enable leave automation rules</span>
-                    </label>
-                    <label className="flex items-center gap-3">
-                      <input type="checkbox" checked={Boolean(settings.sandwichLeaveEnabled)} onChange={(event) => update('sandwichLeaveEnabled', event.target.checked)} />
-                      <span>Enable sandwich-leave rule (leave adjacent to an unapproved absence deducts the weekend/holiday gap too)</span>
-                    </label>
-                  </Section>
-
-                  <div className="pt-6 border-t border-border">
-                    <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition font-medium disabled:opacity-50">
-                      <Save size={20} />
+                  <div className="pt-4 border-t border-border">
+                    <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition text-sm font-medium disabled:opacity-50">
+                      <Save size={17} />
                       {saving ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
@@ -157,8 +146,8 @@ export default function AdminSettings() {
               )}
             </div>
 
-            <div className="bg-card border border-border rounded-lg p-6 mt-6">
-              <h2 className="text-lg font-bold mb-4">Account Security</h2>
+            <div className="bg-card border border-border rounded-xl p-5">
+              <h2 className="font-bold mb-3">Account Security</h2>
               <TwoFactorSettings />
             </div>
           </div>

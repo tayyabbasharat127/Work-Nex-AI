@@ -84,13 +84,29 @@ const syncFromTMS = async (req, res) => {
 };
 
 const getHolidays = async (req, res) => {
-  const holidays = await attendanceService.getHolidays(req.user);
+  const holidays = await attendanceService.getHolidays(req.user, req.query.year);
   apiResponse(res, 200, 'Holidays fetched', holidays);
 };
 
 const createHoliday = async (req, res) => {
   const holiday = await attendanceService.createHoliday(req.body, req.user);
+  res.locals.entityId = holiday.id;
+  res.locals.auditData = holiday;
   apiResponse(res, 201, 'Holiday created', holiday);
+};
+
+const updateHoliday = async (req, res) => {
+  const holiday = await attendanceService.updateHoliday(req.params.id, req.body, req.user);
+  res.locals.entityId = holiday.id;
+  res.locals.auditData = holiday;
+  apiResponse(res, 200, 'Holiday updated', holiday);
+};
+
+const deleteHoliday = async (req, res) => {
+  const holiday = await attendanceService.deleteHoliday(req.params.id, req.user);
+  res.locals.entityId = holiday.id;
+  res.locals.auditData = { name: holiday.name, date: holiday.date };
+  apiResponse(res, 200, 'Holiday deleted', holiday);
 };
 
 const generateAbsences = async (req, res) => {
@@ -103,5 +119,5 @@ module.exports = {
   checkIn, checkOut, autoPing, getTodayAttendance, getMyAttendance,
   getAllAttendance, getUserAttendance, getAttendanceSummary, getWeeklyHoursShortfall,
   manualEntry, updateAttendance, syncFromTMS,
-  getHolidays, createHoliday, generateAbsences,
+  getHolidays, createHoliday, updateHoliday, deleteHoliday, generateAbsences,
 };

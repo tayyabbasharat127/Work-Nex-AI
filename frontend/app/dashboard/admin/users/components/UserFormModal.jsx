@@ -61,6 +61,18 @@ export default function UserFormModal({
             />
           </div>
           <div>
+            <label className="block text-sm font-medium mb-2">
+              Employee ID <span className="text-muted-foreground text-xs">(must match the biometric device PIN, if enrolled)</span>
+            </label>
+            <input
+              type="text"
+              value={formData.employeeId}
+              onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
+              placeholder="Leave blank to auto-generate"
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium mb-2">
                 {editingUser ? 'New Password' : 'Password'}
               </label>

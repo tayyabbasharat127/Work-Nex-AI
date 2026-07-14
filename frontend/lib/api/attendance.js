@@ -67,8 +67,8 @@ export const attendanceAPI = {
     return response.data || response;
   },
 
-  getHolidays: async () => {
-    const response = await apiFetch('/attendance/holidays');
+  getHolidays: async (year) => {
+    const response = await apiFetch(`/attendance/holidays${year ? `?year=${year}` : ''}`);
     return response.data || response;
   },
 
@@ -77,6 +77,19 @@ export const attendanceAPI = {
       method: 'POST',
       body: JSON.stringify(holidayData)
     });
+    return response.data || response;
+  },
+
+  updateHoliday: async (holidayId, holidayData) => {
+    const response = await apiFetch(`/attendance/holidays/${holidayId}`, {
+      method: 'PUT',
+      body: JSON.stringify(holidayData)
+    });
+    return response.data || response;
+  },
+
+  deleteHoliday: async (holidayId) => {
+    const response = await apiFetch(`/attendance/holidays/${holidayId}`, { method: 'DELETE' });
     return response.data || response;
   },
 };

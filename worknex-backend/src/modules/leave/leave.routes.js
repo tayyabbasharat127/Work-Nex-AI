@@ -14,9 +14,10 @@ const upload = multer({
 
 router.use(authenticate);
 
-const leaveTypes = ['ANNUAL', 'SICK', 'CASUAL', 'MATERNITY', 'PATERNITY', 'UNPAID', 'BEREAVEMENT', 'MARRIAGE', 'STUDY', 'HAJJ', 'COMPENSATORY', 'OTHER'];
+const leaveTypes = ['EMERGENCY', 'ANNUAL', 'SICK', 'CASUAL', 'MATERNITY', 'PATERNITY', 'UNPAID', 'BEREAVEMENT', 'MARRIAGE', 'STUDY', 'HAJJ', 'COMPENSATORY', 'OTHER'];
+const policyLeaveTypes = leaveTypes.filter((leaveType) => leaveType !== 'EMERGENCY');
 const policyRules = (partial = false) => [
-  partial ? body('leaveType').optional().isIn(leaveTypes) : body('leaveType').isIn(leaveTypes),
+  partial ? body('leaveType').optional().isIn(policyLeaveTypes) : body('leaveType').isIn(policyLeaveTypes),
   partial ? body('totalDays').optional().isInt({ min: 0, max: 366 }) : body('totalDays').isInt({ min: 0, max: 366 }),
   body('carryForward').optional().isBoolean(),
   body('maxCarryForward').optional().isInt({ min: 0, max: 366 }),
@@ -41,6 +42,7 @@ router.post(
     body('startDate').isISO8601(),
     body('endDate').isISO8601(),
     body('reason').notEmpty().isLength({ max: 500 }),
+    body('otherLeaveName').optional({ nullable: true }).isString().trim().isLength({ min: 2, max: 100 }),
   ],
   validate,
   auditLog('LeaveRequest', 'CREATE'),

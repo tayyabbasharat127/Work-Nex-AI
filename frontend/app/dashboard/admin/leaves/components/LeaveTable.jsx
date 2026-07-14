@@ -53,6 +53,10 @@ export default function LeaveTable({ loading, paginated, typeLabels, onView, onA
             const statusCfg = STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
             const typeColor = TYPE_COLORS[leave.leaveType] || TYPE_COLORS.OTHER;
             const days = leave.totalDays || 0;
+            const canAdminAct = status === 'PENDING_ADMIN' || (status === 'PENDING' && !emp.managerId);
+            const leaveTypeLabel = leave.leaveType === 'OTHER' && leave.otherLeaveName
+              ? leave.otherLeaveName
+              : formatLeaveType(typeLabels, leave.leaveType);
 
             return (
               <tr key={leave.id} className="hover:bg-muted/20 transition group">
@@ -72,7 +76,7 @@ export default function LeaveTable({ loading, paginated, typeLabels, onView, onA
                 {/* Type */}
                 <td className="py-4 px-5">
                   <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${typeColor}`}>
-                    {leave.leaveType ? formatLeaveType(typeLabels, leave.leaveType) : '—'}
+                    {leave.leaveType ? leaveTypeLabel : '—'}
                   </span>
                 </td>
 
@@ -103,14 +107,14 @@ export default function LeaveTable({ loading, paginated, typeLabels, onView, onA
                       className="p-2 rounded-lg hover:bg-muted transition text-muted-foreground hover:text-foreground">
                       <Eye size={15} />
                     </button>
-                    {status === 'PENDING' && (
+                    {canAdminAct && (
                       <>
                         <button onClick={() => onApprove(leave.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition text-xs font-medium">
-                          <Check size={13} /> Approve
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-success/15 text-success hover:bg-success/25 transition text-xs font-medium">
+                          <Check size={13} /> Final approve
                         </button>
                         <button onClick={() => onReject(leave.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition text-xs font-medium">
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/15 text-destructive hover:bg-destructive/25 transition text-xs font-medium">
                           <X size={13} /> Reject
                         </button>
                       </>

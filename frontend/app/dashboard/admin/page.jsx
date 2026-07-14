@@ -8,7 +8,7 @@ import { useLeaveTypeLabels, formatLeaveType } from '@/hooks/useLeaveTypeLabels'
 import { Users, Clock, CalendarX, TrendingUp, AlertCircle, RefreshCw } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
-const COLORS = ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#64748b'];
+const COLORS = ['var(--info)', 'var(--chart-4)', 'var(--success)', 'var(--warning)', 'var(--destructive)', 'var(--muted-foreground)'];
 
 function normalizeArray(value) {
   if (Array.isArray(value)) return value;
@@ -105,10 +105,10 @@ export default function AdminDashboard() {
   if (!user) return null;
 
   const stats = [
-    { label: 'Total Employees', value: kpis?.totalEmployees ?? 0, icon: Users, color: 'text-cyan-400', bg: 'from-cyan-500/20 to-blue-500/20' },
-    { label: 'Present Today', value: kpis?.activeToday ?? 0, icon: Clock, color: 'text-emerald-400', bg: 'from-emerald-500/20 to-green-500/20' },
-    { label: 'Absent Today', value: kpis?.absentToday ?? 0, icon: CalendarX, color: 'text-red-400', bg: 'from-red-500/20 to-rose-500/20' },
-    { label: 'Late Today', value: lateToday, icon: TrendingUp, color: 'text-amber-400', bg: 'from-amber-500/20 to-yellow-500/20' },
+    { label: 'Total Employees', value: kpis?.totalEmployees ?? 0, icon: Users, color: 'text-info', bg: 'from-info/20 to-info/20' },
+    { label: 'Present Today', value: kpis?.activeToday ?? 0, icon: Clock, color: 'text-success', bg: 'from-success/20 to-success/10' },
+    { label: 'Absent Today', value: kpis?.absentToday ?? 0, icon: CalendarX, color: 'text-destructive', bg: 'from-destructive/20 to-destructive/20' },
+    { label: 'Late Today', value: lateToday, icon: TrendingUp, color: 'text-warning', bg: 'from-warning/20 to-warning/20' },
   ];
 
   return (
@@ -161,14 +161,14 @@ export default function AdminDashboard() {
                 <div className="h-72 min-w-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={attendanceTrend} barGap={4}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                      <XAxis dataKey="date" stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
                       <Tooltip content={<ChartTooltip />} />
                       <Legend />
-                      <Bar dataKey="PRESENT" name="Present" fill="#06b6d4" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="ABSENT" name="Absent" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="LATE" name="Late" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="PRESENT" name="Present" fill="var(--info)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="ABSENT" name="Absent" fill="var(--destructive)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="LATE" name="Late" fill="var(--warning)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -209,11 +209,11 @@ export default function AdminDashboard() {
                 <div className="h-64 min-w-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={departmentAttendance}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                      <XAxis dataKey="department" stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#888" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <XAxis dataKey="department" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
                       <Tooltip content={<ChartTooltip />} />
-                      <Area type="monotone" dataKey="rate" name="Attendance %" stroke="#8b5cf6" fill="#8b5cf633" strokeWidth={3} />
+                      <Area type="monotone" dataKey="rate" name="Attendance %" stroke="var(--chart-4)" fill="color-mix(in oklch, var(--chart-4) 20%, transparent)" strokeWidth={3} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>

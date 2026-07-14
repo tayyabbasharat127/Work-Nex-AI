@@ -176,7 +176,7 @@ export default function MultiAgentChatWidget() {
             <div className="flex min-w-0 items-center gap-3">
               <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <Bot size={19} />
-                <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-emerald-500" />
+                <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-success" />
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-foreground">WorkNex Agent</p>

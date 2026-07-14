@@ -87,8 +87,8 @@ export default function AIChatPage() {
         {/* Header */}
         <div className="bg-card border-b border-border p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-purple-500/20">
-              <Brain size={22} className="text-purple-400" />
+            <div className="p-2 rounded-xl bg-chart-4/20">
+              <Brain size={22} className="text-chart-4" />
             </div>
             <div>
               <h1 className="text-xl font-bold">AI HR Assistant</h1>
@@ -99,8 +99,8 @@ export default function AIChatPage() {
             {aiMode && (
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
                 aiMode === 'langchain'
-                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                  ? 'bg-success/15 text-success border border-success/30'
+                  : 'bg-warning/15 text-warning border border-warning/30'
               }`}>
                 {aiMode === 'langchain' ? <Zap size={11} /> : <Activity size={11} />}
                 {aiMode === 'langchain' ? 'LangChain Agent' : 'Statistical Mode'}
@@ -130,8 +130,8 @@ export default function AIChatPage() {
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'assistant' && (
-                <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-1">
-                  <Sparkles size={14} className="text-purple-400" />
+                <div className="w-8 h-8 rounded-full bg-chart-4/20 flex items-center justify-center flex-shrink-0 mt-1">
+                  <Sparkles size={14} className="text-chart-4" />
                 </div>
               )}
 
@@ -140,7 +140,7 @@ export default function AIChatPage() {
                   msg.role === 'user'
                     ? 'bg-primary text-primary-foreground rounded-br-sm'
                     : msg.isError
-                    ? 'bg-red-500/10 border border-red-500/30 text-red-400 rounded-bl-sm'
+                    ? 'bg-destructive/10 border border-destructive/30 text-destructive rounded-bl-sm'
                     : 'bg-card border border-border rounded-bl-sm'
                 }`}>
                   {msg.content}
@@ -148,7 +148,7 @@ export default function AIChatPage() {
                 <div className="flex items-center gap-2 mt-1 px-1">
                   <span className="text-xs text-muted-foreground">{msg.timestamp}</span>
                   {msg.intent && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-chart-4/10 text-chart-4">
                       {msg.intent}
                     </span>
                   )}
@@ -175,8 +175,8 @@ export default function AIChatPage() {
 
           {loading && (
             <div className="flex gap-3 justify-start">
-              <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                <Sparkles size={14} className="text-purple-400 animate-pulse" />
+              <div className="w-8 h-8 rounded-full bg-chart-4/20 flex items-center justify-center flex-shrink-0">
+                <Sparkles size={14} className="text-chart-4 animate-pulse" />
               </div>
               <div className="bg-card border border-border px-4 py-3 rounded-2xl rounded-bl-sm">
                 <div className="flex gap-1">

@@ -95,15 +95,15 @@ export default function EmployeePerformance() {
   const latest = records[0];
 
   const getColor = (score) => {
-    if (score >= 80) return 'text-green-400';
-    if (score >= 60) return 'text-yellow-400';
-    return 'text-red-400';
+    if (score >= 80) return 'text-success';
+    if (score >= 60) return 'text-warning';
+    return 'text-destructive';
   };
 
   const getBg = (score) => {
-    if (score >= 80) return 'bg-green-500';
-    if (score >= 60) return 'bg-yellow-500';
-    return 'bg-red-500';
+    if (score >= 80) return 'bg-success';
+    if (score >= 60) return 'bg-warning';
+    return 'bg-destructive';
   };
 
   return (
@@ -125,7 +125,7 @@ export default function EmployeePerformance() {
           {/* Overall Performance — from goals + manager reviews, kept separate from the attendance score below */}
           <div className="bg-card border border-border rounded-xl p-5">
             <div className="flex items-center gap-2 mb-2">
-              <Star size={18} className="text-purple-400" />
+              <Star size={18} className="text-chart-4" />
               <p className="text-sm text-muted-foreground">Overall Performance</p>
             </div>
             {summary?.overallPerformanceScore != null ? (
@@ -146,7 +146,7 @@ export default function EmployeePerformance() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-card border border-border rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-2">
-                  <Award size={18} className="text-yellow-400" />
+                  <Award size={18} className="text-warning" />
                   <p className="text-sm text-muted-foreground">Attendance & Punctuality Score</p>
                 </div>
                 <p className={`text-3xl font-bold ${getColor(latest.overallScore)}`}>
@@ -155,7 +155,7 @@ export default function EmployeePerformance() {
               </div>
               <div className="bg-card border border-border rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-2">
-                  <Clock size={18} className="text-blue-400" />
+                  <Clock size={18} className="text-info" />
                   <p className="text-sm text-muted-foreground">Attendance Score</p>
                 </div>
                 <p className={`text-3xl font-bold ${getColor(latest.attendanceScore)}`}>
@@ -164,14 +164,14 @@ export default function EmployeePerformance() {
               </div>
               <div className="bg-card border border-border rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-2">
-                  <Calendar size={18} className="text-green-400" />
+                  <Calendar size={18} className="text-success" />
                   <p className="text-sm text-muted-foreground">Present Days</p>
                 </div>
                 <p className="text-3xl font-bold">{latest.presentDays || 0}</p>
               </div>
               <div className="bg-card border border-border rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp size={18} className="text-purple-400" />
+                  <TrendingUp size={18} className="text-chart-4" />
                   <p className="text-sm text-muted-foreground">Avg Hours/Day</p>
                 </div>
                 <p className="text-3xl font-bold">{(latest.avgWorkingHours || 0).toFixed(1)}</p>
@@ -185,14 +185,14 @@ export default function EmployeePerformance() {
               <h2 className="text-lg font-bold mb-4">Performance Trend</h2>
               <ResponsiveContainer width="100%" height={280}>
                 <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="period" stroke="#9ca3af" tick={{ fontSize: 11 }} />
-                  <YAxis stroke="#9ca3af" domain={[0, 100]} />
-                  <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="period" stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} />
+                  <YAxis stroke="var(--muted-foreground)" domain={[0, 100]} />
+                  <Tooltip contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: '8px' }} />
                   <Legend />
-                  <Line type="monotone" dataKey="overall" stroke="#8b5cf6" strokeWidth={3} name="Overall" dot={{ r: 5 }} />
-                  <Line type="monotone" dataKey="attendance" stroke="#3b82f6" strokeWidth={2} name="Attendance" />
-                  <Line type="monotone" dataKey="leave" stroke="#10b981" strokeWidth={2} name="Leave" />
+                  <Line type="monotone" dataKey="overall" stroke="var(--chart-4)" strokeWidth={3} name="Overall" dot={{ r: 5 }} />
+                  <Line type="monotone" dataKey="attendance" stroke="var(--chart-1)" strokeWidth={2} name="Attendance" />
+                  <Line type="monotone" dataKey="leave" stroke="var(--success)" strokeWidth={2} name="Leave" />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -202,7 +202,7 @@ export default function EmployeePerformance() {
           <div className="bg-card border border-border rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold flex items-center gap-2">
-                <Target size={20} className="text-purple-400" />
+                <Target size={20} className="text-chart-4" />
                 My Goals
               </h2>
               <button onClick={() => setShowGoalForm((v) => !v)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border hover:bg-muted transition text-sm">
@@ -273,7 +273,7 @@ export default function EmployeePerformance() {
           {/* Manager Reviews — read-only; only the manager fills rating/comments */}
           <div className="bg-card border border-border rounded-xl p-6">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <MessageSquare size={20} className="text-blue-400" />
+              <MessageSquare size={20} className="text-info" />
               My Reviews
             </h2>
             {reviews.length === 0 ? (
@@ -284,7 +284,7 @@ export default function EmployeePerformance() {
                   <div key={review.id} className="p-4 rounded-lg border border-border">
                     <div className="flex items-center justify-between mb-1">
                       <p className="font-medium">{review.cycle}</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${review.status === 'SUBMITTED' ? 'bg-green-500/15 text-green-400' : 'bg-yellow-500/15 text-yellow-400'}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${review.status === 'SUBMITTED' ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning'}`}>
                         {review.status === 'SUBMITTED' ? 'Submitted' : 'In progress'}
                       </span>
                     </div>
@@ -292,7 +292,7 @@ export default function EmployeePerformance() {
                       <>
                         <div className="flex items-center gap-1 my-1">
                           {[1, 2, 3, 4, 5].map((n) => (
-                            <Star key={n} size={14} className={n <= review.managerRating ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'} />
+                            <Star key={n} size={14} className={n <= review.managerRating ? 'text-warning fill-yellow-400' : 'text-muted-foreground'} />
                           ))}
                         </div>
                         {review.managerComments && <p className="text-sm text-muted-foreground">{review.managerComments}</p>}
@@ -336,9 +336,9 @@ export default function EmployeePerformance() {
                   {records.map((r, i) => (
                     <tr key={i} className="hover:bg-muted/30 transition">
                       <td className="py-3 px-4 font-medium">{months[r.month]} {r.year}</td>
-                      <td className="py-3 px-4 text-green-400">{r.presentDays}</td>
-                      <td className="py-3 px-4 text-red-400">{r.absentDays}</td>
-                      <td className="py-3 px-4 text-yellow-400">{r.lateDays}</td>
+                      <td className="py-3 px-4 text-success">{r.presentDays}</td>
+                      <td className="py-3 px-4 text-destructive">{r.absentDays}</td>
+                      <td className="py-3 px-4 text-warning">{r.lateDays}</td>
                       <td className="py-3 px-4">{(r.avgWorkingHours || 0).toFixed(1)}h</td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">

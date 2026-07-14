@@ -2,11 +2,22 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { ArrowRight, CalendarDays, CalendarRange, FileText, Inbox, Plus, ShieldCheck, X } from 'lucide-react';
+import { ArrowRight, CalendarDays, CalendarRange, FileText, Inbox, Plus, ShieldAlert, ShieldCheck, X } from 'lucide-react';
 import { useLeaves } from '@/hooks/useLeaves';
 import { useLeaveTypeLabels, formatLeaveType } from '@/hooks/useLeaveTypeLabels';
 import { leaveAPI } from '@/lib/api';
 import { toast } from 'sonner';
+
+const PENDING_STATUSES = ['PENDING', 'PENDING_MANAGER', 'PENDING_ADMIN'];
+const LEAVE_STATUS_LABELS = {
+  PENDING: 'Pending review',
+  PENDING_MANAGER: 'Awaiting manager approval',
+  PENDING_ADMIN: 'Manager approved — awaiting admin',
+  APPROVED: 'Finally approved',
+  REJECTED: 'Rejected',
+  CANCELLED: 'Cancelled',
+};
+const REQUEST_LEAVE_TYPES = ['SICK', 'ANNUAL', 'CASUAL', 'EMERGENCY', 'OTHER'];
 
 export default function EmployeeLeaves() {
   const { leaves, loading, fetchMyLeaves, createLeave, cancelLeave } = useLeaves();
@@ -16,8 +27,9 @@ export default function EmployeeLeaves() {
   const [formData, setFormData] = useState({
     startDate: '',
     endDate: '',
-    type: 'ANNUAL', // Changed to uppercase to match backend enum
-    reason: ''
+    type: 'ANNUAL',
+    otherLeaveName: '',
+    reason: '',
   });
 
   async function loadLeaves() {
@@ -42,12 +54,27 @@ export default function EmployeeLeaves() {
   const configuredLeaveTypes = useMemo(() => balances
     .map((balance) => balance.policy?.leaveType)
     .filter(Boolean), [balances]);
+  const configuredLeaveTypeSet = useMemo(() => new Set(configuredLeaveTypes), [configuredLeaveTypes]);
+  const isLeaveTypeAvailable = (type) => (
+    ['EMERGENCY', 'OTHER'].includes(type)
+      ? configuredLeaveTypeSet.has('CASUAL')
+      : configuredLeaveTypeSet.has(type)
+  );
 
   useEffect(() => {
-    if (configuredLeaveTypes.length && !configuredLeaveTypes.includes(formData.type)) {
-      setFormData((current) => ({ ...current, type: configuredLeaveTypes[0] }));
+    if (configuredLeaveTypes.length && !isLeaveTypeAvailable(formData.type)) {
+      const firstAvailable = REQUEST_LEAVE_TYPES.find(isLeaveTypeAvailable) || configuredLeaveTypes[0];
+      setFormData((current) => ({ ...current, type: firstAvailable }));
     }
+    // isLeaveTypeAvailable derives from configuredLeaveTypes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configuredLeaveTypes, formData.type]);
+
+  const openLeaveForm = (type = null) => {
+    const requestedType = type && isLeaveTypeAvailable(type) ? type : formData.type;
+    setFormData((current) => ({ ...current, type: requestedType }));
+    setShowModal(true);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,30 +89,26 @@ export default function EmployeeLeaves() {
     }
     
     try {
-      console.log('Submitting leave:', formData);
-      
       // Transform data to match backend expectations
       const leaveData = {
         leaveType: formData.type.toUpperCase(), // Convert to uppercase enum
         startDate: formData.startDate, // Already in YYYY-MM-DD format from date input
         endDate: formData.endDate,
-        reason: formData.reason
+        reason: formData.reason,
+        ...(formData.type === 'OTHER' && { otherLeaveName: formData.otherLeaveName.trim() }),
       };
       
-      console.log('Transformed leave data:', leaveData);
+      await createLeave(leaveData);
       
-      const result = await createLeave(leaveData);
-      
-      console.log('Leave created:', result);
-      
-      toast.success('Leave application submitted successfully');
+      toast.success(formData.type === 'EMERGENCY'
+        ? 'Emergency leave sent directly to admin'
+        : 'Leave application submitted successfully');
       setShowModal(false);
-      setFormData({ startDate: '', endDate: '', type: configuredLeaveTypes[0] || 'ANNUAL', reason: '' });
+      setFormData({ startDate: '', endDate: '', type: REQUEST_LEAVE_TYPES.find(isLeaveTypeAvailable) || 'ANNUAL', otherLeaveName: '', reason: '' });
       
       // Force reload the leaves list
       await loadLeaves();
     } catch (err) {
-      console.error('Leave submission error:', err);
       const errorMessage = err.message || 'Failed to apply for leave';
       
       // Check if it's an authentication error
@@ -129,14 +152,22 @@ export default function EmployeeLeaves() {
               <h1 className="text-3xl font-bold">My Leaves</h1>
               <p className="text-muted-foreground mt-1">View and manage your leave requests.</p>
             </div>
-            <button
-              onClick={() => setShowModal(true)}
-              disabled={!balances.length}
-              className="mr-14 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Plus size={20} />
-              Apply Leave
-            </button>
+            <div className="mr-14 flex items-center gap-2">
+              <button
+                onClick={() => openLeaveForm('EMERGENCY')}
+                disabled={!isLeaveTypeAvailable('EMERGENCY')}
+                className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 transition disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ShieldAlert size={18} /> Emergency Leave
+              </button>
+              <button
+                onClick={() => openLeaveForm()}
+                disabled={!balances.length}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Plus size={20} /> Apply Leave
+              </button>
+            </div>
           </div>
         </div>
 
@@ -202,9 +233,12 @@ export default function EmployeeLeaves() {
                 {leavesArray.map((leave) => {
                   // Handle different field name formats from backend
                   const leaveType = leave.leaveType || leave.leave_type || leave.type || 'N/A';
+                  const leaveTypeLabel = leaveType === 'OTHER' && leave.otherLeaveName
+                    ? leave.otherLeaveName
+                    : formatLeaveType(typeLabels, leaveType);
                   const startDate = leave.startDate || leave.start_date;
                   const endDate = leave.endDate || leave.end_date;
-                  const status = leave.status || 'PENDING';
+                  const status = leave.status || 'PENDING_MANAGER';
                   const reason = leave.reason || '';
                   const decision = leave.decisionExplanation;
                   const totalDays = leave.totalDays || leave.days || calculateDays(startDate, endDate);
@@ -214,31 +248,33 @@ export default function EmployeeLeaves() {
                   
                   return (
                     <article key={leave.id} className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5">
-                      <div className={`h-1 ${status === 'APPROVED' ? 'bg-emerald-500' : status === 'REJECTED' ? 'bg-red-500' : status === 'CANCELLED' ? 'bg-muted' : 'bg-gradient-to-r from-sky-500 via-primary to-violet-500'}`} />
+                      <div className={`h-1 ${status === 'APPROVED' ? 'bg-success' : status === 'REJECTED' ? 'bg-destructive' : status === 'CANCELLED' ? 'bg-muted' : 'bg-gradient-to-r from-sky-500 via-primary to-violet-500'}`} />
                       <div className="p-5 sm:p-6">
                       <div className="flex flex-wrap justify-between gap-4">
                         <div className="flex items-center gap-4">
                           <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500/25 to-violet-500/20 text-base font-bold text-sky-300 ring-1 ring-sky-400/20">
-                            {formatLeaveType(typeLabels, leaveType).slice(0, 2).toUpperCase()}
+                            {leaveTypeLabel.slice(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <h3 className="text-lg font-bold">{formatLeaveType(typeLabels, leaveType)} Leave</h3>
+                            <h3 className="text-lg font-bold">{leaveTypeLabel}{leaveType === 'OTHER' ? '' : ' Leave'}</h3>
                             <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground"><CalendarDays size={13} /> {totalDays} {totalDays === 1 ? 'day' : 'days'}</div>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className={`rounded-full border px-3 py-1.5 text-xs font-bold tracking-wide ${
-                            status === 'APPROVED' || status === 'Approved' ? 'border-green-500/20 bg-green-500/10 text-green-400' :
-                            status === 'PENDING' || status === 'Pending' ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400' :
-                            status === 'REJECTED' || status === 'Rejected' ? 'border-red-500/20 bg-red-500/10 text-red-400' :
+                            status === 'APPROVED' || status === 'Approved' ? 'border-success/20 bg-success/10 text-success' :
+                            PENDING_STATUSES.includes(status) ? 'border-warning/20 bg-warning/10 text-warning' :
+                            status === 'REJECTED' || status === 'Rejected' ? 'border-destructive/20 bg-destructive/10 text-destructive' :
                             'border-border bg-muted/20 text-muted-foreground'
                           }`}>
-                            {status}
+                            {leaveType === 'EMERGENCY' && status === 'PENDING_ADMIN'
+                              ? 'Emergency — awaiting admin'
+                              : LEAVE_STATUS_LABELS[status] || status.replaceAll('_', ' ')}
                           </span>
-                          {(status === 'PENDING' || status === 'Pending') && (
+                          {PENDING_STATUSES.includes(status) && (
                             <button
                               onClick={() => handleDelete(leave.id)}
-                              className="rounded-lg border border-red-500/20 p-2 text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
+                              className="rounded-lg border border-destructive/20 p-2 text-destructive transition hover:bg-destructive/10 hover:text-destructive"
                               title="Cancel leave request"
                             >
                               <X size={18} />
@@ -261,6 +297,12 @@ export default function EmployeeLeaves() {
                         <div className="mb-4 flex gap-3 rounded-xl bg-muted/25 p-4">
                           <FileText size={18} className="mt-0.5 shrink-0 text-primary" />
                           <div><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Your reason</p><p className="mt-1 text-sm">{reason}</p></div>
+                        </div>
+                      )}
+                      {leaveType === 'EMERGENCY' && leave.emergencyRecoveryDate && (
+                        <div className="mb-4 flex gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
+                          <ShieldAlert size={18} className="mt-0.5 shrink-0 text-destructive" />
+                          <div><p className="text-xs font-semibold uppercase tracking-wider text-destructive">Emergency advance</p><p className="mt-1 text-sm text-muted-foreground">Funded from Casual Leave. Any negative balance is reserved against the next entitlement from {new Date(leave.emergencyRecoveryDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}.</p></div>
                         </div>
                       )}
                       {decision && (
@@ -295,17 +337,52 @@ export default function EmployeeLeaves() {
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Leave Type</label>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, type: 'EMERGENCY' })}
+                    disabled={!isLeaveTypeAvailable('EMERGENCY')}
+                    className={`mb-3 flex w-full items-center gap-3 rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${formData.type === 'EMERGENCY' ? 'border-destructive/40 bg-destructive/10' : 'border-border bg-muted/20 hover:border-destructive/30'}`}
+                  >
+                    <span className="rounded-lg bg-destructive/15 p-2 text-destructive"><ShieldAlert size={18} /></span>
+                    <span><span className="block text-sm font-semibold">Emergency Leave</span><span className="block text-xs text-muted-foreground">Bypasses manager review and goes directly to admin.</span></span>
+                  </button>
                   <select
                     value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value, otherLeaveName: e.target.value === 'OTHER' ? formData.otherLeaveName : '' })}
                     className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
                     required
                   >
-                    {configuredLeaveTypes.map((type) => (
-                      <option key={type} value={type}>{formatLeaveType(typeLabels, type)} Leave</option>
+                    {REQUEST_LEAVE_TYPES.map((type) => (
+                      <option key={type} value={type} disabled={!isLeaveTypeAvailable(type)}>
+                        {type === 'OTHER' ? 'Other' : `${formatLeaveType(typeLabels, type)} Leave`}{!isLeaveTypeAvailable(type) ? ' — not configured' : ''}
+                      </option>
                     ))}
                   </select>
                 </div>
+
+                {formData.type === 'OTHER' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2" htmlFor="other-leave-name">Other Leave Name</label>
+                    <input
+                      id="other-leave-name"
+                      type="text"
+                      value={formData.otherLeaveName}
+                      onChange={(e) => setFormData({ ...formData, otherLeaveName: e.target.value })}
+                      minLength={2}
+                      maxLength={100}
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
+                      placeholder="e.g. Study leave, marriage leave"
+                      required
+                    />
+                  </div>
+                )}
+
+                {formData.type === 'EMERGENCY' && (
+                  <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-4 text-sm">
+                    <p className="font-semibold text-destructive">Direct admin review</p>
+                    <p className="mt-1 text-muted-foreground">This request skips manager approval. It uses Casual Leave and may create a negative advance balance that is reserved against your next entitlement.</p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>

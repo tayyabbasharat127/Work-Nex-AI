@@ -125,15 +125,15 @@ export default function ManagerPerformance() {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 80) return 'text-green-400';
-    if (score >= 60) return 'text-yellow-400';
-    return 'text-red-400';
+    if (score >= 80) return 'text-success';
+    if (score >= 60) return 'text-warning';
+    return 'text-destructive';
   };
 
   const getScoreBg = (score) => {
-    if (score >= 80) return 'bg-green-500';
-    if (score >= 60) return 'bg-yellow-500';
-    return 'bg-red-500';
+    if (score >= 80) return 'bg-success';
+    if (score >= 60) return 'bg-warning';
+    return 'bg-destructive';
   };
 
   // Build chart data from team performance
@@ -166,7 +166,7 @@ export default function ManagerPerformance() {
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-card border border-border rounded-xl p-5">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-green-500/20"><Award size={18} className="text-green-400" /></div>
+                  <div className="p-2 rounded-lg bg-success/20"><Award size={18} className="text-success" /></div>
                   <p className="text-sm text-muted-foreground">Avg Attendance & Punctuality Score</p>
                 </div>
                 <p className="text-3xl font-bold">
@@ -175,7 +175,7 @@ export default function ManagerPerformance() {
               </div>
               <div className="bg-card border border-border rounded-xl p-5">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-blue-500/20"><Clock size={18} className="text-blue-400" /></div>
+                  <div className="p-2 rounded-lg bg-info/20"><Clock size={18} className="text-info" /></div>
                   <p className="text-sm text-muted-foreground">Avg Attendance Score</p>
                 </div>
                 <p className="text-3xl font-bold">
@@ -184,7 +184,7 @@ export default function ManagerPerformance() {
               </div>
               <div className="bg-card border border-border rounded-xl p-5">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-purple-500/20"><Calendar size={18} className="text-purple-400" /></div>
+                  <div className="p-2 rounded-lg bg-chart-4/20"><Calendar size={18} className="text-chart-4" /></div>
                   <p className="text-sm text-muted-foreground">Team Members</p>
                 </div>
                 <p className="text-3xl font-bold">{teamPerformance.length}</p>
@@ -198,14 +198,14 @@ export default function ManagerPerformance() {
               <h2 className="text-lg font-bold mb-4">Team Performance Scores</h2>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="name" stroke="#9ca3af" tick={{ fontSize: 11 }} />
-                  <YAxis stroke="#9ca3af" domain={[0, 100]} />
-                  <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="name" stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} />
+                  <YAxis stroke="var(--muted-foreground)" domain={[0, 100]} />
+                  <Tooltip contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: '8px' }} />
                   <Legend />
-                  <Bar dataKey="attendance" fill="#3b82f6" name="Attendance" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="leave" fill="#10b981" name="Leave" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="overall" fill="#8b5cf6" name="Overall" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="attendance" fill="var(--chart-1)" name="Attendance" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="leave" fill="var(--success)" name="Leave" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="overall" fill="var(--chart-4)" name="Overall" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -280,7 +280,7 @@ export default function ManagerPerformance() {
           {leaderboard.length > 0 && (
             <div className="bg-card border border-border rounded-xl p-6">
               <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <Award size={20} className="text-yellow-400" />
+                <Award size={20} className="text-warning" />
                 Performance Leaderboard
               </h2>
               <div className="space-y-3">
@@ -310,7 +310,7 @@ export default function ManagerPerformance() {
           <div className="bg-card border border-border rounded-xl p-6">
             <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
               <h2 className="text-lg font-bold flex items-center gap-2">
-                <Target size={20} className="text-purple-400" />
+                <Target size={20} className="text-chart-4" />
                 Team Goals & Reviews
               </h2>
               {teamMembers.length > 0 && (
@@ -377,7 +377,7 @@ export default function ManagerPerformance() {
                             <span className="text-xs text-muted-foreground">{goal.status.replace('_', ' ')}</span>
                           </div>
                           <div className="w-full bg-muted rounded-full h-1.5 mt-2">
-                            <div className="h-full rounded-full bg-purple-500" style={{ width: `${goal.progress}%` }} />
+                            <div className="h-full rounded-full bg-chart-4" style={{ width: `${goal.progress}%` }} />
                           </div>
                         </div>
                       ))}
@@ -405,7 +405,7 @@ export default function ManagerPerformance() {
                       <div className="flex items-center gap-1">
                         {[1, 2, 3, 4, 5].map((n) => (
                           <button type="button" key={n} onClick={() => setReviewForm({ ...reviewForm, managerRating: n })}>
-                            <Star size={18} className={n <= reviewForm.managerRating ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'} />
+                            <Star size={18} className={n <= reviewForm.managerRating ? 'text-warning fill-yellow-400' : 'text-muted-foreground'} />
                           </button>
                         ))}
                       </div>
@@ -429,13 +429,13 @@ export default function ManagerPerformance() {
                         <div key={review.id} className="p-3 rounded-lg border border-border text-sm">
                           <div className="flex items-center justify-between mb-1">
                             <p className="font-medium">{review.cycle}</p>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${review.status === 'SUBMITTED' ? 'bg-green-500/15 text-green-400' : 'bg-yellow-500/15 text-yellow-400'}`}>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${review.status === 'SUBMITTED' ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning'}`}>
                               {review.status === 'SUBMITTED' ? 'Submitted' : 'Draft'}
                             </span>
                           </div>
                           <div className="flex items-center gap-1 mb-1">
                             {[1, 2, 3, 4, 5].map((n) => (
-                              <Star key={n} size={12} className={n <= (review.managerRating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'} />
+                              <Star key={n} size={12} className={n <= (review.managerRating || 0) ? 'text-warning fill-yellow-400' : 'text-muted-foreground'} />
                             ))}
                           </div>
                           {review.status !== 'SUBMITTED' && (

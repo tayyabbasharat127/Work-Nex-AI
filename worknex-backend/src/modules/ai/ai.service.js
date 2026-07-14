@@ -3,6 +3,7 @@ const prisma = require('../../config/db');
 const { config } = require('../../config/env');
 const { ApiError } = require('../../utils/ApiError');
 const { assertCanAccessUser, getAccessibleUserIds } = require('../../utils/rbac');
+const { getHolidaysInRange } = require('../attendance/attendance.processor');
 
 const AI_SERVICE = config.aiServiceUrl;
 
@@ -96,6 +97,51 @@ const buildFallbackChat = (message, user) => {
   );
 };
 
+const applyNonWorkingCalendar = async (payload, organizationId) => {
+  if (!Array.isArray(payload?.forecast) || payload.forecast.length === 0) return payload;
+  const validDates = payload.forecast
+    .map((row) => new Date(`${row.date}T00:00:00.000Z`))
+    .filter((date) => !Number.isNaN(date.getTime()));
+  if (!validDates.length) return payload;
+
+  const holidays = await getHolidaysInRange(organizationId, validDates[0], validDates[validDates.length - 1]);
+  const holidayByDate = new Map(holidays.map((holiday) => [
+    holiday.observedDate.toISOString().slice(0, 10),
+    holiday,
+  ]));
+  const forecast = payload.forecast.map((row) => {
+    const date = new Date(`${row.date}T00:00:00.000Z`);
+    const holiday = holidayByDate.get(row.date);
+    const isWeekend = date.getUTCDay() === 0 || date.getUTCDay() === 6;
+    if (!holiday && !isWeekend) return { ...row, forecastAvailable: true };
+    return {
+      ...row,
+      predicted: 0,
+      ...(row.low !== undefined ? { low: 0 } : {}),
+      ...(row.high !== undefined ? { high: 0 } : {}),
+      riskLevel: 'NONE',
+      forecastAvailable: false,
+      nonWorkingReason: holiday ? 'HOLIDAY' : 'WEEKEND',
+      holidayName: holiday?.name || null,
+    };
+  });
+  const total = forecast.reduce((sum, row) => sum + Number(row.predicted || 0), 0);
+  const available = forecast.filter((row) => row.forecastAvailable);
+  const peak = available.reduce((current, row) => (
+    !current || Number(row.predicted || 0) > Number(current.predicted || 0) ? row : current
+  ), null);
+
+  return {
+    ...payload,
+    forecast,
+    totalPredicted: Math.round(total),
+    avgPerDay: Number((total / Math.max(available.length, 1)).toFixed(1)),
+    peakDay: peak?.date || null,
+    peakPredicted: peak?.predicted || 0,
+    calendarAdjusted: true,
+  };
+};
+
 const leaveForecast = async (requestingUser, departmentId, authorization) => {
   if (departmentId) {
     const department = await prisma.department.findFirst({
@@ -116,7 +162,7 @@ const leaveForecast = async (requestingUser, departmentId, authorization) => {
       headers: { Authorization: authorization },
       timeout: 15000,
     });
-    return response.data;
+    return await applyNonWorkingCalendar(response.data, requestingUser.organizationId);
   } catch {
     return await buildStatisticalForecast(requestingUser, departmentId);
   }
@@ -160,7 +206,7 @@ const buildStatisticalForecast = async (requestingUser, departmentId) => {
   const predictions = forecast.map((f) => f.predicted);
   const total = predictions.reduce((s, v) => s + v, 0);
 
-  return {
+  return applyNonWorkingCalendar({
     forecast,
     totalPredicted: Math.round(total),
     avgPerDay: parseFloat((total / 30).toFixed(1)),
@@ -169,7 +215,7 @@ const buildStatisticalForecast = async (requestingUser, departmentId) => {
     fallback: true,
     departmentId,
     message: 'Generated from historical data because AI service is unavailable',
-  };
+  }, requestingUser.organizationId);
 };
 
 const attendanceAnomaly = async (requestingUser, userId, authorization) => {
@@ -287,7 +333,7 @@ const getPerformanceFeatures = async (employeeId, requestingUser) => {
 
   const [attendance, leaves, previousPerformance, employee] = await Promise.all([
     prisma.attendance.findMany({ where: { userId: employeeId, organizationId: requestingUser.organizationId, date: { gte: start, lte: end } } }),
-    prisma.leaveRequest.findMany({ where: { employeeId, organizationId: requestingUser.organizationId, startDate: { gte: start, lte: end }, status: { in: ['PENDING', 'APPROVED'] } } }),
+    prisma.leaveRequest.findMany({ where: { employeeId, organizationId: requestingUser.organizationId, startDate: { gte: start, lte: end }, status: { in: ['PENDING', 'PENDING_MANAGER', 'PENDING_ADMIN', 'APPROVED'] } } }),
     prisma.performanceRecord.findFirst({ where: { userId: employeeId, organizationId: requestingUser.organizationId }, orderBy: [{ year: 'desc' }, { month: 'desc' }] }),
     prisma.user.findFirst({ where: { id: employeeId, organizationId: requestingUser.organizationId }, select: { departmentId: true } }),
   ]);

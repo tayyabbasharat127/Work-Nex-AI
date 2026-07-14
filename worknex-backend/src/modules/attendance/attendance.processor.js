@@ -151,6 +151,41 @@ const getHolidayForDate = async (organizationId, date) => {
   )) || null;
 };
 
+const getHolidaysInRange = async (organizationId, startDate, endDate) => {
+  const start = toAttendanceDate(startDate);
+  const end = toAttendanceDate(endDate);
+  if (end < start) return [];
+
+  const holidays = await prisma.holiday.findMany({
+    where: {
+      organizationId,
+      OR: [
+        { date: { gte: start, lte: end } },
+        { isRecurring: true },
+      ],
+    },
+    orderBy: { date: 'asc' },
+  });
+  const exactByDate = new Map();
+  const recurringByMonthDay = new Map();
+  holidays.forEach((holiday) => {
+    exactByDate.set(holiday.date.toISOString().slice(0, 10), holiday);
+    if (holiday.isRecurring) {
+      recurringByMonthDay.set(`${holiday.date.getUTCMonth()}-${holiday.date.getUTCDate()}`, holiday);
+    }
+  });
+
+  const occurrences = [];
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    const holiday = exactByDate.get(cursor.toISOString().slice(0, 10))
+      || recurringByMonthDay.get(`${cursor.getUTCMonth()}-${cursor.getUTCDate()}`);
+    if (holiday) occurrences.push({ ...holiday, observedDate: new Date(cursor) });
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return occurrences;
+};
+
 const getApprovedLeaveForDate = (organizationId, userId, date) => {
   return prisma.leaveRequest.findFirst({
     where: {
@@ -328,6 +363,7 @@ module.exports = {
   computeCheckOutStatus,
   isOutsideWorkWindow,
   getHolidayForDate,
+  getHolidaysInRange,
   getApprovedLeaveForDate,
   validateLeave,
   processCheckIn,

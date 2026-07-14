@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, X } from 'lucide-react';
+import { Check, ShieldAlert, X } from 'lucide-react';
 import { formatLeaveType } from '@/hooks/useLeaveTypeLabels';
 import { STATUS_CONFIG, TYPE_COLORS } from '../constants';
 import { getInitials, formatDate } from '../helpers';
@@ -15,9 +15,13 @@ export default function LeaveDetailModal({ leave, typeLabels, onClose, onApprove
   const status = leave.status || 'PENDING';
   const statusCfg = STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
   const typeColor = TYPE_COLORS[leave.leaveType] || TYPE_COLORS.OTHER;
+  const canAdminAct = status === 'PENDING_ADMIN' || (status === 'PENDING' && !emp.managerId);
+  const leaveTypeLabel = leave.leaveType === 'OTHER' && leave.otherLeaveName
+    ? leave.otherLeaveName
+    : formatLeaveType(typeLabels, leave.leaveType);
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-overlay backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl">
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-border">
@@ -48,7 +52,7 @@ export default function LeaveDetailModal({ leave, typeLabels, onClose, onApprove
             <div className="p-4 bg-muted/20 rounded-xl">
               <p className="text-xs text-muted-foreground mb-1">Leave Type</p>
               <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${typeColor}`}>
-                {leave.leaveType ? formatLeaveType(typeLabels, leave.leaveType) : '—'}
+                {leave.leaveType ? leaveTypeLabel : '—'}
               </span>
             </div>
             <div className="p-4 bg-muted/20 rounded-xl">
@@ -65,9 +69,26 @@ export default function LeaveDetailModal({ leave, typeLabels, onClose, onApprove
             </div>
           </div>
 
+          {leave.leaveType === 'EMERGENCY' && (
+            <div className="flex gap-3 rounded-xl border border-orange-500/25 bg-orange-500/10 p-4">
+              <ShieldAlert className="mt-0.5 shrink-0 text-orange-400" size={19} />
+              <div>
+                <p className="text-sm font-semibold text-orange-300">Emergency direct-admin request</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Manager review was bypassed. Final approval deducts Casual balance and may create a negative advance recovered by future entitlement.
+                </p>
+                {leave.emergencyRecoveryDate && (
+                  <p className="mt-2 text-xs text-orange-300/90">
+                    Recovery starts {new Date(leave.emergencyRecoveryDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })}.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {leave.isSandwiched && (
-            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
-              <p className="text-xs font-medium text-amber-500 mb-1">Sandwich Rule Applied</p>
+            <div className="p-4 bg-warning/10 border border-warning/30 rounded-xl">
+              <p className="text-xs font-medium text-warning mb-1">Sandwich Rule Applied</p>
               <p className="text-sm">+{leave.sandwichExtraDays} day(s) added — a weekend/holiday between this leave and an unapproved absence was swallowed into the deduction.</p>
             </div>
           )}
@@ -84,14 +105,24 @@ export default function LeaveDetailModal({ leave, typeLabels, onClose, onApprove
             </div>
           )}
 
-          {status === 'PENDING' && (
+          {leave.managerReviewedAt && (
+            <div className="p-4 border border-success/20 bg-success/10 rounded-xl">
+              <p className="text-xs font-semibold text-success mb-1">Manager review completed</p>
+              <p className="text-sm">
+                {leave.managerApprover ? `${leave.managerApprover.firstName} ${leave.managerApprover.lastName}` : 'Manager'}
+                {leave.managerNote ? ` — ${leave.managerNote}` : ''}
+              </p>
+            </div>
+          )}
+
+          {canAdminAct && (
             <div className="flex gap-3 pt-1">
               <button onClick={() => onApprove(leave.id)}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition font-semibold">
-                <Check size={16} /> Approve
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-success/15 text-success hover:bg-success/25 transition font-semibold">
+                <Check size={16} /> Final approve
               </button>
               <button onClick={() => onReject(leave.id)}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/15 text-red-400 hover:bg-red-500/25 transition font-semibold">
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-destructive/15 text-destructive hover:bg-destructive/25 transition font-semibold">
                 <X size={16} /> Reject
               </button>
             </div>

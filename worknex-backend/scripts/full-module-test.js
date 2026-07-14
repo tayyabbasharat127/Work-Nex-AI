@@ -586,13 +586,32 @@ async function leaveTests() {
         body: { leaveType, startDate, endDate: startDate, reason: `E2E overlap ${TEST_PREFIX}` },
       });
       await checkJson('Leave', 'manager can evaluate subordinate leave', 'POST', `${API}/leave/${leave.id}/evaluate`, 200, { role: 'testManager' });
-      if (leave.status === 'PENDING') {
-        await checkJson('Leave', 'manager approves direct subordinate leave', 'PUT', `${API}/leave/${leave.id}/approve`, 200, {
+      if (['PENDING', 'PENDING_MANAGER'].includes(leave.status)) {
+        await checkJson('Leave', 'admin cannot bypass manager approval', 'PUT', `${API}/leave/${leave.id}/approve`, 409, {
+          role: 'admin',
+          body: { note: 'premature admin approval' },
+        });
+        const managerApproval = await checkJson('Leave', 'manager approves and forwards subordinate leave', 'PUT', `${API}/leave/${leave.id}/approve`, 200, {
           role: 'testManager',
-          body: { note: 'E2E approval' },
+          body: { note: 'E2E manager approval' },
+        });
+        add(
+          'Leave',
+          'manager approval leaves request pending for admin',
+          dataOf(managerApproval)?.status === 'PENDING_ADMIN' ? 'PASS' : 'FAIL',
+          dataOf(managerApproval)?.status,
+        );
+        await checkJson('Leave', 'admin grants final leave approval', 'PUT', `${API}/leave/${leave.id}/approve`, 200, {
+          role: 'admin',
+          body: { note: 'E2E final approval' },
+        });
+      } else if (leave.status === 'PENDING_ADMIN') {
+        await checkJson('Leave', 'admin grants final leave approval', 'PUT', `${API}/leave/${leave.id}/approve`, 200, {
+          role: 'admin',
+          body: { note: 'E2E final approval' },
         });
       } else {
-        add('Leave', 'manager approval only when pending', 'SKIPPED', `automation status=${leave.status}`);
+        add('Leave', 'hierarchical approval only when pending', 'SKIPPED', `automation status=${leave.status}`);
       }
     }
     const excess = await checkJson('Leave', 'excess leave is rejected or blocked', 'POST', `${API}/leave`, [400, 409], {
@@ -605,7 +624,7 @@ async function leaveTests() {
   const adminLeaves = await checkJson('Leave', 'admin gets leave list', 'GET', `${API}/leave?limit=1`, 200, { role: 'admin' });
   const unrelated = firstArray(adminLeaves).find((l) => l.employeeId !== state.created.employeeId);
   if (unrelated) {
-    await checkJson('Leave', 'manager cannot approve non-subordinate leave', 'PUT', `${API}/leave/${unrelated.id}/approve`, [400, 403], {
+    await checkJson('Leave', 'manager cannot approve non-subordinate leave', 'PUT', `${API}/leave/${unrelated.id}/approve`, [400, 403, 409], {
       role: 'testManager',
       body: { note: 'should not approve' },
     });

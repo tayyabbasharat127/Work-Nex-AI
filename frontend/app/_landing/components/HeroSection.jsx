@@ -16,7 +16,7 @@ export default function HeroSection({ setDemoModalOpen }) {
         </div>
 
         <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold leading-tight tracking-tight">
-          <span className="bg-gradient-to-r from-primary via-cyan-400 to-accent bg-clip-text text-transparent block">Smart Workforce</span>
+          <span className="bg-gradient-to-r from-primary via-info to-accent bg-clip-text text-transparent block">Smart Workforce</span>
           <span className="text-foreground block">Intelligence Platform</span>
         </h1>
 

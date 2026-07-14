@@ -5,7 +5,7 @@ const attendanceController = require('./attendance.controller');
 const { authenticate, authorize, requirePermission } = require('../../middleware/auth.middleware');
 const { validate } = require('../../middleware/validate.middleware');
 const rateLimit = require('express-rate-limit');
-const { auditHrAccess } = require('../../middleware/audit.middleware');
+const { auditHrAccess, auditLog } = require('../../middleware/audit.middleware');
 const { config } = require('../../config/env');
 
 const webhookLimiter = rateLimit({
@@ -48,13 +48,22 @@ router.get('/my', [
 ], validate, attendanceController.getMyAttendance);
 
 // ── Holidays (named, before /:id) ─────────────────────────────────────────────
-router.get('/holidays',  attendanceController.getHolidays);
-router.post('/holidays', requirePermission('attendance:manage'), [
-  body('name').trim().isLength({ min: 1, max: 150 }),
-  body('date').isISO8601(),
+const holidayFields = (partial = false) => [
+  partial ? body('name').optional().trim().isLength({ min: 1, max: 150 }) : body('name').trim().isLength({ min: 1, max: 150 }),
+  partial ? body('date').optional().isISO8601() : body('date').isISO8601(),
   body('description').optional({ nullable: true }).isString().isLength({ max: 1000 }),
   body('isRecurring').optional().isBoolean(),
-], validate, attendanceController.createHoliday);
+];
+
+router.get('/holidays', query('year').optional().isInt({ min: 2000, max: 2200 }), validate, attendanceController.getHolidays);
+router.post('/holidays', requirePermission('attendance:manage'), holidayFields(), validate, auditLog('Holiday', 'CREATE'), attendanceController.createHoliday);
+router.put('/holidays/:id', requirePermission('attendance:manage'), [
+  param('id').isUUID(),
+  ...holidayFields(true),
+  body().custom((value) => ['name', 'date', 'description', 'isRecurring'].some((field) => Object.prototype.hasOwnProperty.call(value, field)))
+    .withMessage('At least one holiday field is required'),
+], validate, auditLog('Holiday', 'UPDATE'), attendanceController.updateHoliday);
+router.delete('/holidays/:id', requirePermission('attendance:manage'), param('id').isUUID(), validate, auditLog('Holiday', 'DELETE'), attendanceController.deleteHoliday);
 
 // ── TMS Sync ──────────────────────────────────────────────────────────────────
 router.post('/sync/tms', requirePermission('attendance:manage'), body('date').optional().isISO8601(), validate, attendanceController.syncFromTMS);

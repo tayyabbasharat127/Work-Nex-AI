@@ -16,6 +16,8 @@ import LeaveTable from './components/LeaveTable';
 import LeavePagination from './components/LeavePagination';
 import LeaveDetailModal from './components/LeaveDetailModal';
 import ManualPolicyModal from './components/ManualPolicyModal';
+import HolidayManagement from './components/HolidayManagement';
+import LeaveAutomationSettings from './components/LeaveAutomationSettings';
 
 export default function AdminLeaves() {
   const [leaves, setLeaves] = useState([]);
@@ -57,7 +59,7 @@ export default function AdminLeaves() {
   const handleApprove = async (id) => {
     try {
       await leaveAPI.approve(id, '');
-      toast.success('Leave approved');
+      toast.success('Final admin approval completed');
       loadLeaves();
       setViewingLeave(null);
     } catch (err) {
@@ -189,10 +191,10 @@ export default function AdminLeaves() {
 
   // Stats
   const stats = [
-    { label: 'Total Requests', value: leaves.length, icon: FileText, color: 'text-blue-400', bg: 'bg-blue-500/15', border: 'border-blue-500/20' },
-    { label: 'Pending', value: leaves.filter(l => l.status === 'PENDING').length, icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/20' },
-    { label: 'Approved', value: leaves.filter(l => l.status === 'APPROVED').length, icon: Check, color: 'text-emerald-400', bg: 'bg-emerald-500/15', border: 'border-emerald-500/20' },
-    { label: 'Rejected', value: leaves.filter(l => l.status === 'REJECTED').length, icon: X, color: 'text-red-400', bg: 'bg-red-500/15', border: 'border-red-500/20' },
+    { label: 'Total Requests', value: leaves.length, icon: FileText, color: 'text-info', bg: 'bg-info/15', border: 'border-info/20' },
+    { label: 'Pending', value: leaves.filter(l => ['PENDING', 'PENDING_MANAGER', 'PENDING_ADMIN'].includes(l.status)).length, icon: Clock, color: 'text-warning', bg: 'bg-warning/15', border: 'border-warning/20' },
+    { label: 'Approved', value: leaves.filter(l => l.status === 'APPROVED').length, icon: Check, color: 'text-success', bg: 'bg-success/15', border: 'border-success/20' },
+    { label: 'Rejected', value: leaves.filter(l => l.status === 'REJECTED').length, icon: X, color: 'text-destructive', bg: 'bg-destructive/15', border: 'border-destructive/20' },
   ];
 
   // Filter
@@ -201,7 +203,9 @@ export default function AdminLeaves() {
     const name = `${emp.firstName || ''} ${emp.lastName || ''}`.toLowerCase();
     const email = (emp.email || '').toLowerCase();
     const matchSearch = !search || name.includes(search.toLowerCase()) || email.includes(search.toLowerCase());
-    const matchStatus = filterStatus === 'ALL' || l.status === filterStatus;
+    const matchStatus = filterStatus === 'ALL'
+      || (filterStatus === 'PENDING' && ['PENDING', 'PENDING_MANAGER', 'PENDING_ADMIN'].includes(l.status))
+      || l.status === filterStatus;
     const matchType = filterType === 'ALL' || l.leaveType === filterType;
     return matchSearch && matchStatus && matchType;
   });
@@ -215,7 +219,7 @@ export default function AdminLeaves() {
 
       <main className="flex-1 overflow-auto md:ml-64">
         {/* Header */}
-        <div className="sticky top-0 bg-card/80 backdrop-blur-xl border-b border-border px-8 py-5 z-20">
+        <div className="sticky top-0 bg-card/80 backdrop-blur-xl border-b border-border px-5 py-4 z-20">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Leave Management</h1>
@@ -227,22 +231,27 @@ export default function AdminLeaves() {
           </div>
         </div>
 
-        <div className="px-8 py-6 space-y-6">
-          <LeavePolicySetup
-            showUploadSection={showUploadSection}
-            setShowUploadSection={setShowUploadSection}
-            openManualModal={openManualModal}
-            policyInputRef={policyInputRef}
-            policyFile={policyFile}
-            policyDocument={policyDocument}
-            policyUploading={policyUploading}
-            isDraggingPolicy={isDraggingPolicy}
-            setIsDraggingPolicy={setIsDraggingPolicy}
-            selectPolicyFile={selectPolicyFile}
-            clearPolicyFile={clearPolicyFile}
-            handlePolicyUpload={handlePolicyUpload}
-            handleApprovePolicyRules={handleApprovePolicyRules}
-          />
+        <div className="space-y-4 p-5">
+          <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+            <LeavePolicySetup
+              showUploadSection={showUploadSection}
+              setShowUploadSection={setShowUploadSection}
+              openManualModal={openManualModal}
+              policyInputRef={policyInputRef}
+              policyFile={policyFile}
+              policyDocument={policyDocument}
+              policyUploading={policyUploading}
+              isDraggingPolicy={isDraggingPolicy}
+              setIsDraggingPolicy={setIsDraggingPolicy}
+              selectPolicyFile={selectPolicyFile}
+              clearPolicyFile={clearPolicyFile}
+              handlePolicyUpload={handlePolicyUpload}
+              handleApprovePolicyRules={handleApprovePolicyRules}
+            />
+            <LeaveAutomationSettings />
+          </div>
+
+          <HolidayManagement />
 
           <LeaveStatsCards stats={stats} loading={loading} />
 

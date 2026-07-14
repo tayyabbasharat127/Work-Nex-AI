@@ -21,7 +21,7 @@ export default function ManagerLeaves() {
     try {
       setProcessingId(id);
       await updateLeaveStatus(id, 'Approved', '');
-      toast.success('Leave approved successfully');
+      toast.success('Manager approval recorded and forwarded to admin');
     } catch (err) {
       toast.error(err.message || 'Failed to approve leave');
     } finally {
@@ -53,13 +53,13 @@ export default function ManagerLeaves() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold">Team Leaves</h1>
-              <p className="text-muted-foreground mt-1">Review requests and keep your team covered.</p>
+              <p className="text-muted-foreground mt-1">Complete manager review before final admin approval.</p>
             </div>
-            <div className="mr-14 hidden sm:flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3">
-              <Clock3 size={20} className="text-amber-400" />
+            <div className="mr-14 hidden sm:flex items-center gap-3 rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3">
+              <Clock3 size={20} className="text-warning" />
               <div>
                 <p className="text-xs text-muted-foreground">Awaiting review</p>
-                <p className="text-xl font-bold leading-none text-amber-400">{leavesArray.length}</p>
+                <p className="text-xl font-bold leading-none text-warning">{leavesArray.length}</p>
               </div>
             </div>
           </div>
@@ -74,7 +74,7 @@ export default function ManagerLeaves() {
             </div>
           ) : leavesArray.length === 0 ? (
             <div className="mx-auto flex max-w-xl flex-col items-center rounded-3xl border border-dashed border-border bg-card/40 px-8 py-20 text-center">
-              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-success/10 text-success">
                 <Inbox size={30} />
               </div>
               <h2 className="text-xl font-bold">You&apos;re all caught up</h2>
@@ -90,11 +90,14 @@ export default function ManagerLeaves() {
                   : employee.firstName || employee.lastName || 'Unknown';
                 
                 const leaveType = leave.leaveType || leave.type || 'N/A';
+                const leaveTypeLabel = leaveType === 'OTHER' && leave.otherLeaveName
+                  ? leave.otherLeaveName
+                  : formatLeaveType(typeLabels, leaveType);
                 const startDate = leave.startDate || leave.from || '';
                 const endDate = leave.endDate || leave.to || '';
                 const totalDays = leave.totalDays || leave.days || 0;
                 const reason = leave.reason || '';
-                const status = leave.status || 'PENDING';
+                const status = leave.status || 'PENDING_MANAGER';
                 const decision = leave.decisionExplanation;
                 const initials = employeeName.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
                 const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-US', {
@@ -113,17 +116,17 @@ export default function ManagerLeaves() {
                         <div className="min-w-0">
                           <h3 className="truncate text-lg font-bold">{employeeName}</h3>
                           <div className="mt-1 flex flex-wrap items-center gap-2">
-                            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{formatLeaveType(typeLabels, leaveType)}</span>
+                            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{leaveTypeLabel}</span>
                             <span className="flex items-center gap-1 text-xs text-muted-foreground"><CalendarDays size={13} /> {totalDays} {totalDays === 1 ? 'day' : 'days'}</span>
                           </div>
                         </div>
                       </div>
                       <span className={`h-fit rounded-full border px-3 py-1.5 text-xs font-bold tracking-wide ${
-                        status === 'APPROVED' || status === 'Approved' ? 'bg-green-500/20 text-green-400' : 
-                        status === 'REJECTED' || status === 'Rejected' ? 'bg-red-500/20 text-red-400' :
-                        'border-amber-500/20 bg-amber-500/10 text-amber-400'
+                        status === 'APPROVED' || status === 'Approved' ? 'bg-success/20 text-success' :
+                        status === 'REJECTED' || status === 'Rejected' ? 'bg-destructive/20 text-destructive' :
+                        'border-warning/20 bg-warning/10 text-warning'
                       }`}>
-                        {status}
+                        {status === 'PENDING_MANAGER' || status === 'PENDING' ? 'AWAITING MANAGER' : status.replaceAll('_', ' ')}
                       </span>
                     </div>
 
@@ -156,20 +159,20 @@ export default function ManagerLeaves() {
                       </div>
                     )}
 
-                    {(status === 'PENDING' || status === 'Pending') && (
+                    {['PENDING_MANAGER', 'PENDING'].includes(status) && (
                       <div className="grid gap-3 border-t border-border pt-5 sm:grid-cols-2">
                         <button 
                           onClick={() => handleApprove(leave.id)}
                           disabled={processingId === leave.id}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-emerald-950 shadow-lg shadow-emerald-500/10 transition hover:bg-emerald-400 disabled:cursor-wait disabled:opacity-60"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-success px-4 py-3 font-semibold text-success-foreground shadow-lg shadow-success/10 transition hover:bg-success disabled:cursor-wait disabled:opacity-60"
                         >
                           <Check size={18} />
-                          {processingId === leave.id ? 'Processing...' : 'Approve request'}
+                          {processingId === leave.id ? 'Forwarding...' : 'Approve & forward to admin'}
                         </button>
                         <button 
                           onClick={() => handleReject(leave.id)}
                           disabled={processingId === leave.id}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 font-semibold text-red-400 transition hover:border-red-500/40 hover:bg-red-500/20 disabled:cursor-wait disabled:opacity-60"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-destructive/25 bg-destructive/10 px-4 py-3 font-semibold text-destructive transition hover:border-destructive/40 hover:bg-destructive/20 disabled:cursor-wait disabled:opacity-60"
                         >
                           <X size={18} />
                           Reject request

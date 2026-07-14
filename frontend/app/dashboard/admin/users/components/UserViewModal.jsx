@@ -31,24 +31,24 @@ export default function UserViewModal({ open, user, departments, onClose }) {
         <div className="relative bg-gradient-to-br from-primary to-primary/70 px-6 pt-5 pb-6">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-lg text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10 transition"
+            className="absolute top-4 right-4 p-2 rounded-lg text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 transition"
           >
             <X size={20} />
           </button>
           <p className="text-primary-foreground/70 text-xs font-semibold uppercase tracking-wide mb-4">User Details</p>
 
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center text-primary-foreground font-bold text-xl shrink-0">
+            <div className="w-16 h-16 rounded-2xl bg-primary-foreground/15 border border-primary-foreground/25 flex items-center justify-center text-primary-foreground font-bold text-xl shrink-0">
               {user.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
             </div>
             <div className="min-w-0">
               <h3 className="text-xl font-bold text-primary-foreground truncate">{user.name}</h3>
               <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-primary-foreground text-xs font-semibold">
+                <span className="px-2.5 py-0.5 rounded-full bg-primary-foreground/15 text-primary-foreground text-xs font-semibold">
                   {user.roleName || getRoleName(user.role_id)}
                 </span>
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  user.status === 'Active' ? 'bg-success/90 text-white' : 'bg-white/20 text-primary-foreground'
+                  user.status === 'Active' ? 'bg-success/90 text-success-foreground' : 'bg-primary-foreground/20 text-primary-foreground'
                 }`}>
                   {user.status}
                 </span>

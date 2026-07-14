@@ -170,13 +170,14 @@ async function main() {
 
   const policies = {};
   for (const p of policyData) {
-    const applicableRoleIds = p.applicableRoles.map((tier) => roleIdByTier[tier]).filter(Boolean);
+    const { applicableRoles, ...policyFields } = p;
+    const applicableRoleIds = applicableRoles.map((tier) => roleIdByTier[tier]).filter(Boolean);
     const existing = await prisma.leavePolicy.findFirst({
       where: { organizationId: org.id, leaveType: p.leaveType },
     });
     const policy = existing
-      ? await prisma.leavePolicy.update({ where: { id: existing.id }, data: { ...p, applicableRoleIds, organizationId: org.id } })
-      : await prisma.leavePolicy.create({ data: { ...p, applicableRoleIds, organizationId: org.id } });
+      ? await prisma.leavePolicy.update({ where: { id: existing.id }, data: { ...policyFields, applicableRoleIds, organizationId: org.id } })
+      : await prisma.leavePolicy.create({ data: { ...policyFields, applicableRoleIds, organizationId: org.id } });
     policies[p.leaveType] = policy;
   }
   const demoPolicyRules = {

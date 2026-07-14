@@ -109,7 +109,7 @@ const updateOrganizationSettings = async (user, data) => {
     wifiVerificationEnabled: data.wifiVerificationEnabled,
     leaveAutomationEnabled: data.leaveAutomationEnabled,
     sandwichLeaveEnabled: data.sandwichLeaveEnabled,
-    attendancePolicyJson: data.attendancePolicyJson || data.attendancePolicy,
+    attendancePolicyJson: data.attendancePolicy || data.attendancePolicyJson,
   };
   const cleanSettingsData = Object.fromEntries(Object.entries(settingsData).filter(([, value]) => value !== undefined));
 

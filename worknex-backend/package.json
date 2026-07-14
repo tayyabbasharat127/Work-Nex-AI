@@ -21,6 +21,7 @@
     "db:seed": "node prisma/seed.js",
     "db:preflight": "node scripts/db-preflight.js",
     "leave:backfill-defaults": "node scripts/backfill-default-leave-policies.js",
+    "policy:configure": "node scripts/configure-nts-faculty-policy.js",
     "lint": "eslint src scripts prisma --max-warnings=0",
     "test": "jest --testPathPatterns=src/__tests__ --forceExit",
     "test:watch": "jest --testPathPatterns=src/__tests__ --watch"

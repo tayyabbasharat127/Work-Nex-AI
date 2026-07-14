@@ -139,6 +139,53 @@
   html {
     font-size: 18px;
   }
+  /* Tailwind v4 preflight resets button cursor to `default` — restore the
+     pointer so every clickable button (modal close/open toggles, actions,
+     icon buttons) actually looks clickable on hover. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* Dashboard-wide layout safeguards. The notification/alert controls occupy the
+   top-right corner, so sticky page headers keep a small action-safe gutter and
+   wrap their own controls before labels can collide. */
+@media (min-width: 48rem) {
+  main > [class*='sticky'][class*='top-0'] {
+    padding-right: 5.5rem;
+  }
+}
+
+@media (max-width: 47.999rem) {
+  main > [class*='sticky'][class*='top-0'] {
+    padding-left: 4.75rem;
+  }
+}
+
+main > [class*='sticky'][class*='top-0'] > [class*='flex'] {
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+main > [class*='sticky'][class*='top-0'] h1,
+main > [class*='sticky'][class*='top-0'] p {
+  overflow-wrap: anywhere;
+}
+
+/* Keep wide data tables usable on narrow pages instead of clipping columns. */
+main div:has(> table) {
+  overflow-x: auto;
+}
+
+main table {
+  min-width: max-content;
+}
+
+/* Recharts otherwise paints a light-grey/white hover rectangle in dark mode. */
+.recharts-tooltip-cursor {
+  fill: color-mix(in oklch, var(--muted) 78%, transparent);
 }
 
 @layer utilities {

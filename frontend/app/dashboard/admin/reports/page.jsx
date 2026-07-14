@@ -6,6 +6,17 @@ import { reportsAPI, hoursShortfallAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import { Download, FileText, RefreshCw, BarChart3, Users, Calendar, Clock } from 'lucide-react';
 
+const humanizeKey = (key) => key
+  .replace(/([a-z])([A-Z])/g, '$1 $2')
+  .replace(/^./, (c) => c.toUpperCase());
+
+const formatSummary = (summary) => {
+  if (!summary || typeof summary !== 'object') return 'No summary yet';
+  const entries = Object.entries(summary);
+  if (!entries.length) return 'No summary yet';
+  return entries.map(([key, value]) => `${humanizeKey(key)}: ${value}`).join(' · ');
+};
+
 export default function AdminReports() {
   const [activeTab, setActiveTab] = useState('attendance');
   const [reports, setReports] = useState({ attendance: null, leave: null, performance: null, department: null, hoursShortfall: null });
@@ -131,7 +142,7 @@ export default function AdminReports() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold">{tabs.find((t) => t.id === activeTab)?.label} Report</h2>
-              <p className="text-sm text-muted-foreground">{currentReport?.summary ? JSON.stringify(currentReport.summary) : 'No summary yet'}</p>
+              <p className="text-sm text-muted-foreground">{formatSummary(currentReport?.summary)}</p>
             </div>
             <button onClick={() => exportCSV(currentReport)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition text-sm">
               <Download size={16} />
@@ -165,9 +176,10 @@ function ReportTable({ loading, report, error, onRetry }) {
   if (!rows.length) {
     return <div className="h-48 flex items-center justify-center border border-dashed border-border rounded-xl text-muted-foreground">No report rows found</div>;
   }
-  // Raw internal "id" (UUID primary key) isn't useful to read on screen —
-  // employeeId/userId etc. are the human-meaningful identifiers and stay.
-  const headers = Object.keys(rows[0]).filter((h) => h !== 'id');
+  // Raw internal UUID primary/foreign keys ("id", "userId") aren't useful to
+  // read on screen — employeeId/employeeName etc. are the human-meaningful
+  // identifiers and stay.
+  const headers = Object.keys(rows[0]).filter((h) => h !== 'id' && h !== 'userId');
   return (
     <div className="bg-card border border-border rounded-xl overflow-auto">
       <table className="w-full text-sm">

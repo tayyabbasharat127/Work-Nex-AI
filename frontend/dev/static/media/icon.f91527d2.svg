@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="wnx-node" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+    <linearGradient id="wnx-beam" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="100%" stop-color="#38BDF8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- dark background -->
+  <rect width="64" height="64" rx="14" fill="#0B1220"/>
+
+  <!-- hexagon wireframe -->
+  <path d="M32 10 50.6 20.75 50.6 42.25 32 53 13.4 42.25 13.4 20.75Z"
+        stroke="#38BDF8" stroke-opacity="0.45" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- hidden cube edge (top node to core) -->
+  <line x1="32" y1="12" x2="32" y2="32" stroke="#16283F" stroke-width="5"/>
+
+  <!-- bright beams (core to lower nodes) -->
+  <line x1="32" y1="32" x2="13.4" y2="42.25" stroke="url(#wnx-beam)" stroke-width="5" stroke-linecap="round"/>
+  <line x1="32" y1="32" x2="50.6" y2="42.25" stroke="url(#wnx-beam)" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- vertex nodes -->
+  <circle cx="32"   cy="10"    r="4"   fill="#38BDF8"/>
+  <circle cx="13.4" cy="20.75" r="2.7" fill="#5BC8F5"/>
+  <circle cx="50.6" cy="20.75" r="2.7" fill="#5BC8F5"/>
+  <circle cx="13.4" cy="42.25" r="4.5" fill="url(#wnx-node)"/>
+  <circle cx="50.6" cy="42.25" r="4.5" fill="url(#wnx-node)"/>
+  <circle cx="32"   cy="53"    r="3.2" fill="#38BDF8"/>
+
+  <!-- core node -->
+  <circle cx="32" cy="32" r="7" fill="url(#wnx-node)" stroke="#0EA5E9" stroke-opacity="0.6" stroke-width="1.5"/>
+</svg>

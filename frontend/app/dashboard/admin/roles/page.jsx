@@ -103,8 +103,8 @@ export default function AdminRoles() {
 
       <main className="flex-1 overflow-auto md:ml-64">
         <div className="sticky top-0 bg-card border-b border-border p-6 z-20">
-          <div className="flex justify-between items-center">
-            <div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 max-w-4xl">
               <h1 className="text-3xl font-bold">Roles & Permissions</h1>
               <p className="text-muted-foreground mt-1">
                 Built-in roles (Admin/Manager/Employee) always exist. Create custom roles with their
@@ -113,7 +113,7 @@ export default function AdminRoles() {
             </div>
             <button
               onClick={handleOpenAddModal}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition"
+              className="inline-flex shrink-0 items-center justify-center gap-2 self-start px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition"
             >
               <Plus size={20} />
               Add Role
@@ -154,10 +154,10 @@ export default function AdminRoles() {
                       )}
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-6 text-sm">
-                    <div>
+                  <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 sm:gap-6">
+                    <div className="min-w-0">
                       <p className="text-muted-foreground mb-1">Permissions</p>
-                      <p className="font-semibold">
+                      <p className="font-semibold break-words">
                         {role.permissions?.length ? role.permissions.join(', ') : 'None (scope-only access)'}
                       </p>
                     </div>

@@ -305,6 +305,7 @@ export default function AdminAttendance() {
                     <th className="text-left py-4 px-6 font-semibold">Check Out</th>
                     <th className="text-left py-4 px-6 font-semibold">Work Hours</th>
                     <th className="text-left py-4 px-6 font-semibold">Status</th>
+                    <th className="text-left py-4 px-6 font-semibold">Notes</th>
                     <th className="text-left py-4 px-6 font-semibold">Actions</th>
                   </tr>
                 </thead>
@@ -313,18 +314,18 @@ export default function AdminAttendance() {
                     <tr key={record.id} className="hover:bg-muted/30 transition">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-semibold text-sm">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-semibold text-sm shrink-0">
                             {personName(record).split(' ').map(n => n[0]).join('')}
                           </div>
-                          <span className="font-medium">{personName(record)}</span>
+                          <span className="font-medium truncate max-w-[160px]" title={personName(record)}>{personName(record)}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-muted-foreground">{departmentName(record)}</td>
-                      <td className="py-4 px-6"><span className={!record.checkIn ? 'text-muted-foreground' : 'text-foreground'}>{formatTime(record.checkIn)}</span></td>
-                      <td className="py-4 px-6"><span className={!record.checkOut ? 'text-muted-foreground' : 'text-foreground'}>{formatTime(record.checkOut)}</span></td>
-                      <td className="py-4 px-6 font-medium">{formatHours(record.workingHours)}</td>
+                      <td className="py-4 px-6 text-muted-foreground truncate max-w-[140px]" title={departmentName(record)}>{departmentName(record)}</td>
+                      <td className="py-4 px-6"><span className={!record.checkIn ? 'text-muted-foreground' : 'text-foreground'} title={formatTime(record.checkIn)}>{formatTime(record.checkIn)}</span></td>
+                      <td className="py-4 px-6"><span className={!record.checkOut ? 'text-muted-foreground' : 'text-foreground'} title={formatTime(record.checkOut)}>{formatTime(record.checkOut)}</span></td>
+                      <td className="py-4 px-6 font-medium" title={formatHours(record.workingHours)}>{formatHours(record.workingHours)}</td>
                       <td className="py-4 px-6">
-                        <span className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                        <span title={statusLabel(record.status)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
                           record.status === 'PRESENT' ? 'bg-success/20 text-success' :
                           record.status === 'LATE' ? 'bg-warning/20 text-warning' :
                           record.status === 'ABSENT' ? 'bg-destructive/20 text-destructive' :
@@ -332,9 +333,16 @@ export default function AdminAttendance() {
                           'bg-accent/20 text-accent'
                         }`}>{statusLabel(record.status)}</span>
                       </td>
+                      <td className="py-4 px-6 text-muted-foreground text-xs">
+                        {record.notes ? (
+                          <span className="block truncate max-w-[200px] cursor-help" title={record.notes}>{record.notes}</span>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
+                        )}
+                      </td>
                       <td className="py-4 px-6">
                         {record.status === 'ABSENT' && (
-                          <button onClick={() => handleMarkAttendance(record.id, 'PRESENT')} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-success/20 text-success hover:bg-success/30 transition">Mark Present</button>
+                          <button onClick={() => handleMarkAttendance(record.id, 'PRESENT')} title="Mark this record present" className="px-3 py-1.5 rounded-lg text-xs font-medium bg-success/20 text-success hover:bg-success/30 transition">Mark Present</button>
                         )}
                         {record.status !== 'ABSENT' && <span className="text-muted-foreground text-xs">-</span>}
                       </td>

@@ -1,8 +1,10 @@
 ﻿const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
 const prisma = require('../../config/db');
+const { config } = require('../../config/env');
 const { ApiError } = require('../../utils/ApiError');
 const { sendEmail } = require('../../config/email');
+const { organizationWelcomeEmail } = require('../../utils/emailTemplates');
 const { PLANS, TAX_RATE, ANNUAL_DISCOUNT } = require('./billing.plans');
 const { ensureDefaultLeavePolicies, ensureLeaveBalancesForUser } = require('../leave/leave.defaults');
 const { ensureSystemRoles } = require('../../utils/systemRoles');
@@ -43,6 +45,8 @@ const trySendEmail = async (to, subject, html) => {
 
 const generateOwnerEmployeeId = () => `OWNER-${Date.now().toString(36).toUpperCase()}-${uuidv4().slice(0, 6).toUpperCase()}`;
 
+const SELF_SERVE_PLAN_TYPES = ['STARTER', 'GROWTH', 'BUSINESS', 'ENTERPRISE'];
+
 const registerOrganization = async (data) => {
   const {
     orgName,
@@ -55,6 +59,7 @@ const registerOrganization = async (data) => {
     password,
     phone,
     website,
+    planType,
   } = data;
   const slug = orgName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   const existing = await prisma.organization.findUnique({ where: { slug } });
@@ -65,6 +70,12 @@ const registerOrganization = async (data) => {
 
   const rawPassword = ownerPassword || password;
   if (!rawPassword) throw new ApiError(400, 'Owner password is required');
+
+  // Signup always starts on a 14-day trial (no payment collected) — but the
+  // trial is *of* the plan the customer picked, not a separate flat "Trial"
+  // tier. Falls back to PLANS.TRIAL (10 employees) only when no plan was
+  // selected, so this stays backward-compatible with older signup payloads.
+  const selectedPlan = SELF_SERVE_PLAN_TYPES.includes(planType) ? PLANS[planType] : PLANS.TRIAL;
 
   const trialEnd   = new Date();
   trialEnd.setDate(trialEnd.getDate() + PLANS.TRIAL.trialDays);
@@ -114,8 +125,9 @@ const registerOrganization = async (data) => {
     });
     await tx.subscription.create({
       data: {
-        organizationId: organization.id, plan: 'TRIAL', status: 'TRIAL',
-        billingCycle: 'MONTHLY', maxEmployees: PLANS.TRIAL.maxEmployees,
+        organizationId: organization.id, plan: selectedPlan.type, status: 'TRIAL',
+        billingCycle: 'MONTHLY', maxEmployees: selectedPlan.maxEmployees,
+        // Trial means no charge yet regardless of which plan is being trialled.
         pricePerMonth: 0, discountPercent: 0, trialEndsAt: trialEnd,
         currentPeriodStart: new Date(), currentPeriodEnd: trialEnd, licenseKey,
       },
@@ -127,8 +139,17 @@ const registerOrganization = async (data) => {
     return { organization: updatedOrganization, owner: serializedOwner };
   });
 
-  await trySendEmail(ownerEmail, 'Welcome to WorkNex AI',
-    '<h2>Welcome ' + ownerFirstName + '!</h2><p>Trial started. License: ' + licenseKey + '</p>');
+  const { subject, html } = organizationWelcomeEmail({
+    orgName,
+    ownerFirstName,
+    planName: selectedPlan.name,
+    maxEmployees: selectedPlan.maxEmployees,
+    trialEndsAt: trialEnd,
+    licenseKey,
+    loginEmail: ownerEmail,
+    loginUrl: `${config.frontendUrl}/login`,
+  });
+  await trySendEmail(ownerEmail, subject, html);
 
   return { ...result, licenseKey, trialEndsAt: trialEnd };
 };

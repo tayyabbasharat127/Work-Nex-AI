@@ -36,11 +36,11 @@ export default function NotificationBell({ role }) {
       <button
         onClick={() => setOpen((v) => !v)}
         title="Notifications"
-        className="relative p-2 rounded-lg hover:bg-muted transition text-foreground"
+        className="relative flex h-11 w-11 items-center justify-center rounded-xl hover:bg-muted transition text-foreground"
       >
         <Bell size={20} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-bold px-1">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold px-1">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}

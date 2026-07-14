@@ -3,22 +3,11 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { analyticsAPI, attendanceAPI, leaveAPI, notificationsAPI, performanceAPI, userAPI } from '@/lib/api';
+import { getStoredUser } from '@/lib/authStorage';
 import { Users, Clock, CalendarX, TrendingUp, Check, X, AlertCircle, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
-const COLORS = { present: '#10b981', absent: '#ef4444', late: '#f59e0b', leave: '#06b6d4' };
-
-function getStoredUser() {
-  if (typeof window === 'undefined') return null;
-  const userData = localStorage.getItem('user');
-  if (!userData) return null;
-  try {
-    return JSON.parse(userData);
-  } catch {
-    localStorage.removeItem('user');
-    return null;
-  }
-}
+const COLORS = { present: 'var(--success)', absent: 'var(--destructive)', late: 'var(--warning)', leave: 'var(--info)' };
 
 function normalizeArray(value) {
   if (Array.isArray(value)) return value;
@@ -123,7 +112,7 @@ export default function ManagerDashboard() {
   const present = todayAttendance.filter((item) => ['PRESENT', 'LATE'].includes(item.status)).length;
   const late = todayAttendance.filter((item) => item.status === 'LATE').length;
   const absent = todayAttendance.filter((item) => item.status === 'ABSENT').length;
-  const onLeave = pendingLeaves.filter((item) => item.status === 'PENDING').length;
+  const onLeave = pendingLeaves.filter((item) => ['PENDING', 'PENDING_MANAGER'].includes(item.status)).length;
   const teamStatus = [
     { name: 'Present', value: present, color: COLORS.present },
     { name: 'Late', value: late, color: COLORS.late },
@@ -149,9 +138,9 @@ export default function ManagerDashboard() {
   }));
 
   const stats = [
-    { label: 'Team Members', value: teamMembers.length || kpis?.totalEmployees || 0, icon: Users, color: 'text-cyan-400' },
-    { label: 'Present Today', value: present || kpis?.activeToday || 0, icon: Clock, color: 'text-emerald-400' },
-    { label: 'Absent Today', value: absent || kpis?.absentToday || 0, icon: CalendarX, color: 'text-red-400' },
+    { label: 'Team Members', value: teamMembers.length || kpis?.totalEmployees || 0, icon: Users, color: 'text-info' },
+    { label: 'Present Today', value: present || kpis?.activeToday || 0, icon: Clock, color: 'text-success' },
+    { label: 'Absent Today', value: absent || kpis?.absentToday || 0, icon: CalendarX, color: 'text-destructive' },
     { label: 'Attendance Rate', value: `${kpis?.attendanceRate ?? 0}%`, icon: TrendingUp, color: 'text-violet-400' },
   ];
 
@@ -203,9 +192,9 @@ export default function ManagerDashboard() {
                 <div className="h-64 min-w-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={attendanceTrend} barGap={4}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                      <XAxis dataKey="date" stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
                       <Tooltip content={<ChartTooltip />} />
                       <Legend />
                       <Bar dataKey="PRESENT" name="Present" fill={COLORS.present} radius={[4, 4, 0, 0]} />
@@ -247,13 +236,13 @@ export default function ManagerDashboard() {
               <div className="h-64 min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={performanceChart} layout="vertical" barGap={4}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
-                    <XAxis type="number" stroke="#888" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
-                    <YAxis type="category" dataKey="name" stroke="#888" fontSize={12} tickLine={false} axisLine={false} width={100} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                    <XAxis type="number" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
+                    <YAxis type="category" dataKey="name" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} width={100} />
                     <Tooltip content={<ChartTooltip />} />
                     <Legend />
-                    <Bar dataKey="attendance" name="Attendance" fill="#06b6d4" radius={[0, 4, 4, 0]} barSize={15} />
-                    <Bar dataKey="score" name="Overall Score" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={15} />
+                    <Bar dataKey="attendance" name="Attendance" fill="var(--info)" radius={[0, 4, 4, 0]} barSize={15} />
+                    <Bar dataKey="score" name="Overall Score" fill="var(--chart-4)" radius={[0, 4, 4, 0]} barSize={15} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

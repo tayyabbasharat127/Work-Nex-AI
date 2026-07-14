@@ -20,6 +20,8 @@ const bcrypt = require('bcryptjs');
 const { ensureSystemRoles, ensurePlatformSuperAdminRole } = require('../src/utils/systemRoles');
 
 const prisma = new PrismaClient();
+const SEED_PASSWORD = process.env.SEED_USER_PASSWORD;
+if (!SEED_PASSWORD) throw new Error('SEED_USER_PASSWORD is required');
 
 const d = (y, m, day) => new Date(y, m - 1, day);
 const dt = (y, m, day, h, min) => new Date(y, m - 1, day, h, min, 0);
@@ -154,7 +156,7 @@ async function main() {
 
   // ── 5. USERS ─────────────────────────────────────────────────────────────────
   console.log('👥 Creating users...');
-  const pw = await hash('DSU@2025');
+  const pw = await hash(SEED_PASSWORD);
 
   const vc = await prisma.user.upsert({
     where: { email: 'vc@dsu.edu.pk' },
@@ -247,7 +249,7 @@ async function main() {
     }
   }
   console.log(`   ✓ ${allUsers.length} users created (1 VC, 1 Registrar, 4 HODs, ${facultyUsers.length} Faculty)`);
-  console.log(`     → Demo login for all seeded users: password "DSU@2025"`);
+  console.log('     → Demo user password supplied through SEED_USER_PASSWORD');
   console.log(`     → Live "auto-approve" demo user: ahmed.raza@dsu.edu.pk (Computer Science, clean balance)`);
 
   // ── 6. LEAVE BALANCES ───────────────────────────────────────────────────────
@@ -420,7 +422,7 @@ async function main() {
   console.log(`   ✓ ${perfCount} performance records computed (run ETL afterward to refine)`);
 
   console.log('\n✅ DSU University demo data seeded successfully.\n');
-  console.log('Login credentials (all users, password: DSU@2025):');
+  console.log('Login users (password supplied through SEED_USER_PASSWORD):');
   console.log('  Vice Chancellor : vc@dsu.edu.pk');
   console.log('  Registrar       : registrar@dsu.edu.pk');
   console.log('  HOD (CS)        : kashif.mahmood@dsu.edu.pk');

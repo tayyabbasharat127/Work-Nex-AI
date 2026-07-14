@@ -7,12 +7,18 @@
 const fs = require('fs');
 const path = require('path');
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-const AI_URL = process.env.AI_URL || 'http://localhost:8000';
+const requiredUrl = (name) => {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value.replace(/\/$/, '');
+};
+const BACKEND_URL = requiredUrl('BACKEND_URL');
+const FRONTEND_URL = requiredUrl('FRONTEND_URL');
+const AI_URL = requiredUrl('AI_SERVICE_URL');
 const API = `${BACKEND_URL}/api/v1`;
 const TEST_PREFIX = process.env.TEST_PREFIX || `worknex_e2e_${Date.now()}`;
-const TEST_PASSWORD = 'NovaPay@2025';
+const TEST_PASSWORD = process.env.TEST_USER_PASSWORD;
+if (!TEST_PASSWORD) throw new Error('TEST_USER_PASSWORD is required');
 const REPORT_DIR = path.join(process.cwd(), 'reports');
 const JSON_REPORT = path.join(REPORT_DIR, 'full-module-test-report.json');
 const MD_REPORT = path.join(REPORT_DIR, 'full-module-test-report.md');
@@ -580,13 +586,32 @@ async function leaveTests() {
         body: { leaveType, startDate, endDate: startDate, reason: `E2E overlap ${TEST_PREFIX}` },
       });
       await checkJson('Leave', 'manager can evaluate subordinate leave', 'POST', `${API}/leave/${leave.id}/evaluate`, 200, { role: 'testManager' });
-      if (leave.status === 'PENDING') {
-        await checkJson('Leave', 'manager approves direct subordinate leave', 'PUT', `${API}/leave/${leave.id}/approve`, 200, {
+      if (['PENDING', 'PENDING_MANAGER'].includes(leave.status)) {
+        await checkJson('Leave', 'admin cannot bypass manager approval', 'PUT', `${API}/leave/${leave.id}/approve`, 409, {
+          role: 'admin',
+          body: { note: 'premature admin approval' },
+        });
+        const managerApproval = await checkJson('Leave', 'manager approves and forwards subordinate leave', 'PUT', `${API}/leave/${leave.id}/approve`, 200, {
           role: 'testManager',
-          body: { note: 'E2E approval' },
+          body: { note: 'E2E manager approval' },
+        });
+        add(
+          'Leave',
+          'manager approval leaves request pending for admin',
+          dataOf(managerApproval)?.status === 'PENDING_ADMIN' ? 'PASS' : 'FAIL',
+          dataOf(managerApproval)?.status,
+        );
+        await checkJson('Leave', 'admin grants final leave approval', 'PUT', `${API}/leave/${leave.id}/approve`, 200, {
+          role: 'admin',
+          body: { note: 'E2E final approval' },
+        });
+      } else if (leave.status === 'PENDING_ADMIN') {
+        await checkJson('Leave', 'admin grants final leave approval', 'PUT', `${API}/leave/${leave.id}/approve`, 200, {
+          role: 'admin',
+          body: { note: 'E2E final approval' },
         });
       } else {
-        add('Leave', 'manager approval only when pending', 'SKIPPED', `automation status=${leave.status}`);
+        add('Leave', 'hierarchical approval only when pending', 'SKIPPED', `automation status=${leave.status}`);
       }
     }
     const excess = await checkJson('Leave', 'excess leave is rejected or blocked', 'POST', `${API}/leave`, [400, 409], {
@@ -599,7 +624,7 @@ async function leaveTests() {
   const adminLeaves = await checkJson('Leave', 'admin gets leave list', 'GET', `${API}/leave?limit=1`, 200, { role: 'admin' });
   const unrelated = firstArray(adminLeaves).find((l) => l.employeeId !== state.created.employeeId);
   if (unrelated) {
-    await checkJson('Leave', 'manager cannot approve non-subordinate leave', 'PUT', `${API}/leave/${unrelated.id}/approve`, [400, 403], {
+    await checkJson('Leave', 'manager cannot approve non-subordinate leave', 'PUT', `${API}/leave/${unrelated.id}/approve`, [400, 403, 409], {
       role: 'testManager',
       body: { note: 'should not approve' },
     });

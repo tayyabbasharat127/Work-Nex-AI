@@ -11,6 +11,7 @@
 
 const axios = require('axios');
 const prisma = require('../../../config/db');
+const { config } = require('../../../config/env');
 const { ApiError } = require('../../../utils/ApiError');
 const { getOrganizationScope } = require('../../../utils/tenant');
 const { decrypt } = require('../../../utils/encryption');
@@ -139,20 +140,11 @@ const fetchRawRecords = async (syncDate, requestingUser) => {
     // a webhook receiver already wrote to the DB; not built yet (see plan).
   }
 
-  if (process.env.TMS_MODE || process.env.TMS_API_URL) {
+  if (config.tms.enabled) {
     // Full real TMS service (retry backoff + SFTP fallback + normalisation)
     const tmsReal = require('../tms.real.service');
     const tmsResult = await tmsReal.fetchAttendance(dateStr);
     return { records: tmsResult.records || [], mode: tmsResult.source || 'real-tms' };
-  }
-
-  if (process.env.TMS_API_KEY && !process.env.TMS_MODE) {
-    // Legacy simple HTTP path (kept for backwards compat)
-    const response = await axios.get(`${process.env.TMS_API_URL}/attendance`, {
-      headers: { 'x-api-key': process.env.TMS_API_KEY },
-      params: { date: dateStr },
-    });
-    return { records: response.data?.records || [], mode: 'external-legacy' };
   }
 
   return { records: await buildMockTmsRecords(syncDate, requestingUser), mode: 'demo-fallback' };

@@ -83,11 +83,11 @@ export default function ManagerAttendance() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'PRESENT': return 'bg-green-500/20 text-green-400';
-      case 'LATE': return 'bg-yellow-500/20 text-yellow-400';
-      case 'ABSENT': return 'bg-red-500/20 text-red-400';
-      case 'ON_LEAVE': return 'bg-blue-500/20 text-blue-400';
-      case 'HALF_DAY': return 'bg-orange-500/20 text-orange-400';
+      case 'PRESENT': return 'bg-success/20 text-success';
+      case 'LATE': return 'bg-warning/20 text-warning';
+      case 'ABSENT': return 'bg-destructive/20 text-destructive';
+      case 'ON_LEAVE': return 'bg-info/20 text-info';
+      case 'HALF_DAY': return 'bg-warning/20 text-warning';
       default: return 'bg-muted/20 text-muted-foreground';
     }
   };
@@ -107,48 +107,48 @@ export default function ManagerAttendance() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                  <Users size={20} className="text-green-400" />
+                <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
+                  <Users size={20} className="text-success" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Present</p>
-                  <p className="text-2xl font-bold text-green-400">{stats.present}</p>
+                  <p className="text-2xl font-bold text-success">{stats.present}</p>
                 </div>
               </div>
             </div>
             
             <div className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
-                  <Users size={20} className="text-red-400" />
+                <div className="w-10 h-10 rounded-lg bg-destructive/20 flex items-center justify-center">
+                  <Users size={20} className="text-destructive" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Absent</p>
-                  <p className="text-2xl font-bold text-red-400">{stats.absent}</p>
+                  <p className="text-2xl font-bold text-destructive">{stats.absent}</p>
                 </div>
               </div>
             </div>
             
             <div className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
-                  <Clock size={20} className="text-yellow-400" />
+                <div className="w-10 h-10 rounded-lg bg-warning/20 flex items-center justify-center">
+                  <Clock size={20} className="text-warning" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Late</p>
-                  <p className="text-2xl font-bold text-yellow-400">{stats.late}</p>
+                  <p className="text-2xl font-bold text-warning">{stats.late}</p>
                 </div>
               </div>
             </div>
             
             <div className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                  <Calendar size={20} className="text-blue-400" />
+                <div className="w-10 h-10 rounded-lg bg-info/20 flex items-center justify-center">
+                  <Calendar size={20} className="text-info" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">On Leave</p>
-                  <p className="text-2xl font-bold text-blue-400">{stats.onLeave}</p>
+                  <p className="text-2xl font-bold text-info">{stats.onLeave}</p>
                 </div>
               </div>
             </div>
@@ -192,7 +192,6 @@ export default function ManagerAttendance() {
                       <th className="text-left py-4 px-6 font-semibold">Check In</th>
                       <th className="text-left py-4 px-6 font-semibold">Check Out</th>
                       <th className="text-left py-4 px-6 font-semibold">Work Hours</th>
-                      <th className="text-left py-4 px-6 font-semibold">IP Address</th>
                       <th className="text-center py-4 px-6 font-semibold">Status</th>
                     </tr>
                   </thead>
@@ -220,9 +219,6 @@ export default function ManagerAttendance() {
                         </td>
                         <td className="py-4 px-6 font-medium">
                           {formatHours(record.workingHours)}
-                        </td>
-                        <td className="py-4 px-6 text-muted-foreground text-xs font-mono">
-                          {record.ipAddress || '---'}
                         </td>
                         <td className="py-4 px-6 text-center">
                           <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${getStatusColor(record.status)}`}>

@@ -1,5 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
-import { Toaster } from 'sonner'
+import { Toaster } from '@/components/ui/sonner'
+import ThemeProvider from '@/components/theme/ThemeProvider'
+import AuthThemeSwitcher from '@/components/theme/AuthThemeSwitcher'
 import './globals.css'
 
 export const metadata = {
@@ -9,16 +11,22 @@ export const metadata = {
 }
 
 export const viewport = {
-  themeColor: '#2d3748',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f7f9fc' },
+    { media: '(prefers-color-scheme: dark)', color: '#101116' },
+  ],
 }
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="dark">
-      <body className="font-sans antialiased" suppressHydrationWarning>
-        {children}
-        <Toaster position="top-right" richColors />
-        <Analytics />
+    <html lang="en" suppressHydrationWarning>
+      <body className="font-sans antialiased">
+        <ThemeProvider>
+          {children}
+          <AuthThemeSwitcher />
+          <Toaster position="top-right" richColors />
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   )

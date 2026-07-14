@@ -1,17 +1,30 @@
 const express = require('express');
 const router = express.Router();
-const { body } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const multer = require('multer');
-const fs = require('fs');
 const leaveController = require('./leave.controller');
 const { authenticate, authorize, requirePermission } = require('../../middleware/auth.middleware');
 const { validate } = require('../../middleware/validate.middleware');
 const { auditHrAccess } = require('../../middleware/audit.middleware');
 const { auditLog } = require('../../middleware/audit.middleware');
-fs.mkdirSync('storage/tmp', { recursive: true });
-const upload = multer({ dest: 'storage/tmp' });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+});
 
 router.use(authenticate);
+
+const leaveTypes = ['EMERGENCY', 'ANNUAL', 'SICK', 'CASUAL', 'MATERNITY', 'PATERNITY', 'UNPAID', 'BEREAVEMENT', 'MARRIAGE', 'STUDY', 'HAJJ', 'COMPENSATORY', 'OTHER'];
+const policyLeaveTypes = leaveTypes.filter((leaveType) => leaveType !== 'EMERGENCY');
+const policyRules = (partial = false) => [
+  partial ? body('leaveType').optional().isIn(policyLeaveTypes) : body('leaveType').isIn(policyLeaveTypes),
+  partial ? body('totalDays').optional().isInt({ min: 0, max: 366 }) : body('totalDays').isInt({ min: 0, max: 366 }),
+  body('carryForward').optional().isBoolean(),
+  body('maxCarryForward').optional().isInt({ min: 0, max: 366 }),
+  body('applicableRoleIds').optional().isArray({ max: 100 }),
+  body('applicableRoleIds.*').optional().isUUID(),
+  body('description').optional({ nullable: true }).isString().isLength({ max: 2000 }),
+];
 
 // Leave Requests — specific routes BEFORE parameterized /:id
 router.get('/my',      leaveController.getMyLeaves);
@@ -25,10 +38,11 @@ router.put('/policies/manual', requirePermission('leave:manage_policy'), leaveCo
 router.post(
   '/',
   [
-    body('leaveType').isIn(['ANNUAL', 'SICK', 'CASUAL', 'MATERNITY', 'PATERNITY', 'UNPAID', 'OTHER']),
+    body('leaveType').isIn(leaveTypes),
     body('startDate').isISO8601(),
     body('endDate').isISO8601(),
     body('reason').notEmpty().isLength({ max: 500 }),
+    body('otherLeaveName').optional({ nullable: true }).isString().trim().isLength({ min: 2, max: 100 }),
   ],
   validate,
   auditLog('LeaveRequest', 'CREATE'),
@@ -38,6 +52,9 @@ router.post(
 router.put(
   '/:id/approve',
   authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'),
+  param('id').isUUID(),
+  body('note').optional({ nullable: true }).isString().isLength({ max: 2000 }),
+  validate,
   auditLog('LeaveRequest', 'APPROVE'),
   leaveController.approveLeave
 );
@@ -45,17 +62,20 @@ router.put(
 router.put(
   '/:id/reject',
   authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'),
+  param('id').isUUID(),
+  body('note').optional({ nullable: true }).isString().isLength({ max: 2000 }),
+  validate,
   auditLog('LeaveRequest', 'REJECT'),
   leaveController.rejectLeave
 );
 
-router.put('/:id/cancel', leaveController.cancelLeave);
-router.post('/:id/evaluate', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), leaveController.evaluateLeave);
-router.get('/:id/decision-explanation', leaveController.getDecisionExplanation);
+router.put('/:id/cancel', param('id').isUUID(), validate, leaveController.cancelLeave);
+router.post('/:id/evaluate', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), param('id').isUUID(), validate, leaveController.evaluateLeave);
+router.get('/:id/decision-explanation', param('id').isUUID(), validate, leaveController.getDecisionExplanation);
 
 // Leave Balances — /me BEFORE /:userId
 router.get('/balances/me',       leaveController.getMyBalances);
-router.get('/balances/:userId',  authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), auditHrAccess('LeaveBalance'), leaveController.getUserBalances);
+router.get('/balances/:userId', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), param('userId').isUUID(), validate, auditHrAccess('LeaveBalance'), leaveController.getUserBalances);
 
 // Leave Policies — /all and /active BEFORE /:id
 router.get('/policies/all',    leaveController.getPolicies);
@@ -63,11 +83,11 @@ router.get('/policies/active', requirePermission('leave:manage_policy'), leaveCo
 // Every role needs display labels to render leave-type text — no admin-only gate here.
 router.get('/type-labels', leaveController.getLeaveTypeLabels);
 // Read by the AI service (leave-forecast baseline) using the requesting user's own token — same open-read pattern as /attendance/holidays.
-router.get('/history/daily-counts', leaveController.getDailyLeaveCounts);
-router.post('/policies',       requirePermission('leave:manage_policy'), leaveController.createPolicy);
-router.put('/policies/:id',    requirePermission('leave:manage_policy'), leaveController.updatePolicy);
+router.get('/history/daily-counts', query('days').optional().isInt({ min: 1, max: 90 }), validate, leaveController.getDailyLeaveCounts);
+router.post('/policies', requirePermission('leave:manage_policy'), policyRules(), validate, leaveController.createPolicy);
+router.put('/policies/:id', requirePermission('leave:manage_policy'), param('id').isUUID(), policyRules(true), validate, leaveController.updatePolicy);
 
 router.get('/',        leaveController.getLeaves);
-router.get('/:id',     leaveController.getLeaveById);
+router.get('/:id', param('id').isUUID(), validate, leaveController.getLeaveById);
 
 module.exports = router;

@@ -1,19 +1,24 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { billingAPI } from '@/lib/api';
 
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signup } = useAuth();
 
-  const planFromUrl = searchParams.get('plan');
-  const defaultPlan = planFromUrl === 'basic' ? 'Basic' : planFromUrl === 'enterprise' ? 'Enterprise' : 'Pro';
+  // ?plan= matches a real PlanType (e.g. "growth"), case-insensitive —
+  // resolved against the actual fetched plan list below, not guessed.
+  const planFromUrl = (searchParams.get('plan') || '').toUpperCase();
+
+  const [plans, setPlans] = useState([]);
+  const [plansLoading, setPlansLoading] = useState(true);
 
   const [formData, setFormData] = useState({
     admin_name: '',
@@ -21,7 +26,7 @@ function RegisterForm() {
     password: '',
     confirmPassword: '',
     organization_name: '',
-    subscription_plan: defaultPlan,
+    subscription_plan: '',
     industry: '',
     company_domain: '',
     city: '',
@@ -31,6 +36,21 @@ function RegisterForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    billingAPI.getPlans()
+      .then((allPlans) => {
+        // Trial isn't something you "pick" — it's the automatic 14-day
+        // starting state every plan below already includes.
+        const selectable = (Array.isArray(allPlans) ? allPlans : []).filter((p) => p.type !== 'TRIAL');
+        setPlans(selectable);
+        const matched = selectable.find((p) => p.type === planFromUrl);
+        setFormData((prev) => ({ ...prev, subscription_plan: (matched || selectable[0])?.type || '' }));
+      })
+      .catch(() => setError('Could not load subscription plans. Please refresh and try again.'))
+      .finally(() => setPlansLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const passwordRequirements = [
     { label: 'At least 8 characters', met: formData.password.length >= 8 },
@@ -215,11 +235,20 @@ function RegisterForm() {
               name="subscription_plan"
               value={formData.subscription_plan}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
+              disabled={plansLoading}
+              className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-60"
             >
-              <option value="Basic">Basic — $19/month (up to 25 employees)</option>
-              <option value="Pro">Pro — $49/month (up to 200 employees + AI)</option>
-              <option value="Enterprise">Enterprise — Custom pricing (unlimited)</option>
+              {plansLoading && <option>Loading plans...</option>}
+              {plans.map((plan) => {
+                const price = plan.pricing?.monthly;
+                const priceLabel = price === 0 ? 'Free' : (price == null ? 'Custom pricing' : `$${price}/month`);
+                const seatsLabel = plan.maxEmployees >= 999999 ? 'unlimited employees' : `up to ${plan.maxEmployees} employees`;
+                return (
+                  <option key={plan.type} value={plan.type}>
+                    {plan.name} — {priceLabel} ({seatsLabel})
+                  </option>
+                );
+              })}
             </select>
             <p className="text-xs text-muted-foreground mt-1.5">14-day free trial included. No credit card required.</p>
           </div>

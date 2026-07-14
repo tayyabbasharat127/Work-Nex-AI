@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/db');
+const { config } = require('../config/env');
 const { ApiError } = require('../utils/ApiError');
 
 /**
@@ -13,18 +14,33 @@ const authenticate = async (req, res, next) => {
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, config.jwt.accessSecret, {
+        algorithms: ['HS256'],
+        issuer: config.jwt.issuer,
+        audience: config.jwt.audience,
+      });
+    } catch (strictError) {
+      const legacy = jwt.verify(token, config.jwt.accessSecret, { algorithms: ['HS256'] });
+      if (legacy.tokenType) throw strictError;
+      decoded = legacy;
+    }
+    if (decoded.tokenType && decoded.tokenType !== 'access') {
+      return next(new ApiError(401, 'Invalid access token'));
+    }
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: {
-        id: true, email: true, isActive: true,
+        id: true, email: true, isActive: true, authVersion: true,
         firstName: true, lastName: true, employeeId: true,
         departmentId: true, managerId: true, organizationId: true,
         customRole: { select: { id: true, name: true, tier: true, permissions: true } },
       },
     });
 
-    if (!user || !user.isActive || !user.customRole) {
+    if (!user || !user.isActive || !user.customRole
+        || (decoded.version === undefined ? user.authVersion !== 0 : decoded.version !== user.authVersion)) {
       return next(new ApiError(401, 'User not found or inactive'));
     }
 

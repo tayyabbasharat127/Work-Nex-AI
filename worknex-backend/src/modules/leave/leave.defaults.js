@@ -36,6 +36,10 @@ const DEFAULT_LEAVE_POLICIES = [
 const ensureDefaultLeavePolicies = async (tx, organizationId, systemRoles) => {
   const policies = [];
   for (const policy of DEFAULT_LEAVE_POLICIES) {
+    // `applicableRoles` (tier names) is the human-readable input shape used
+    // above in DEFAULT_LEAVE_POLICIES — LeavePolicy only has an
+    // `applicableRoleIds` column, so it must be excluded before spreading
+    // `policy` into the Prisma create, not just supplemented.
     const { applicableRoles, ...policyFields } = policy;
     const applicableRoleIds = applicableRoles
       .map((tier) => systemRoles[tier]?.id)

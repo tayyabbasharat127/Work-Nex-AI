@@ -12,16 +12,7 @@ const defaultSettings = {
   timezone: 'Asia/Karachi',
   workingHours: { start: '09:00', end: '17:00' },
   lateThreshold: { hour: 9, minute: 30 },
-  officeIpRanges: '',
-  wifiVerificationEnabled: false,
   attendancePolicy: { halfDayHours: 4, workWindowStart: '', workWindowEnd: '' },
-  leaveAutomationEnabled: true,
-  sandwichLeaveEnabled: false,
-};
-
-const normalizeIpRanges = (value) => {
-  if (Array.isArray(value)) return value.filter((item) => typeof item === 'string').join(', ');
-  return typeof value === 'string' ? value : '';
 };
 
 const normalizeSettings = (value = {}) => ({
@@ -39,7 +30,6 @@ const normalizeSettings = (value = {}) => ({
     ...defaultSettings.attendancePolicy,
     ...(value.attendancePolicy && typeof value.attendancePolicy === 'object' ? value.attendancePolicy : {}),
   },
-  officeIpRanges: normalizeIpRanges(value.officeIpRanges),
 });
 
 export default function AdminSettings() {
@@ -66,17 +56,18 @@ export default function AdminSettings() {
 
   const update = (key, value) => setSettings((prev) => ({ ...prev, [key]: value }));
 
+  // For nested objects (workingHours, lateThreshold, attendancePolicy):
+  // merges against the LATEST state via the setState updater, not a
+  // `settings.xxx` value captured in the render closure. `<input type="time">`
+  // fires onChange per segment (hour, then minute) — using the closure value
+  // let a fast second edit clobber the first because it spread a stale
+  // `settings.attendancePolicy` that hadn't caught up yet.
+  const updateNested = (key, patch) => setSettings((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+
   const handleSave = async () => {
     try {
       setSaving(true);
-      const payload = {
-        ...settings,
-        officeIpRanges: settings.officeIpRanges
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean),
-      };
-      const saved = await organizationSettingsAPI.update(payload);
+      const saved = await organizationSettingsAPI.update(settings);
       setSettings(normalizeSettings(saved));
       toast.success('Settings saved');
     } catch (error) {
@@ -90,19 +81,20 @@ export default function AdminSettings() {
     <div className="flex h-screen bg-background">
       <Sidebar role="admin" />
       <main className="flex-1 overflow-auto md:ml-64">
-        <div className="sticky top-0 bg-card border-b border-border p-6 z-20">
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground mt-1">Manage organization settings and preferences.</p>
+        <div className="sticky top-0 bg-card border-b border-border px-5 py-4 z-20">
+          <h1 className="text-2xl font-bold">Settings</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Organization, attendance and account preferences.</p>
         </div>
 
-        <div className="p-6">
-          <div className="max-w-2xl">
-            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+        <div className="p-5">
+          <div className="grid max-w-6xl items-start gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+            <div className="bg-card border border-border rounded-xl p-5 space-y-5">
               {loading ? (
                 <div className="text-muted-foreground">Loading settings...</div>
               ) : (
                 <>
                   <Section title="Organization">
+                    <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Organization Name">
                       <input value={settings.name || ''} onChange={(event) => update('name', event.target.value)} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
                     </Field>
@@ -114,56 +106,39 @@ export default function AdminSettings() {
                         <option value="Europe/London">Europe/London</option>
                       </select>
                     </Field>
+                    </div>
                   </Section>
 
                   <Section title="Attendance">
                     <div className="grid grid-cols-2 gap-4">
                       <Field label="Work Start">
-                        <input type="time" value={settings.workingHours?.start || '09:00'} onChange={(event) => update('workingHours', { ...settings.workingHours, start: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                        <input type="time" value={settings.workingHours?.start || '09:00'} onChange={(event) => updateNested('workingHours', { start: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
                       </Field>
                       <Field label="Work End">
-                        <input type="time" value={settings.workingHours?.end || '17:00'} onChange={(event) => update('workingHours', { ...settings.workingHours, end: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                        <input type="time" value={settings.workingHours?.end || '17:00'} onChange={(event) => updateNested('workingHours', { end: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
                       </Field>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <Field label="Late Hour">
-                        <input type="number" value={settings.lateThreshold?.hour ?? 9} onChange={(event) => update('lateThreshold', { ...settings.lateThreshold, hour: Number(event.target.value) })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                        <input type="number" value={settings.lateThreshold?.hour ?? 9} onChange={(event) => updateNested('lateThreshold', { hour: Number(event.target.value) })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
                       </Field>
                       <Field label="Late Minute">
-                        <input type="number" value={settings.lateThreshold?.minute ?? 30} onChange={(event) => update('lateThreshold', { ...settings.lateThreshold, minute: Number(event.target.value) })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                        <input type="number" value={settings.lateThreshold?.minute ?? 30} onChange={(event) => updateNested('lateThreshold', { minute: Number(event.target.value) })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
                       </Field>
                     </div>
-                    <Field label="Office IP Ranges">
-                      <input value={settings.officeIpRanges} onChange={(event) => update('officeIpRanges', event.target.value)} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
-                    </Field>
-                    <label className="flex items-center gap-3">
-                      <input type="checkbox" checked={Boolean(settings.wifiVerificationEnabled)} onChange={(event) => update('wifiVerificationEnabled', event.target.checked)} />
-                      <span>Enable Wi-Fi/IP verification</span>
-                    </label>
                     <div className="grid grid-cols-2 gap-4">
                       <Field label="Office Window Start" hint="Reporting only — flags punches outside this range, never blocks a check-in">
-                        <input type="time" value={settings.attendancePolicy?.workWindowStart || ''} onChange={(event) => update('attendancePolicy', { ...settings.attendancePolicy, workWindowStart: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                        <input type="time" value={settings.attendancePolicy?.workWindowStart || ''} onChange={(event) => updateNested('attendancePolicy', { workWindowStart: event.target.value })} className="time-picker-visible w-full px-4 py-2 rounded-lg border border-border bg-input text-foreground" />
                       </Field>
                       <Field label="Office Window End">
-                        <input type="time" value={settings.attendancePolicy?.workWindowEnd || ''} onChange={(event) => update('attendancePolicy', { ...settings.attendancePolicy, workWindowEnd: event.target.value })} className="w-full px-4 py-2 rounded-lg border border-border bg-input" />
+                        <input type="time" value={settings.attendancePolicy?.workWindowEnd || ''} onChange={(event) => updateNested('attendancePolicy', { workWindowEnd: event.target.value })} className="time-picker-visible w-full px-4 py-2 rounded-lg border border-border bg-input text-foreground" />
                       </Field>
                     </div>
                   </Section>
 
-                  <Section title="Leave Automation">
-                    <label className="flex items-center gap-3">
-                      <input type="checkbox" checked={Boolean(settings.leaveAutomationEnabled)} onChange={(event) => update('leaveAutomationEnabled', event.target.checked)} />
-                      <span>Enable leave automation rules</span>
-                    </label>
-                    <label className="flex items-center gap-3">
-                      <input type="checkbox" checked={Boolean(settings.sandwichLeaveEnabled)} onChange={(event) => update('sandwichLeaveEnabled', event.target.checked)} />
-                      <span>Enable sandwich-leave rule (leave adjacent to an unapproved absence deducts the weekend/holiday gap too)</span>
-                    </label>
-                  </Section>
-
-                  <div className="pt-6 border-t border-border">
-                    <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition font-medium disabled:opacity-50">
-                      <Save size={20} />
+                  <div className="pt-4 border-t border-border">
+                    <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition text-sm font-medium disabled:opacity-50">
+                      <Save size={17} />
                       {saving ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
@@ -171,8 +146,8 @@ export default function AdminSettings() {
               )}
             </div>
 
-            <div className="bg-card border border-border rounded-lg p-6 mt-6">
-              <h2 className="text-lg font-bold mb-4">Account Security</h2>
+            <div className="bg-card border border-border rounded-xl p-5">
+              <h2 className="font-bold mb-3">Account Security</h2>
               <TwoFactorSettings />
             </div>
           </div>

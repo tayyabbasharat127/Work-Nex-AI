@@ -7,12 +7,12 @@ import { departmentAPI, userAPI } from '@/lib/api';
 import { toast } from 'sonner';
 
 const DEPT_COLORS = [
-  { bg: 'bg-blue-500/10', border: 'border-blue-500/30', icon: 'text-blue-400', dot: 'bg-blue-500' },
-  { bg: 'bg-purple-500/10', border: 'border-purple-500/30', icon: 'text-purple-400', dot: 'bg-purple-500' },
-  { bg: 'bg-green-500/10', border: 'border-green-500/30', icon: 'text-green-400', dot: 'bg-green-500' },
-  { bg: 'bg-orange-500/10', border: 'border-orange-500/30', icon: 'text-orange-400', dot: 'bg-orange-500' },
+  { bg: 'bg-info/10', border: 'border-info/30', icon: 'text-info', dot: 'bg-info' },
+  { bg: 'bg-chart-4/10', border: 'border-chart-4/30', icon: 'text-chart-4', dot: 'bg-chart-4' },
+  { bg: 'bg-success/10', border: 'border-success/30', icon: 'text-success', dot: 'bg-success' },
+  { bg: 'bg-warning/10', border: 'border-warning/30', icon: 'text-warning', dot: 'bg-warning' },
   { bg: 'bg-pink-500/10', border: 'border-pink-500/30', icon: 'text-pink-400', dot: 'bg-pink-500' },
-  { bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', icon: 'text-cyan-400', dot: 'bg-cyan-500' },
+  { bg: 'bg-info/10', border: 'border-info/30', icon: 'text-info', dot: 'bg-info' },
 ];
 
 export default function AdminDepartments() {
@@ -128,8 +128,8 @@ export default function AdminDepartments() {
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-card border border-border rounded-xl p-5">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-blue-500/20">
-                  <Building2 size={20} className="text-blue-400" />
+                <div className="p-2.5 rounded-xl bg-info/20">
+                  <Building2 size={20} className="text-info" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Departments</p>
@@ -139,8 +139,8 @@ export default function AdminDepartments() {
             </div>
             <div className="bg-card border border-border rounded-xl p-5">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-green-500/20">
-                  <Users size={20} className="text-green-400" />
+                <div className="p-2.5 rounded-xl bg-success/20">
+                  <Users size={20} className="text-success" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Employees</p>
@@ -150,8 +150,8 @@ export default function AdminDepartments() {
             </div>
             <div className="bg-card border border-border rounded-xl p-5">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-purple-500/20">
-                  <Briefcase size={20} className="text-purple-400" />
+                <div className="p-2.5 rounded-xl bg-chart-4/20">
+                  <Briefcase size={20} className="text-chart-4" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Avg Team Size</p>
@@ -204,8 +204,8 @@ export default function AdminDepartments() {
                           <Edit size={15} className="text-muted-foreground" />
                         </button>
                         <button onClick={() => handleDelete(dept.id)}
-                          className="p-2 rounded-lg hover:bg-red-500/10 transition">
-                          <Trash2 size={15} className="text-red-400" />
+                          className="p-2 rounded-lg hover:bg-destructive/10 transition">
+                          <Trash2 size={15} className="text-destructive" />
                         </button>
                       </div>
                     </div>

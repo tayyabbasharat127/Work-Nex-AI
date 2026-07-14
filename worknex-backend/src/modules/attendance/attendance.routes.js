@@ -1,15 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { body } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const attendanceController = require('./attendance.controller');
 const { authenticate, authorize, requirePermission } = require('../../middleware/auth.middleware');
 const { validate } = require('../../middleware/validate.middleware');
 const rateLimit = require('express-rate-limit');
-const { auditHrAccess } = require('../../middleware/audit.middleware');
+const { auditHrAccess, auditLog } = require('../../middleware/audit.middleware');
+const { config } = require('../../config/env');
 
 const webhookLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: Number(process.env.BIOMETRIC_WEBHOOK_RATE_LIMIT || 120),
+  max: config.biometricWebhookRateLimit,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Biometric webhook rate limit exceeded' },
@@ -32,19 +33,41 @@ router.post('/tms-webhook', webhookLimiter, [
 router.use(authenticate);
 
 // ── Employee self-service (named routes BEFORE /:id) ──────────────────────────
-router.post('/check-in',  attendanceController.checkIn);
+router.post('/check-in', [
+  body('latitude').optional().isFloat({ min: -90, max: 90 }),
+  body('longitude').optional().isFloat({ min: -180, max: 180 }),
+], validate, attendanceController.checkIn);
 router.post('/check-out', attendanceController.checkOut);
 router.post('/ping',      attendanceController.autoPing);
 router.get('/today',      attendanceController.getTodayAttendance);
-router.get('/my',         attendanceController.getMyAttendance);
+router.get('/my', [
+  query('page').optional().isInt({ min: 1 }),
+  query('limit').optional().isInt({ min: 1, max: 100 }),
+  query('startDate').optional().isISO8601(),
+  query('endDate').optional().isISO8601(),
+], validate, attendanceController.getMyAttendance);
 
 // ── Holidays (named, before /:id) ─────────────────────────────────────────────
-router.get('/holidays',  attendanceController.getHolidays);
-router.post('/holidays', requirePermission('attendance:manage'), attendanceController.createHoliday);
+const holidayFields = (partial = false) => [
+  partial ? body('name').optional().trim().isLength({ min: 1, max: 150 }) : body('name').trim().isLength({ min: 1, max: 150 }),
+  partial ? body('date').optional().isISO8601() : body('date').isISO8601(),
+  body('description').optional({ nullable: true }).isString().isLength({ max: 1000 }),
+  body('isRecurring').optional().isBoolean(),
+];
+
+router.get('/holidays', query('year').optional().isInt({ min: 2000, max: 2200 }), validate, attendanceController.getHolidays);
+router.post('/holidays', requirePermission('attendance:manage'), holidayFields(), validate, auditLog('Holiday', 'CREATE'), attendanceController.createHoliday);
+router.put('/holidays/:id', requirePermission('attendance:manage'), [
+  param('id').isUUID(),
+  ...holidayFields(true),
+  body().custom((value) => ['name', 'date', 'description', 'isRecurring'].some((field) => Object.prototype.hasOwnProperty.call(value, field)))
+    .withMessage('At least one holiday field is required'),
+], validate, auditLog('Holiday', 'UPDATE'), attendanceController.updateHoliday);
+router.delete('/holidays/:id', requirePermission('attendance:manage'), param('id').isUUID(), validate, auditLog('Holiday', 'DELETE'), attendanceController.deleteHoliday);
 
 // ── TMS Sync ──────────────────────────────────────────────────────────────────
-router.post('/sync/tms', requirePermission('attendance:manage'), attendanceController.syncFromTMS);
-router.post('/generate-absences', requirePermission('attendance:manage'), attendanceController.generateAbsences);
+router.post('/sync/tms', requirePermission('attendance:manage'), body('date').optional().isISO8601(), validate, attendanceController.syncFromTMS);
+router.post('/generate-absences', requirePermission('attendance:manage'), body('date').optional().isISO8601(), validate, attendanceController.generateAbsences);
 
 // ── Admin/Manager collection routes ───────────────────────────────────────────
 router.get('/summary',  authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), auditHrAccess('AttendanceSummary'), attendanceController.getAttendanceSummary);
@@ -57,14 +80,26 @@ router.post(
   '/manual',
   requirePermission('attendance:manage'),
   [
-    body('userId').notEmpty().withMessage('userId required'),
+    body('userId').isUUID().withMessage('Valid userId required'),
     body('date').isISO8601().withMessage('Valid date required'),
     body('status').isIn(['PRESENT', 'ABSENT', 'LATE', 'HALF_DAY', 'ON_LEAVE', 'HOLIDAY']).withMessage('Invalid status'),
+    body('checkIn').optional({ nullable: true }).isISO8601(),
+    body('checkOut').optional({ nullable: true }).isISO8601(),
+    body('notes').optional({ nullable: true }).isString().isLength({ max: 2000 }),
   ],
   validate,
   attendanceController.manualEntry
 );
 
-router.put('/:id', requirePermission('attendance:manage'), attendanceController.updateAttendance);
+router.put('/:id', requirePermission('attendance:manage'), [
+  param('id').isUUID(),
+  body('organizationId').optional().isUUID(),
+  body('status').optional().isIn(['PRESENT', 'ABSENT', 'LATE', 'HALF_DAY', 'ON_LEAVE', 'HOLIDAY']),
+  body('checkIn').optional({ nullable: true }).isISO8601(),
+  body('checkOut').optional({ nullable: true }).isISO8601(),
+  body('notes').optional({ nullable: true }).isString().isLength({ max: 2000 }),
+  body().custom((value) => ['status', 'checkIn', 'checkOut', 'notes'].some((field) => Object.prototype.hasOwnProperty.call(value, field)))
+    .withMessage('At least one editable attendance field is required'),
+], validate, attendanceController.updateAttendance);
 
 module.exports = router;

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { biometricAPI, WEBHOOK_BASE_URL } from '@/lib/api';
+import { biometricAPI, WEBHOOK_BASE_URL, ICLOCK_SERVER_ADDRESS, ICLOCK_SERVER_PORT } from '@/lib/api';
 import { toast } from 'sonner';
 import {
   Fingerprint, Plug, Cpu, ArrowLeftRight, RefreshCw,
@@ -188,7 +188,7 @@ export default function BiometricIntegrationPage() {
                           className="sr-only peer"
                         />
                         <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:bg-primary transition-colors" />
-                        <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5" />
+                        <div className="absolute left-1 top-1 w-4 h-4 bg-elevated rounded-full transition-transform peer-checked:translate-x-5" />
                       </label>
                     </div>
 
@@ -269,18 +269,42 @@ export default function BiometricIntegrationPage() {
 
                   {form.integrationType === 'ADMS' && (
                     <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-                      <h3 className="font-semibold">ADMS (Device Push)</h3>
+                      <h3 className="font-semibold">ADMS (Device Push) — real ZKTeco/uFace protocol</h3>
                       <p className="text-sm text-muted-foreground">
-                        The device calls WorkNex directly — configure this URL on the device itself (menu: Comm → Cloud Server Setting).
+                        Real terminal firmware only accepts a bare <strong>IP address + port</strong> in
+                        its <strong>Comm → Cloud Server Setting</strong> menu — it does not let you type a
+                        custom path. Enter exactly these two values on the device:
                       </p>
-                      <div className="bg-muted rounded-lg px-4 py-3 font-mono text-sm break-all">
-                        {WEBHOOK_BASE_URL}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium mb-1 text-muted-foreground">Server Address</label>
+                          <div className="bg-muted rounded-lg px-4 py-3 font-mono text-sm break-all">{ICLOCK_SERVER_ADDRESS}</div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium mb-1 text-muted-foreground">Server Port</label>
+                          <div className="bg-muted rounded-lg px-4 py-3 font-mono text-sm">{ICLOCK_SERVER_PORT}</div>
+                        </div>
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        The terminal will then talk to <code>/iclock/cdata</code>, <code>/iclock/getrequest</code> etc.
+                        on its own — those routes are already live on the backend. Also make sure <strong>Enable
+                        Domain Name</strong> is OFF on the device (Server Address must be a plain IP, not a hostname)
+                        unless your firmware supports DNS resolution.
+                      </p>
                       <div>
-                        <label className="block text-sm font-medium mb-2">Legacy Communication Key</label>
+                        <label className="block text-sm font-medium mb-2">Legacy Communication Key <span className="text-xs text-muted-foreground">(optional, unused by the real protocol)</span></label>
                         <input type="password" value={form.admsCommunicationKey} onChange={(e) => setForm({ ...form, admsCommunicationKey: e.target.value })} placeholder="Leave blank to keep current" className="w-full px-4 py-3 rounded-xl border border-border bg-input" />
                       </div>
-                      <p className="text-xs text-muted-foreground">Note: the device&apos;s IP need not be static for ADMS. Every request must use the per-device HMAC secret configured on the Devices tab.</p>
+                      <p className="text-xs text-muted-foreground">
+                        Every enrolled device must still be registered under the <strong>Devices</strong> tab below,
+                        using the serial number printed on the terminal (or found in its Comm menu) — the backend
+                        only accepts pushes from serials it recognizes.
+                      </p>
+                      <details className="text-xs text-muted-foreground">
+                        <summary className="cursor-pointer font-medium text-foreground">Advanced: custom-middleware JSON webhook (not for the physical device)</summary>
+                        <p className="mt-2">If you build a translator/middleware instead of pointing the terminal directly at WorkNex, it can call this signed JSON endpoint:</p>
+                        <div className="bg-muted rounded-lg px-4 py-3 font-mono mt-2 break-all">{WEBHOOK_BASE_URL}</div>
+                      </details>
                     </div>
                   )}
 
@@ -429,7 +453,7 @@ export default function BiometricIntegrationPage() {
                         {syncLogs.map((log) => (
                           <tr key={log.id}>
                             <td className="py-3 px-4">
-                              <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${log.status === 'SUCCESS' ? 'bg-success/20 text-success' : log.status === 'FAILED' ? 'bg-destructive/20 text-destructive' : 'bg-yellow-500/20 text-yellow-500'}`}>
+                              <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${log.status === 'SUCCESS' ? 'bg-success/20 text-success' : log.status === 'FAILED' ? 'bg-destructive/20 text-destructive' : 'bg-warning/20 text-warning'}`}>
                                 {log.status}
                               </span>
                             </td>

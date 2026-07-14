@@ -1,21 +1,23 @@
 const authService = require('./auth.service');
 const { apiResponse } = require('../../utils/ApiResponse');
+const { config } = require('../../config/env');
 
 const refreshCookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  secure: config.cookies.secure,
+  sameSite: config.cookies.sameSite,
   path: '/api/v1/auth',
-  maxAge: 30 * 24 * 60 * 60 * 1000,
+  maxAge: config.cookies.maxAgeMs,
+  ...(config.cookies.domain ? { domain: config.cookies.domain } : {}),
 };
 
 const setRefreshCookie = (res, refreshToken) => {
-  if (refreshToken) res.cookie('refreshToken', refreshToken, refreshCookieOptions);
+  if (refreshToken) res.cookie(config.cookies.refreshName, refreshToken, refreshCookieOptions);
 };
 
 const clearRefreshCookie = (res) => {
   const { maxAge, ...clearCookieOptions } = refreshCookieOptions;
-  res.clearCookie('refreshToken', clearCookieOptions);
+  res.clearCookie(config.cookies.refreshName, clearCookieOptions);
 };
 
 const publicTokens = (result) => {
@@ -23,7 +25,7 @@ const publicTokens = (result) => {
   // In production the refresh token lives only in the HttpOnly cookie.
   // In development the cookie is SameSite=Lax which cross-origin fetch won't send,
   // so we include it in the body so the frontend can store and resend it.
-  if (process.env.NODE_ENV === 'production') {
+  if (config.isProduction) {
     const { refreshToken, ...safeResult } = result;
     return safeResult;
   }
@@ -36,20 +38,26 @@ const register = async (req, res) => {
 };
 
 const login = async (req, res) => {
-  const result = await authService.login(req.body.email, req.body.password);
+  const result = await authService.login(req.body.email, req.body.password, {
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
   setRefreshCookie(res, result.refreshToken);
   apiResponse(res, 200, result.requires2FA ? '2FA required' : 'Login successful', publicTokens(result));
 };
 
 const refreshToken = async (req, res) => {
-  const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
-  const tokens = await authService.refreshToken(refreshToken);
+  const refreshToken = req.cookies?.[config.cookies.refreshName] || req.body.refreshToken;
+  const tokens = await authService.refreshToken(refreshToken, {
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
   setRefreshCookie(res, tokens.refreshToken);
   apiResponse(res, 200, 'Token refreshed', publicTokens(tokens));
 };
 
 const logout = async (req, res) => {
-  await authService.logout(req.user.id, req.cookies?.refreshToken || req.body.refreshToken);
+  await authService.logout(req.user.id, req.cookies?.[config.cookies.refreshName] || req.body.refreshToken);
   clearRefreshCookie(res);
   apiResponse(res, 200, 'Logged out successfully');
 };
@@ -70,7 +78,10 @@ const disable2FA = async (req, res) => {
 };
 
 const validate2FA = async (req, res) => {
-  const tokens = await authService.validate2FA(req.body.userId, req.body.token);
+  const tokens = await authService.validate2FA(req.body.userId, req.body.token, {
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
   setRefreshCookie(res, tokens.refreshToken);
   apiResponse(res, 200, 'Login successful', publicTokens(tokens));
 };

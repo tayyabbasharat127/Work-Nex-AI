@@ -1,4 +1,5 @@
 const logger = require('../config/logger');
+const { config } = require('../config/env');
 const { ApiError } = require('../utils/ApiError');
 
 const errorHandler = (err, req, res, next) => {
@@ -36,7 +37,7 @@ const errorHandler = (err, req, res, next) => {
 
   return res.status(500).json({
     success: false,
-    message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
+    message: config.isProduction ? 'Internal server error' : err.message,
   });
 };
 

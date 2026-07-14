@@ -9,6 +9,8 @@ const bcrypt = require('bcryptjs');
 const { ensureSystemRoles, ensurePlatformSuperAdminRole } = require('../src/utils/systemRoles');
 
 const prisma = new PrismaClient();
+const SEED_PASSWORD = process.env.SEED_USER_PASSWORD;
+if (!SEED_PASSWORD) throw new Error('SEED_USER_PASSWORD is required');
 const YEAR = 2025;
 const HASH = '$2a$12$demo.hash.placeholder'; // replaced per user below
 
@@ -237,7 +239,7 @@ async function main() {
   // ── 4. USERS ────────────────────────────────────────────────────────────────
   console.log('👥 Creating users...');
 
-  const pw = await hash('NovaPay@2025');
+  const pw = await hash(SEED_PASSWORD);
 
   // Super Admin — CEO / Owner
   const owner = await prisma.user.upsert({
@@ -1041,7 +1043,7 @@ async function main() {
   console.log('  ETL Logs    : 8 sync runs');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('\n  Login credentials (all users):');
-  console.log('  Password: NovaPay@2025\n');
+  console.log('  Password supplied through SEED_USER_PASSWORD\n');
   console.log('  SUPER_ADMIN : zaid.khan@novapay.pk');
   console.log('  ADMIN       : sara.malik@novapay.pk');
   console.log('  MANAGER     : ali.raza@novapay.pk       (Engineering)');

@@ -73,8 +73,11 @@ export function calculateMinutes(startTime, endTime) {
  * Get role display name
  */
 export function getRoleName(roleId) {
+  // tier 0 is WorkNex's own platform-operator account, not a role that
+  // belongs to any customer org — labeled distinctly if it ever surfaces in
+  // an org's own user list, rather than "Super Admin" reading like a normal tier.
   const roles = {
-    0: 'Super Admin',
+    0: 'WorkNex Platform Team',
     1: 'Admin',
     2: 'Manager',
     3: 'Employee'
@@ -303,11 +306,11 @@ export function formatPercentage(value, decimals = 1) {
  */
 export function generateColor(seed) {
   const colors = [
-    'bg-red-500',
-    'bg-blue-500',
-    'bg-green-500',
-    'bg-yellow-500',
-    'bg-purple-500',
+    'bg-destructive',
+    'bg-info',
+    'bg-success',
+    'bg-warning',
+    'bg-chart-4',
     'bg-pink-500',
     'bg-indigo-500',
     'bg-teal-500'

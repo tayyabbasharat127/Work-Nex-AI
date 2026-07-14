@@ -2,50 +2,57 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Charcoal + Fluorescent Blue Theme for Leave & Attendance Management */
+/* WorkNex semantic design tokens. Light is the default; dark preserves the original palette. */
 :root {
-  --background: oklch(0.14 0.008 270);
-  --foreground: oklch(0.96 0.005 270);
-  --card: oklch(0.18 0.012 270);
-  --card-foreground: oklch(0.96 0.005 270);
-  --popover: oklch(0.16 0.010 270);
-  --popover-foreground: oklch(0.96 0.005 270);
-  --primary: oklch(0.72 0.25 230);
-  --primary-foreground: oklch(0.12 0.01 270);
-  --secondary: oklch(0.24 0.015 270);
-  --secondary-foreground: oklch(0.94 0 0);
-  --muted: oklch(0.22 0.012 270);
-  --muted-foreground: oklch(0.62 0.01 270);
-  --accent: oklch(0.68 0.22 210);
-  --accent-foreground: oklch(0.12 0.01 270);
-  --destructive: oklch(0.60 0.24 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.28 0.02 260);
-  --input: oklch(0.20 0.015 270);
-  --ring: oklch(0.72 0.25 230);
-  --chart-1: oklch(0.72 0.25 230);
-  --chart-2: oklch(0.68 0.22 210);
-  --chart-3: oklch(0.70 0.20 280);
-  --chart-4: oklch(0.72 0.18 160);
-  --chart-5: oklch(0.68 0.22 30);
+  color-scheme: light;
+  --background: oklch(0.98 0.006 250);
+  --foreground: oklch(0.22 0.018 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.018 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.018 260);
+  --primary: oklch(0.59 0.19 238);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.94 0.012 250);
+  --secondary-foreground: oklch(0.28 0.02 260);
+  --muted: oklch(0.95 0.009 250);
+  --muted-foreground: oklch(0.46 0.018 260);
+  --accent: oklch(0.91 0.035 230);
+  --accent-foreground: oklch(0.28 0.04 245);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.87 0.012 250);
+  --input: oklch(0.97 0.006 250);
+  --ring: oklch(0.59 0.19 238);
+  --chart-1: oklch(0.57 0.19 238);
+  --chart-2: oklch(0.53 0.17 155);
+  --chart-3: oklch(0.65 0.16 80);
+  --chart-4: oklch(0.55 0.18 290);
+  --chart-5: oklch(0.58 0.2 25);
   --radius: 0.75rem;
-  --sidebar: oklch(0.12 0.008 270);
-  --sidebar-foreground: oklch(0.96 0.005 270);
-  --sidebar-primary: oklch(0.72 0.25 230);
-  --sidebar-primary-foreground: oklch(0.12 0.01 270);
-  --sidebar-accent: oklch(0.22 0.015 270);
-  --sidebar-accent-foreground: oklch(0.96 0.005 270);
-  --sidebar-border: oklch(0.26 0.015 270);
-  --sidebar-ring: oklch(0.72 0.25 230);
-  --success: oklch(0.70 0.20 155);
-  --success-foreground: oklch(0.12 0.01 155);
-  --warning: oklch(0.78 0.18 85);
-  --warning-foreground: oklch(0.15 0 0);
-  --info: oklch(0.68 0.20 250);
-  --info-foreground: oklch(0.12 0.01 250);
+  --sidebar: oklch(0.965 0.008 250);
+  --sidebar-foreground: oklch(0.24 0.018 260);
+  --sidebar-primary: oklch(0.59 0.19 238);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.91 0.035 230);
+  --sidebar-accent-foreground: oklch(0.25 0.03 250);
+  --sidebar-border: oklch(0.86 0.012 250);
+  --sidebar-ring: oklch(0.59 0.19 238);
+  --success: oklch(0.50 0.16 155);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.63 0.16 75);
+  --warning-foreground: oklch(0.18 0.02 75);
+  --info: oklch(0.56 0.18 250);
+  --info-foreground: oklch(0.99 0 0);
+  --surface: oklch(0.965 0.007 250);
+  --elevated: oklch(1 0 0);
+  --disabled: oklch(0.91 0.008 250);
+  --disabled-foreground: oklch(0.52 0.015 260);
+  --overlay: oklch(0.15 0.01 260 / 55%);
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.14 0.008 270);
   --foreground: oklch(0.96 0.005 270);
   --card: oklch(0.18 0.012 270);
@@ -84,6 +91,11 @@
   --warning-foreground: oklch(0.15 0 0);
   --info: oklch(0.68 0.20 250);
   --info-foreground: oklch(0.12 0.01 250);
+  --surface: oklch(0.16 0.01 270);
+  --elevated: oklch(0.20 0.014 270);
+  --disabled: oklch(0.23 0.012 270);
+  --disabled-foreground: oklch(0.55 0.01 270);
+  --overlay: oklch(0.04 0.005 270 / 72%);
 }
 
 @theme inline {
@@ -125,6 +137,17 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-disabled: var(--disabled);
+  --color-disabled-foreground: var(--disabled-foreground);
+  --color-overlay: var(--overlay);
 }
 
 @layer base {
@@ -135,6 +158,7 @@
     @apply bg-background text-foreground;
     font-size: 18px;
     line-height: 1.6;
+    transition: background-color 180ms ease, color 180ms ease;
   }
   html {
     font-size: 18px;
@@ -145,6 +169,22 @@
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 30%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  input, textarea, select {
+    color: var(--foreground);
+  }
+  input::placeholder, textarea::placeholder {
+    color: var(--muted-foreground);
+  }
+  :disabled {
+    cursor: not-allowed;
   }
 }
 
@@ -188,7 +228,60 @@ main table {
   fill: color-mix(in oklch, var(--muted) 78%, transparent);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Native time controls need an explicit scheme so the picker icon stays visible. */
+.time-picker-visible {
+  color-scheme: light;
+}
+
+.dark .time-picker-visible {
+  color-scheme: dark;
+}
+
+.time-picker-visible::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.78;
+}
+
+.time-picker-visible::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
 @layer utilities {
+  /* Dashboard headers reserve a fixed action slot for the global notification bell. */
+  @media (min-width: 48rem) {
+    main > .sticky.top-0:first-child {
+      padding-right: 5.5rem !important;
+    }
+  }
+
+  .worknex-sidebar-scrollbar {
+    scrollbar-color: color-mix(in oklch, var(--muted-foreground) 38%, transparent) transparent;
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+  }
+
+  .worknex-sidebar-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .worknex-sidebar-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .worknex-sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: color-mix(in oklch, var(--muted-foreground) 38%, transparent);
+    border-radius: 999px;
+  }
+
   .worknex-chat-scrollbar {
     scrollbar-color: color-mix(in oklch, var(--muted-foreground) 62%, transparent) var(--card);
     scrollbar-width: thin;
@@ -201,13 +294,13 @@ main table {
   }
 
   .worknex-chat-scrollbar::-webkit-scrollbar-track {
-    background: color-mix(in oklch, var(--card) 86%, black);
+    background: color-mix(in oklch, var(--card) 94%, var(--foreground));
     border-radius: 999px;
   }
 
   .worknex-chat-scrollbar::-webkit-scrollbar-thumb {
     background: color-mix(in oklch, var(--muted-foreground) 58%, var(--primary) 18%);
-    border: 2px solid color-mix(in oklch, var(--card) 86%, black);
+    border: 2px solid color-mix(in oklch, var(--card) 94%, var(--foreground));
     border-radius: 999px;
   }
 

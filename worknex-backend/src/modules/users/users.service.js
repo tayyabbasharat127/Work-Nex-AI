@@ -4,8 +4,12 @@ const { paginate, paginateMeta } = require('../../utils/pagination');
 const { assertCanAccessUser, getAccessibleUserIds, isPlatformAdmin } = require('../../utils/rbac');
 const { assertOrganizationAccess, getOrganizationScope } = require('../../utils/tenant');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { sendEmail } = require('../../config/email');
+const logger = require('../../config/logger');
+const authService = require('../auth/auth.service');
 const { getSystemRoleId } = require('../../utils/systemRoles');
+const { getActivePolicyVersion } = require('../leave/leave.automation');
 
 const userSelect = {
   id: true, employeeId: true, firstName: true, lastName: true,
@@ -108,10 +112,12 @@ const createUser = async (data, requestingUser) => {
 
   assertOrganizationAccess(requestingUser, organizationId);
 
-  const existing = await prisma.user.findFirst({
-    where: { OR: [{ email: data.email }, { employeeId: data.employeeId }] },
-  });
-  if (existing) throw new ApiError(409, 'Email or Employee ID already exists');
+  const [emailExists, employeeIdExists] = await Promise.all([
+    prisma.user.findUnique({ where: { email: data.email }, select: { id: true } }),
+    prisma.user.findFirst({ where: { organizationId, employeeId: data.employeeId }, select: { id: true } }),
+  ]);
+  if (emailExists) throw new ApiError(409, 'Email already exists');
+  if (employeeIdExists) throw new ApiError(409, 'Employee ID already exists in this organization');
 
   // Validate department exists if provided
   if (data.departmentId) {
@@ -150,7 +156,7 @@ const createUser = async (data, requestingUser) => {
     passwordHash = await bcrypt.hash(data.password, 12);
   } else {
     // Generate temp password
-    tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+    tempPassword = `${crypto.randomBytes(24).toString('base64url')}Aa1!`;
     passwordHash = await bcrypt.hash(tempPassword, 12);
   }
 
@@ -189,8 +195,16 @@ const createUser = async (data, requestingUser) => {
     select: userSelect,
   });
 
-  // Initialize leave balances for all active policies
-  const policies = await prisma.leavePolicy.findMany({ where: { organizationId } });
+  // Initialize leave balances — scoped to whatever the org's actual active
+  // LeavePolicyVersion configures (e.g. just CL/EL), not every legacy
+  // LeavePolicy row still sitting in the table from org registration
+  // defaults. Falls back to all legacy rows only if the org has never set
+  // up a real policy yet, so older/never-migrated orgs keep working as before.
+  const activeVersion = await getActivePolicyVersion(organizationId);
+  const activeLeaveTypes = activeVersion?.rulesJson?.leavePolicies?.map((rule) => rule.leaveType) || null;
+  const policies = await prisma.leavePolicy.findMany({
+    where: { organizationId, ...(activeLeaveTypes ? { leaveType: { in: activeLeaveTypes } } : {}) },
+  });
   const year = new Date().getFullYear();
   for (const policy of policies) {
     await prisma.leaveBalance.upsert({
@@ -206,34 +220,30 @@ const createUser = async (data, requestingUser) => {
     });
   }
 
-  // Send welcome email with credentials
+  // Send onboarding messages without transmitting a password.
   try {
-    const passwordInfo = tempPassword 
-      ? `<tr><td><strong>Temporary Password</strong></td><td>${tempPassword}</td></tr>`
-      : `<tr><td colspan="2"><strong>Password set by administrator</strong></td></tr>`;
-    
     await sendEmail(data.email, 'Welcome to WorkNex AI — Your Account is Ready', `
       <h2>Welcome to WorkNex AI!</h2>
-      <p>Your account has been created. Here are your login credentials:</p>
-      <table border="1" cellpadding="8" style="border-collapse:collapse">
-        <tr><td><strong>Email</strong></td><td>${data.email}</td></tr>
-        ${passwordInfo}
-        <tr><td><strong>Employee ID</strong></td><td>${data.employeeId}</td></tr>
-      </table>
-      <p><strong>Please change your password after first login.</strong></p>
-      <p>— WorkNex AI Team</p>
+      <p>Your account has been created. A separate secure link will let you set your password.</p>
     `);
-  } catch {
-    // Non-blocking — user is created even if email fails
+    if (tempPassword) await authService.forgotPassword(data.email);
+  } catch (error) {
+    logger.error('User onboarding email failed', { error: error.message, userId: user.id, organizationId });
   }
 
-  return { user: serializeUser(user), tempPassword };
+  return { user: serializeUser(user), tempPassword: null, passwordSetupRequired: Boolean(tempPassword) };
 };
 
 const updateUser = async (id, data, requestingUser) => {
   await assertCanAccessUser(requestingUser, id);
-  const { password, passwordHash, roleId: requestedRoleId, role: requestedTier, ...safeData } = data;
-  delete safeData.organizationId;
+  const { password, roleId: requestedRoleId, role: requestedTier } = data;
+  const editableFields = [
+    'email', 'employeeId', 'firstName', 'lastName', 'departmentId', 'staffCategoryId',
+    'managerId', 'designation', 'phone', 'joiningDate', 'isActive',
+  ];
+  const safeData = Object.fromEntries(
+    Object.entries(data).filter(([key]) => editableFields.includes(key)),
+  );
   const target = await prisma.user.findFirst({ where: { id, ...getOrganizationScope(requestingUser) }, select: { organizationId: true } });
   if (!target) throw new ApiError(404, 'User not found');
 
@@ -276,13 +286,35 @@ const updateUser = async (id, data, requestingUser) => {
     if (!manager) throw new ApiError(400, 'Assigned manager not found');
   }
 
-  const user = await prisma.user.update({ where: { id }, data: safeData, select: userSelect });
+  if (password) {
+    safeData.passwordHash = await bcrypt.hash(password, 12);
+    safeData.authVersion = { increment: 1 };
+  }
+
+  const user = password
+    ? await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({ where: { id }, data: safeData, select: userSelect });
+      await tx.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
+      return updated;
+    })
+    : await prisma.user.update({ where: { id }, data: safeData, select: userSelect });
   return serializeUser(user);
 };
 
 const deactivateUser = async (id, requestingUser) => {
   await assertCanAccessUser(requestingUser, id);
-  return prisma.user.update({ where: { id }, data: { isActive: false }, select: { id: true } });
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.user.update({
+      where: { id },
+      data: { isActive: false, authVersion: { increment: 1 } },
+      select: { id: true },
+    });
+    await tx.refreshToken.updateMany({
+      where: { userId: id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    return user;
+  });
 };
 
 const updateMe = async (userId, data) => {
@@ -309,14 +341,18 @@ const createDepartment = async (data, requestingUser) => {
     : requestingUser.organizationId;
 
   assertOrganizationAccess(requestingUser, organizationId);
-  return prisma.department.create({ data: { ...data, organizationId } });
+  return prisma.department.create({
+    data: { name: data.name, description: data.description || null, organizationId },
+  });
 };
 
 const updateDepartment = async (id, data, requestingUser) => {
   const department = await prisma.department.findFirst({ where: { id, ...getOrganizationScope(requestingUser) } });
   if (!department) throw new ApiError(404, 'Department not found');
   assertOrganizationAccess(requestingUser, department.organizationId);
-  const { organizationId, ...safeData } = data;
+  const safeData = Object.fromEntries(
+    Object.entries(data).filter(([key]) => ['name', 'description'].includes(key)),
+  );
   return prisma.department.update({
     where: { id },
     data: safeData,

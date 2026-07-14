@@ -98,8 +98,8 @@ export default function EmployeeAnalytics() {
   const leaveDistribution = balances.flatMap((item, index) => {
     const label = item.policy?.leaveType ? formatLeaveType(typeLabels, item.policy.leaveType) : 'Leave';
     return [
-      { name: `${label} used`, value: Number(item.usedDays || 0), color: index % 2 ? '#8b5cf6' : '#3b82f6' },
-      { name: `${label} remaining`, value: Number(item.remainingDays || 0), color: index % 2 ? '#10b981' : '#06b6d4' },
+      { name: `${label} used`, value: Number(item.usedDays || 0), color: index % 2 ? 'var(--chart-4)' : 'var(--chart-1)' },
+      { name: `${label} remaining`, value: Number(item.remainingDays || 0), color: index % 2 ? 'var(--success)' : 'var(--info)' },
     ];
   }).filter((item) => item.value > 0);
 
@@ -111,10 +111,10 @@ export default function EmployeeAnalytics() {
     }));
 
   const stats = [
-    { label: 'Average Work Hours', value: `${avgHours} hrs`, icon: Clock, color: 'text-blue-400' },
-    { label: 'Days Present', value: present, icon: Calendar, color: 'text-green-400' },
-    { label: 'Days Absent', value: absent, icon: AlertCircle, color: 'text-red-400' },
-    { label: 'Late Days', value: late, icon: TrendingUp, color: 'text-yellow-400' },
+    { label: 'Average Work Hours', value: `${avgHours} hrs`, icon: Clock, color: 'text-info' },
+    { label: 'Days Present', value: present, icon: Calendar, color: 'text-success' },
+    { label: 'Days Absent', value: absent, icon: AlertCircle, color: 'text-destructive' },
+    { label: 'Late Days', value: late, icon: TrendingUp, color: 'text-warning' },
   ];
 
   return (
@@ -161,12 +161,12 @@ export default function EmployeeAnalytics() {
                 <div className="h-72 min-w-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={workHours}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis dataKey="date" stroke="#9ca3af" />
-                      <YAxis stroke="#9ca3af" />
-                      <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="date" stroke="var(--muted-foreground)" />
+                      <YAxis stroke="var(--muted-foreground)" />
+                      <Tooltip contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: '8px' }} />
                       <Legend />
-                      <Bar dataKey="hours" fill="#3b82f6" name="Hours Worked" radius={[8, 8, 0, 0]} />
+                      <Bar dataKey="hours" fill="var(--chart-1)" name="Hours Worked" radius={[8, 8, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -179,14 +179,14 @@ export default function EmployeeAnalytics() {
                 <div className="h-72 min-w-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={monthlyAttendance}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis dataKey="week" stroke="#9ca3af" />
-                      <YAxis stroke="#9ca3af" />
-                      <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="week" stroke="var(--muted-foreground)" />
+                      <YAxis stroke="var(--muted-foreground)" />
+                      <Tooltip contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: '8px' }} />
                       <Legend />
-                      <Line type="monotone" dataKey="present" stroke="#10b981" strokeWidth={2} name="Present" />
-                      <Line type="monotone" dataKey="absent" stroke="#ef4444" strokeWidth={2} name="Absent" />
-                      <Line type="monotone" dataKey="late" stroke="#f59e0b" strokeWidth={2} name="Late" />
+                      <Line type="monotone" dataKey="present" stroke="var(--success)" strokeWidth={2} name="Present" />
+                      <Line type="monotone" dataKey="absent" stroke="var(--destructive)" strokeWidth={2} name="Absent" />
+                      <Line type="monotone" dataKey="late" stroke="var(--warning)" strokeWidth={2} name="Late" />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -204,7 +204,7 @@ export default function EmployeeAnalytics() {
                       <Pie data={leaveDistribution} cx="50%" cy="50%" labelLine={false} label={({ name, value }) => `${name}: ${value}`} outerRadius={100} dataKey="value">
                         {leaveDistribution.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                       </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                      <Tooltip contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: '8px' }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -217,12 +217,12 @@ export default function EmployeeAnalytics() {
                 <div className="h-72 min-w-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={performanceTrend}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis dataKey="period" stroke="#9ca3af" />
-                      <YAxis stroke="#9ca3af" domain={[0, 100]} />
-                      <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="period" stroke="var(--muted-foreground)" />
+                      <YAxis stroke="var(--muted-foreground)" domain={[0, 100]} />
+                      <Tooltip contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: '8px' }} />
                       <Legend />
-                      <Line type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={3} name="Performance Score" />
+                      <Line type="monotone" dataKey="score" stroke="var(--chart-4)" strokeWidth={3} name="Performance Score" />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -231,9 +231,9 @@ export default function EmployeeAnalytics() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Metric icon={TrendingUp} label="Attendance Rate" value={`${attendanceRate}%`} detail={`${attendance.length} recorded day${attendance.length === 1 ? '' : 's'}`} color="text-green-400" />
-            <Metric icon={Clock} label="Avg. Work Hours/Day" value={`${avgHours} hrs`} detail="Based on completed records" color="text-blue-400" />
-            <Metric icon={BarChart3} label="Performance Score" value={latestPerformance ? `${latestPerformance.overallScore ?? latestPerformance.score ?? 0}/100` : 'No record'} detail={latestPerformance ? `${latestPerformance.month}/${latestPerformance.year}` : 'Awaiting evaluation'} color="text-purple-400" />
+            <Metric icon={TrendingUp} label="Attendance Rate" value={`${attendanceRate}%`} detail={`${attendance.length} recorded day${attendance.length === 1 ? '' : 's'}`} color="text-success" />
+            <Metric icon={Clock} label="Avg. Work Hours/Day" value={`${avgHours} hrs`} detail="Based on completed records" color="text-info" />
+            <Metric icon={BarChart3} label="Performance Score" value={latestPerformance ? `${latestPerformance.overallScore ?? latestPerformance.score ?? 0}/100` : 'No record'} detail={latestPerformance ? `${latestPerformance.month}/${latestPerformance.year}` : 'Awaiting evaluation'} color="text-chart-4" />
           </div>
         </div>
       </main>

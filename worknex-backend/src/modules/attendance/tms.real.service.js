@@ -31,20 +31,21 @@
 
 const axios = require('axios');
 const logger = require('../../config/logger');
+const { config } = require('../../config/env');
 
-const TMS_MODE         = (process.env.TMS_MODE   || 'HTTP').toUpperCase();
-const TMS_API_URL      = process.env.TMS_API_URL  || '';
-const TMS_API_KEY      = process.env.TMS_API_KEY  || '';
-const TMS_TIMEOUT_MS   = parseInt(process.env.TMS_TIMEOUT_MS  || '10000', 10);
-const TMS_RETRY_COUNT  = parseInt(process.env.TMS_RETRY_COUNT || '3',     10);
-const TMS_LATE_CUTOFF  = parseInt(process.env.TMS_LATE_CUTOFF_H || '9',   10);
+const TMS_MODE         = config.tms.mode;
+const TMS_API_URL      = config.tms.apiUrl || '';
+const TMS_API_KEY      = config.tms.apiKey || '';
+const TMS_TIMEOUT_MS   = config.tms.timeoutMs;
+const TMS_RETRY_COUNT  = config.tms.retryCount;
+const TMS_LATE_CUTOFF  = config.tms.lateCutoffHour;
 
 // ─── HTTP transport ────────────────────────────────────────────────────────────
 
 async function _httpHeaders() {
   const h = { 'Accept': 'application/json', 'X-Api-Key': TMS_API_KEY };
-  if (process.env.TMS_API_USER && process.env.TMS_API_PASS) {
-    const creds = Buffer.from(`${process.env.TMS_API_USER}:${process.env.TMS_API_PASS}`).toString('base64');
+  if (config.tms.apiUser && config.tms.apiPassword) {
+    const creds = Buffer.from(`${config.tms.apiUser}:${config.tms.apiPassword}`).toString('base64');
     h['Authorization'] = `Basic ${creds}`;
   }
   return h;
@@ -85,15 +86,15 @@ async function _fetchSFTP(dateStr) {
 
   const sftp = new Client();
   await sftp.connect({
-    host:       process.env.TMS_SFTP_HOST,
-    port:       parseInt(process.env.TMS_SFTP_PORT || '22', 10),
-    username:   process.env.TMS_SFTP_USER,
-    password:   process.env.TMS_SFTP_PASS,
+    host:       config.tms.sftpHost,
+    port:       config.tms.sftpPort,
+    username:   config.tms.sftpUser,
+    password:   config.tms.sftpPassword,
     readyTimeout: TMS_TIMEOUT_MS,
   });
 
   try {
-    const remotePath = `${(process.env.TMS_SFTP_PATH || '/attendance').replace(/\/$/, '')}/${dateStr}.csv`;
+    const remotePath = `${config.tms.sftpPath.replace(/\/$/, '')}/${dateStr}.csv`;
     const buffer     = await sftp.get(remotePath);
     const csv        = buffer.toString('utf8');
     return _parseSFTPcsv(dateStr, csv);
@@ -175,7 +176,7 @@ async function fetchAttendance(dateStr) {
   try {
     return await _fetchHTTP(dateStr);
   } catch (err) {
-    if (process.env.TMS_SFTP_HOST) {
+    if (config.tms.sftpHost) {
       logger.warn('[TMS] HTTP failed, falling back to SFTP:', err.message);
       return _fetchSFTP(dateStr);
     }

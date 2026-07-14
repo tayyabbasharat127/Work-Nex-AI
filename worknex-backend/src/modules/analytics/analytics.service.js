@@ -1,4 +1,5 @@
 const prisma = require('../../config/db');
+const { config } = require('../../config/env');
 const { getMonthRange } = require('../../utils/dateHelpers');
 const { ApiError } = require('../../utils/ApiError');
 const { addAccessibleUserScope, assertCanAccessUser, getAccessibleUserIds, isPlatformAdmin } = require('../../utils/rbac');
@@ -30,7 +31,7 @@ const getDashboardKPIs = async (requestingUser) => {
   ] = await Promise.all([
     prisma.user.count({ where: { ...userScope, isActive: true, customRole: { tier: 'EMPLOYEE' } } }),
     prisma.attendance.count({ where: { ...attendanceScope, date: today, status: { in: ['PRESENT', 'LATE'] } } }),
-    prisma.leaveRequest.count({ where: { ...leaveScope, status: 'PENDING' } }),
+    prisma.leaveRequest.count({ where: { ...leaveScope, status: { in: ['PENDING', 'PENDING_MANAGER', 'PENDING_ADMIN'] } } }),
     prisma.attendance.count({ where: { ...attendanceScope, date: today, status: 'ABSENT' } }),
   ]);
 
@@ -310,8 +311,8 @@ const getTurnoverRate = async (year, requestingUser) => {
 const POWERBI_BASE = 'https://api.powerbi.com/v1.0/myorg';
 
 const _requirePowerBIEnv = () => {
-  const missing = ['POWERBI_CLIENT_ID', 'POWERBI_CLIENT_SECRET', 'POWERBI_TENANT_ID']
-    .filter((k) => !process.env[k]);
+  const requiredFields = { POWERBI_CLIENT_ID: 'clientId', POWERBI_CLIENT_SECRET: 'clientSecret', POWERBI_TENANT_ID: 'tenantId' };
+  const missing = Object.entries(requiredFields).filter(([, field]) => !config.powerBi[field]).map(([name]) => name);
   if (missing.length) {
     throw new ApiError(503, `Power BI not configured. Missing env vars: ${missing.join(', ')}`);
   }
@@ -320,11 +321,11 @@ const _requirePowerBIEnv = () => {
 const _getPowerBIAccessToken = async () => {
   _requirePowerBIEnv();
   const tokenRes = await axios.post(
-    `https://login.microsoftonline.com/${process.env.POWERBI_TENANT_ID}/oauth2/v2.0/token`,
+    `https://login.microsoftonline.com/${config.powerBi.tenantId}/oauth2/v2.0/token`,
     new URLSearchParams({
       grant_type: 'client_credentials',
-      client_id: process.env.POWERBI_CLIENT_ID,
-      client_secret: process.env.POWERBI_CLIENT_SECRET,
+      client_id: config.powerBi.clientId,
+      client_secret: config.powerBi.clientSecret,
       scope: 'https://analysis.windows.net/powerbi/api/.default',
     }),
     { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
@@ -339,9 +340,9 @@ const getPowerBIToken = async () => {
   const accessToken = await _getPowerBIAccessToken();
   return {
     accessToken,
-    workspaceId: process.env.POWERBI_WORKSPACE_ID,
-    reportId: process.env.POWERBI_REPORT_ID,
-    embedUrl: process.env.POWERBI_EMBED_URL,
+    workspaceId: config.powerBi.workspaceId,
+    reportId: config.powerBi.reportId,
+    embedUrl: config.powerBi.embedUrl,
     rls: {
       supported: false,
       note: 'Service-principal token — ADMIN/SUPER_ADMIN only. Per-user RLS available via /powerbi/embed-token.',
@@ -355,9 +356,9 @@ const getPowerBIToken = async () => {
  */
 const getPowerBIEmbedToken = async (requestingUser) => {
   const accessToken = await _getPowerBIAccessToken();
-  const workspaceId = process.env.POWERBI_WORKSPACE_ID;
-  const reportId = process.env.POWERBI_REPORT_ID;
-  const datasetId = process.env.POWERBI_DATASET_ID;
+  const workspaceId = config.powerBi.workspaceId;
+  const reportId = config.powerBi.reportId;
+  const datasetId = config.powerBi.datasetId;
 
   if (!workspaceId || !reportId) {
     throw new ApiError(503, 'POWERBI_WORKSPACE_ID and POWERBI_REPORT_ID must be set.');
@@ -401,7 +402,7 @@ const getPowerBIEmbedToken = async (requestingUser) => {
     reportId,
     workspaceId,
     datasetId: datasetId || null,
-    embedUrl: process.env.POWERBI_EMBED_URL,
+    embedUrl: config.powerBi.embedUrl,
     rlsApplied: !!datasetId,
     userEmail: requestingUser.email,
     userRole: requestingUser.role,
@@ -498,7 +499,7 @@ const _ensurePushDataset = async (accessToken, workspaceId, orgId) => {
  */
 const pushDataToPowerBI = async (requestingUser) => {
   const accessToken = await _getPowerBIAccessToken();
-  const workspaceId = process.env.POWERBI_WORKSPACE_ID;
+  const workspaceId = config.powerBi.workspaceId;
   if (!workspaceId) throw new ApiError(503, 'POWERBI_WORKSPACE_ID must be set.');
 
   const orgId = requestingUser.organizationId;

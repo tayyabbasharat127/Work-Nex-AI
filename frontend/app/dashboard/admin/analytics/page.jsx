@@ -11,7 +11,7 @@ import {
   Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+const COLORS = ['var(--chart-1)', 'var(--success)', 'var(--warning)', 'var(--destructive)', 'var(--chart-4)', 'var(--info)'];
 
 export default function AdminAnalytics() {
   const [kpis, setKpis] = useState(null);
@@ -96,10 +96,10 @@ export default function AdminAnalytics() {
   };
 
   const statCards = [
-    { label: 'Total Employees', value: kpis?.totalEmployees ?? '—', icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/20' },
-    { label: 'Present Today', value: kpis?.activeToday ?? '—', icon: Clock, color: 'text-green-400', bg: 'bg-green-500/20' },
-    { label: 'Pending Leaves', value: kpis?.pendingLeaves ?? '—', icon: Calendar, color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
-    { label: 'Attendance Rate', value: kpis?.attendanceRate != null ? `${kpis.attendanceRate}%` : '—', icon: TrendingUp, color: 'text-purple-400', bg: 'bg-purple-500/20' },
+    { label: 'Total Employees', value: kpis?.totalEmployees ?? '—', icon: Users, color: 'text-info', bg: 'bg-info/20' },
+    { label: 'Present Today', value: kpis?.activeToday ?? '—', icon: Clock, color: 'text-success', bg: 'bg-success/20' },
+    { label: 'Pending Leaves', value: kpis?.pendingLeaves ?? '—', icon: Calendar, color: 'text-warning', bg: 'bg-warning/20' },
+    { label: 'Attendance Rate', value: kpis?.attendanceRate != null ? `${kpis.attendanceRate}%` : '—', icon: TrendingUp, color: 'text-chart-4', bg: 'bg-chart-4/20' },
   ];
 
   return (
@@ -142,14 +142,14 @@ export default function AdminAnalytics() {
               {attendanceTrends.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <AreaChart data={attendanceTrends}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="date" stroke="#9ca3af" tick={{ fontSize: 11 }} />
-                    <YAxis stroke="#9ca3af" />
-                    <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="date" stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} />
+                    <YAxis stroke="var(--muted-foreground)" />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: '8px' }} />
                     <Legend />
-                    <Area type="monotone" dataKey="PRESENT" stroke="#10b981" fill="#10b98120" name="Present" />
-                    <Area type="monotone" dataKey="ABSENT" stroke="#ef4444" fill="#ef444420" name="Absent" />
-                    <Area type="monotone" dataKey="LATE" stroke="#f59e0b" fill="#f59e0b20" name="Late" />
+                    <Area type="monotone" dataKey="PRESENT" stroke="var(--success)" fill="color-mix(in oklch, var(--success) 18%, transparent)" name="Present" />
+                    <Area type="monotone" dataKey="ABSENT" stroke="var(--destructive)" fill="color-mix(in oklch, var(--destructive) 18%, transparent)" name="Absent" />
+                    <Area type="monotone" dataKey="LATE" stroke="var(--warning)" fill="color-mix(in oklch, var(--warning) 18%, transparent)" name="Late" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
@@ -163,11 +163,11 @@ export default function AdminAnalytics() {
               {deptAttendance.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={deptAttendance} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis type="number" stroke="#9ca3af" domain={[0, 100]} />
-                    <YAxis type="category" dataKey="department" stroke="#9ca3af" tick={{ fontSize: 11 }} width={80} />
-                    <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} />
-                    <Bar dataKey="rate" fill="#3b82f6" name="Rate %" radius={[0, 6, 6, 0]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis type="number" stroke="var(--muted-foreground)" domain={[0, 100]} />
+                    <YAxis type="category" dataKey="department" stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} width={80} />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: '8px' }} />
+                    <Bar dataKey="rate" fill="var(--chart-1)" name="Rate %" radius={[0, 6, 6, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -188,7 +188,7 @@ export default function AdminAnalytics() {
                       label={({ label, count }) => `${label}: ${count}`}>
                       {leaveByType.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                     </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: '8px' }} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -202,13 +202,13 @@ export default function AdminAnalytics() {
               {leaveSummary.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={leaveSummary}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="status" stroke="#9ca3af" />
-                    <YAxis stroke="#9ca3af" />
-                    <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="status" stroke="var(--muted-foreground)" />
+                    <YAxis stroke="var(--muted-foreground)" />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: '8px' }} />
                     <Legend />
-                    <Bar dataKey="count" fill="#3b82f6" name="Requests" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="days" fill="#10b981" name="Total Days" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="count" fill="var(--chart-1)" name="Requests" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="days" fill="var(--success)" name="Total Days" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (

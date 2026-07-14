@@ -69,7 +69,7 @@ export default function EmployeeForecastPage() {
           </div>
 
           <div className="p-6 space-y-6">
-            {error && <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-200">{error}</div>}
+            {error && <div className="rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-warning">{error}</div>}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="rounded-lg border border-border bg-card p-5">
@@ -118,7 +118,7 @@ export default function EmployeeForecastPage() {
               </section>
 
               <section className="rounded-lg border border-border bg-card p-5">
-                <div className="mb-4 flex items-center gap-2"><AlertTriangle size={18} className="text-amber-400" /><h2 className="font-semibold">Attendance Signals</h2></div>
+                <div className="mb-4 flex items-center gap-2"><AlertTriangle size={18} className="text-warning" /><h2 className="font-semibold">Attendance Signals</h2></div>
                 {anomalyRows.length ? (
                   <div className="space-y-2">
                     {anomalyRows.map((row, index) => (

@@ -86,10 +86,12 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/dashboard/admin/leaves)",
       "Bash(grep -n \"leaveType} balance\\\\|leaveType} leave is not applicable\\\\|leaveType} leave was auto-approved\\\\|leaveType} leave$\\\\|applied for \\\\${leave.leaveType}\" src/modules/leave/leave.service.js)",
       "Bash(powershell -Command \"Stop-Process -Id 5832 -Force\")",
-      "Bash(node -c src/modules/attendance/attendance.processor.js)"
+      "Bash(node -c src/modules/attendance/attendance.processor.js)",
+      "Bash(rm -f \"/c/Users/TECHXC~1/AppData/Local/Temp/claude/c--Users-TECHXCESS-Desktop-Work-Nex-AI/11a3fe22-a81a-419f-bbef-834d18e14da0/scratchpad/welcome-email-preview.html\" && echo \"deleted\")"
     ],
     "additionalDirectories": [
-      "c:\\Users\\TECHXCESS\\Desktop\\Work-Nex-AI\\worknex-backend\\docs"
+      "c:\\Users\\TECHXCESS\\Desktop\\Work-Nex-AI\\worknex-backend\\docs",
+      "C:\\Users\\TECHXC~1\\AppData\\Local\\Temp\\claude\\c--Users-TECHXCESS-Desktop-Work-Nex-AI\\11a3fe22-a81a-419f-bbef-834d18e14da0\\scratchpad"
     ]
   }
 }

@@ -1,13 +1,16 @@
 const nodemailer = require('nodemailer');
+const { config } = require('./env');
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT),
-  secure: false,
+  host: config.email.host,
+  port: config.email.port,
+  secure: config.email.secure,
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: config.email.user,
+    pass: config.email.password,
   },
+  disableFileAccess: true,
+  disableUrlAccess: true,
 });
 
 /**
@@ -18,7 +21,7 @@ const transporter = nodemailer.createTransport({
  */
 const sendEmail = async (to, subject, html) => {
   await transporter.sendMail({
-    from: `"WorkNex AI" <${process.env.EMAIL_FROM}>`,
+    from: `"WorkNex AI" <${config.email.from}>`,
     to,
     subject,
     html,

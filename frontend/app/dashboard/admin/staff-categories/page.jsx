@@ -7,10 +7,10 @@ import { staffCategoryAPI, userAPI } from '@/lib/api';
 import { toast } from 'sonner';
 
 const CATEGORY_COLORS = [
-  { bg: 'bg-blue-500/10', border: 'border-blue-500/30', icon: 'text-blue-400', dot: 'bg-blue-500' },
-  { bg: 'bg-purple-500/10', border: 'border-purple-500/30', icon: 'text-purple-400', dot: 'bg-purple-500' },
-  { bg: 'bg-green-500/10', border: 'border-green-500/30', icon: 'text-green-400', dot: 'bg-green-500' },
-  { bg: 'bg-orange-500/10', border: 'border-orange-500/30', icon: 'text-orange-400', dot: 'bg-orange-500' },
+  { bg: 'bg-info/10', border: 'border-info/30', icon: 'text-info', dot: 'bg-info' },
+  { bg: 'bg-chart-4/10', border: 'border-chart-4/30', icon: 'text-chart-4', dot: 'bg-chart-4' },
+  { bg: 'bg-success/10', border: 'border-success/30', icon: 'text-success', dot: 'bg-success' },
+  { bg: 'bg-warning/10', border: 'border-warning/30', icon: 'text-warning', dot: 'bg-warning' },
 ];
 
 const emptyForm = { name: '', lateThresholdTime: '', latesPerAbsence: '', minHoursPerDay: '', minHoursPerWeek: '' };
@@ -166,8 +166,8 @@ export default function AdminStaffCategories() {
                         <button onClick={() => handleEdit(cat)} className="p-2 rounded-lg hover:bg-muted transition">
                           <Edit size={15} className="text-muted-foreground" />
                         </button>
-                        <button onClick={() => handleDelete(cat.id)} className="p-2 rounded-lg hover:bg-red-500/10 transition">
-                          <Trash2 size={15} className="text-red-400" />
+                        <button onClick={() => handleDelete(cat.id)} className="p-2 rounded-lg hover:bg-destructive/10 transition">
+                          <Trash2 size={15} className="text-destructive" />
                         </button>
                       </div>
                     </div>

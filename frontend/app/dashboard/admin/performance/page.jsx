@@ -23,9 +23,9 @@ function employeeName(record, fallback = 'Employee') {
 }
 
 function scoreClass(score) {
-  if (score >= 80) return 'text-emerald-400';
-  if (score >= 60) return 'text-amber-400';
-  return 'text-red-400';
+  if (score >= 80) return 'text-success';
+  if (score >= 60) return 'text-warning';
+  return 'text-destructive';
 }
 
 export default function AdminPerformancePage() {
@@ -121,7 +121,7 @@ export default function AdminPerformancePage() {
           </div>
 
           <div className="p-6 space-y-6">
-            {error && <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-200">{error}</div>}
+            {error && <div className="rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-warning">{error}</div>}
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {[
@@ -151,7 +151,7 @@ export default function AdminPerformancePage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Submitted</p>
-                  <p className="text-2xl font-bold text-emerald-400">{loading ? '...' : (reviewStatus?.SUBMITTED ?? 0)}</p>
+                  <p className="text-2xl font-bold text-success">{loading ? '...' : (reviewStatus?.SUBMITTED ?? 0)}</p>
                 </div>
               </div>
             </div>

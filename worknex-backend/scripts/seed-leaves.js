@@ -2,9 +2,15 @@
  * WorkNex — Seed Leaves + Trigger ETL
  * Run after restarting backend: node seed-leaves.js
  */
-const API = 'http://localhost:5000/api/v1';
-const ADMIN_EMAIL    = 'tbasharat804@gmail.com';
-const ADMIN_PASSWORD = 'tayyab123@GMAIL';
+const requiredEnv = (name) => {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+};
+const API = `${requiredEnv('BACKEND_URL').replace(/\/$/, '')}/api/v1`;
+const ADMIN_EMAIL = requiredEnv('SEED_ADMIN_EMAIL');
+const ADMIN_PASSWORD = requiredEnv('SEED_ADMIN_PASSWORD');
+const USER_PASSWORD = requiredEnv('SEED_USER_PASSWORD');
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const pick  = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -65,7 +71,7 @@ const put = async (path, body, token) => {
     try {
       const r = await fetch(`${API}/auth/login`, {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ email: user.email, password: 'WorkNex@2025' }),
+        body: JSON.stringify({ email: user.email, password: USER_PASSWORD }),
       });
       const j = await r.json();
       userToken = j.data?.accessToken;

@@ -59,19 +59,19 @@ export default function ETLManagementPage() {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'SUCCESS': return <CheckCircle size={16} className="text-green-400" />;
-      case 'FAILED': return <XCircle size={16} className="text-red-400" />;
-      case 'PARTIAL': return <AlertCircle size={16} className="text-yellow-400" />;
-      default: return <Clock size={16} className="text-blue-400" />;
+      case 'SUCCESS': return <CheckCircle size={16} className="text-success" />;
+      case 'FAILED': return <XCircle size={16} className="text-destructive" />;
+      case 'PARTIAL': return <AlertCircle size={16} className="text-warning" />;
+      default: return <Clock size={16} className="text-info" />;
     }
   };
 
   const getStatusClass = (status) => {
     switch (status) {
-      case 'SUCCESS': return 'bg-green-500/20 text-green-400';
-      case 'FAILED': return 'bg-red-500/20 text-red-400';
-      case 'PARTIAL': return 'bg-yellow-500/20 text-yellow-400';
-      default: return 'bg-blue-500/20 text-blue-400';
+      case 'SUCCESS': return 'bg-success/20 text-success';
+      case 'FAILED': return 'bg-destructive/20 text-destructive';
+      case 'PARTIAL': return 'bg-warning/20 text-warning';
+      default: return 'bg-info/20 text-info';
     }
   };
 
@@ -128,7 +128,7 @@ export default function ETLManagementPage() {
           {/* Manual Trigger */}
           <div className="bg-card border border-border rounded-xl p-6">
             <div className="flex items-center gap-2 mb-2">
-              <Database size={20} className="text-blue-400" />
+              <Database size={20} className="text-info" />
               <h2 className="text-lg font-bold">Manual ETL Execution</h2>
             </div>
             <p className="text-muted-foreground text-sm mb-6">
@@ -162,8 +162,8 @@ export default function ETLManagementPage() {
             </div>
 
             {running && (
-              <div className="mt-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
-                <div className="flex items-center gap-2 text-blue-400">
+              <div className="mt-4 p-4 rounded-lg bg-info/10 border border-info/30">
+                <div className="flex items-center gap-2 text-info">
                   <Activity size={16} className="animate-pulse" />
                   <span className="text-sm">Processing attendance → leave → performance → attrition ML scoring…</span>
                 </div>
@@ -174,10 +174,10 @@ export default function ETLManagementPage() {
           {/* ETL Pipeline Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {[
-              { title: 'Step 1: Attendance ETL', desc: 'Aggregates daily attendance records, calculates present/absent/late counts and working hours per employee.', color: 'border-blue-500/30 bg-blue-500/5' },
-              { title: 'Step 2: Leave ETL', desc: 'Processes approved leave requests, calculates leave days used and updates leave scores per employee.', color: 'border-green-500/30 bg-green-500/5' },
-              { title: 'Step 3: Performance ETL', desc: 'Combines attendance and leave data to compute overall performance scores for each employee.', color: 'border-purple-500/30 bg-purple-500/5' },
-              { title: 'Step 4: Attrition ML Scoring', desc: 'Runs the RandomForest attrition classifier and GradientBoosting regressor to assign risk scores and labels per employee.', color: 'border-red-500/30 bg-red-500/5' },
+              { title: 'Step 1: Attendance ETL', desc: 'Aggregates daily attendance records, calculates present/absent/late counts and working hours per employee.', color: 'border-info/30 bg-info/5' },
+              { title: 'Step 2: Leave ETL', desc: 'Processes approved leave requests, calculates leave days used and updates leave scores per employee.', color: 'border-success/30 bg-success/5' },
+              { title: 'Step 3: Performance ETL', desc: 'Combines attendance and leave data to compute overall performance scores for each employee.', color: 'border-chart-4/30 bg-chart-4/5' },
+              { title: 'Step 4: Attrition ML Scoring', desc: 'Runs the RandomForest attrition classifier and GradientBoosting regressor to assign risk scores and labels per employee.', color: 'border-destructive/30 bg-destructive/5' },
             ].map((step, i) => (
               <div key={i} className={`rounded-xl p-5 border ${step.color}`}>
                 <h3 className="font-semibold mb-2">{step.title}</h3>
@@ -236,7 +236,7 @@ export default function ETLManagementPage() {
                         <td className="py-3 px-4 text-muted-foreground">{formatDate(log.startedAt)}</td>
                         <td className="py-3 px-4">
                           {log.errorLog ? (
-                            <span className="text-xs text-red-400 truncate max-w-xs block" title={log.errorLog}>
+                            <span className="text-xs text-destructive truncate max-w-xs block" title={log.errorLog}>
                               {log.errorLog.slice(0, 60)}...
                             </span>
                           ) : (

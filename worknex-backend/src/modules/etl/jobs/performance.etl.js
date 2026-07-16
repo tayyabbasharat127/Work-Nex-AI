@@ -42,7 +42,10 @@ class PerformanceETL {
       const y = parseInt(year, 10);
       const startDate = new Date(y, m - 1, 1);
       const endDate   = new Date(y, m, 0, 23, 59, 59);
-      const workingDays = this._countWorkingDays(startDate, endDate);
+      const now = new Date();
+      const isCurrentMonth = now.getFullYear() === y && now.getMonth() === m - 1;
+      const scoringEndDate = isCurrentMonth && now < endDate ? now : endDate;
+      const workingDays = this._countWorkingDays(startDate, scoringEndDate);
 
       const where = { isActive: true };
       if (organizationId) where.organizationId = organizationId;

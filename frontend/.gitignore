@@ -19,5 +19,8 @@ yarn-error.log*
 dist/
 build/
 
+# Playwright test report
+playwright-report/
+
 # Mac system files
 .DS_Store

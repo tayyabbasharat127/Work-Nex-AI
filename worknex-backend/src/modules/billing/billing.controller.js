@@ -1,6 +1,7 @@
 const billingService = require('./billing.service');
 const { apiResponse } = require('../../utils/ApiResponse');
 const logger = require('../../config/logger');
+const { setRefreshCookie, publicTokens } = require('../../utils/authSessionResponse');
 
 const isMigrationError = (err) =>
   err?.code === 'P2021' || /does not exist in the current database/i.test(err?.message || '');
@@ -24,6 +25,30 @@ const registerOrganization = async (req, res) => {
     }
     throw err;
   }
+};
+
+const startOrganizationRegistration = async (req, res) => {
+  const result = await billingService.startOrganizationRegistration(req.body);
+  apiResponse(res, 202, 'Verification code sent', result);
+};
+
+const resendOrganizationVerification = async (req, res) => {
+  const result = await billingService.resendOrganizationVerification(req.body.registrationId);
+  apiResponse(res, 200, 'Verification code resent', result);
+};
+
+const verifyOrganizationEmail = async (req, res) => {
+  const result = await billingService.verifyOrganizationEmail(req.body.registrationId, req.body.code);
+  apiResponse(res, 200, 'Email verified', result);
+};
+
+const completeOrganizationRegistration = async (req, res) => {
+  const result = await billingService.completeOrganizationRegistration(req.body, {
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
+  setRefreshCookie(res, result.refreshToken);
+  apiResponse(res, 201, 'Organization created. Trial started!', publicTokens(result));
 };
 
 const subscribe = async (req, res) => {
@@ -63,6 +88,8 @@ const checkEmployeeLimit = async (req, res) => {
 };
 
 module.exports = {
-  getPlans, registerOrganization, subscribe, upgradePlan,
+  getPlans, startOrganizationRegistration, resendOrganizationVerification,
+  verifyOrganizationEmail, completeOrganizationRegistration,
+  registerOrganization, subscribe, upgradePlan,
   getSubscription, cancelSubscription, getInvoices, checkEmployeeLimit,
 };

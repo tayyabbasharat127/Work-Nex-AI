@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import RoleGate from '@/components/RoleGate';
 import { aiAPI, performanceAPI } from '@/lib/api';
-import { AlertTriangle, Brain, Calendar, RefreshCw, TrendingUp } from 'lucide-react';
+import { AlertTriangle, Brain, RefreshCw, TrendingUp } from 'lucide-react';
 
 function toArray(value) {
   if (Array.isArray(value)) return value;
@@ -20,24 +20,21 @@ export default function EmployeeForecastPage() {
   const [error, setError] = useState('');
   const [performance, setPerformance] = useState([]);
   const [prediction, setPrediction] = useState(null);
-  const [leaveForecast, setLeaveForecast] = useState(null);
   const [anomaly, setAnomaly] = useState(null);
 
   const loadData = async () => {
     setLoading(true);
     setError('');
     try {
-      const [perfRes, predRes, leaveRes, anomalyRes] = await Promise.allSettled([
+      const [perfRes, predRes, anomalyRes] = await Promise.allSettled([
         performanceAPI.getMy(),
         aiAPI.predictPerformance(),
-        aiAPI.leaveForecast(),
         aiAPI.attendanceAnomaly(),
       ]);
       if (perfRes.status === 'fulfilled') setPerformance(toArray(perfRes.value));
       if (predRes.status === 'fulfilled') setPrediction(predRes.value);
-      if (leaveRes.status === 'fulfilled') setLeaveForecast(leaveRes.value);
       if (anomalyRes.status === 'fulfilled') setAnomaly(anomalyRes.value);
-      const rejected = [perfRes, predRes].find((item) => item.status === 'rejected');
+      const rejected = [perfRes, predRes, anomalyRes].find((item) => item.status === 'rejected');
       if (rejected) setError(rejected.reason?.message || 'Some forecast data could not be loaded.');
     } finally {
       setLoading(false);
@@ -49,7 +46,6 @@ export default function EmployeeForecastPage() {
   }, []);
 
   const latest = performance[0] || {};
-  const forecastRows = toArray(leaveForecast).slice(0, 6);
   const anomalyRows = toArray(anomaly?.anomalies || anomaly).slice(0, 5);
 
   return (
@@ -69,7 +65,7 @@ export default function EmployeeForecastPage() {
           </div>
 
           <div className="p-6 space-y-6">
-            {error && <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-200">{error}</div>}
+            {error && <div className="rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-warning">{error}</div>}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="rounded-lg border border-border bg-card p-5">
@@ -100,25 +96,9 @@ export default function EmployeeForecastPage() {
               )}
             </section>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
               <section className="rounded-lg border border-border bg-card p-5">
-                <div className="mb-4 flex items-center gap-2"><Calendar size={18} className="text-primary" /><h2 className="font-semibold">Leave Forecast</h2></div>
-                {forecastRows.length ? (
-                  <div className="space-y-2">
-                    {forecastRows.map((row, index) => (
-                      <div key={index} className="flex items-center justify-between rounded-lg bg-muted/40 p-3 text-sm">
-                        <span>{row.date || row.period || row.month || `Window ${index + 1}`}</span>
-                        <b>{row.predicted ?? row.value ?? row.count ?? '-'}</b>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">{loading ? 'Loading leave forecast...' : 'No leave forecast rows returned.'}</p>
-                )}
-              </section>
-
-              <section className="rounded-lg border border-border bg-card p-5">
-                <div className="mb-4 flex items-center gap-2"><AlertTriangle size={18} className="text-amber-400" /><h2 className="font-semibold">Attendance Signals</h2></div>
+                <div className="mb-4 flex items-center gap-2"><AlertTriangle size={18} className="text-warning" /><h2 className="font-semibold">Attendance Signals</h2></div>
                 {anomalyRows.length ? (
                   <div className="space-y-2">
                     {anomalyRows.map((row, index) => (

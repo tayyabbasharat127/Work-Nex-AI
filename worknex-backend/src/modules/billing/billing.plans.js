@@ -13,7 +13,7 @@ const PLANS = {
     trialDays: 14,
     features: [
       'Up to 10 employees',
-      'Attendance tracking (manual check-in)',
+      'Biometric and TMS attendance tracking',
       'Basic leave management',
       'Email notifications',
       'Standard reports',

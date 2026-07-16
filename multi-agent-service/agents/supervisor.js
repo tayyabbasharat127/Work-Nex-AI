@@ -1,5 +1,5 @@
 import { StateGraph, MessagesAnnotation, START, END } from "@langchain/langgraph";
-import { SystemMessage } from "@langchain/core/messages";
+import { AIMessage, SystemMessage } from "@langchain/core/messages";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { createChatModel } from "../config/llm.js";
@@ -15,6 +15,22 @@ import { routeLeaveRequest } from "../routing/leave-router.js";
 import { routePerformanceRequest } from "../routing/performance-router.js";
 
 export function createSupervisorAgent(requestContext = {}) {
+  const limits = {
+    maxSupervisorTurns: Number(process.env.AGENT_MAX_SUPERVISOR_TURNS || 4),
+    maxToolCalls: Number(process.env.AGENT_MAX_TOOL_CALLS || 6),
+    maxEstimatedTokens: Number(process.env.AGENT_MAX_ESTIMATED_TOKENS || 8000),
+  };
+  const usage = { supervisorTurns: 0, toolCalls: 0, estimatedTokens: 0 };
+  const consume = (kind, text = "") => {
+    if (kind === "supervisor") usage.supervisorTurns += 1;
+    if (kind === "tool") usage.toolCalls += 1;
+    usage.estimatedTokens += Math.ceil(String(text).length / 4);
+    if (usage.supervisorTurns > limits.maxSupervisorTurns
+        || usage.toolCalls > limits.maxToolCalls
+        || usage.estimatedTokens > limits.maxEstimatedTokens) {
+      throw new Error("Agent request budget exceeded; please narrow the question");
+    }
+  };
   const llm = createChatModel({ temperature: 0.2 });
   const attendanceAgent = createAttendanceAgent(requestContext);
   const leaveAgent = createLeaveAgent(requestContext);
@@ -126,6 +142,39 @@ Prompting rules:
 - Do not claim to perform mutations such as check-in, check-out, manual edits, absence generation, leave application, leave approval, leave rejection, leave cancellation, or policy updates.`;
 
   const callSupervisor = async (state) => {
+    consume("supervisor", state.messages.map((message) => message.content || "").join(""));
+    const latestHumanMessage = [...state.messages]
+      .reverse()
+      .find((message) => (message._getType?.() || message.getType?.() || message.role) === "human");
+    const latestHumanText = typeof latestHumanMessage?.content === "string"
+      ? latestHumanMessage.content
+      : "";
+
+    if (latestHumanText) {
+      const directRoutes = [
+        {
+          route: await routeAttendanceRequest(latestHumanText),
+          handler: handleAttendanceRequest,
+        },
+        {
+          route: await routeLeaveRequest(latestHumanText),
+          handler: handleLeaveRequest,
+        },
+        {
+          route: await routePerformanceRequest(latestHumanText),
+          handler: handlePerformanceRequest,
+        },
+      ];
+
+      const selectedRoute = directRoutes.find((item) => item.route.domain !== "unsupported" && item.route.confidence >= 0.9);
+      if (selectedRoute) {
+        const handledResult = await selectedRoute.handler(latestHumanText, requestContext);
+        if (handledResult.handled) {
+          return { messages: [new AIMessage(handledResult.answer)] };
+        }
+      }
+    }
+
     const response = await modelWithTools.invoke([
       new SystemMessage(SUPERVISOR_SYSTEM_PROMPT),
       ...state.messages,
@@ -141,6 +190,7 @@ Prompting rules:
 
     const messages = [];
     for (const toolCall of lastMessage.tool_calls) {
+      consume("tool", JSON.stringify(toolCall.args || {}));
       const selectedTool = supervisorTools.find((item) => item.name === toolCall.name);
       if (!selectedTool) continue;
 

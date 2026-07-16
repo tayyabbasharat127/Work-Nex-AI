@@ -51,9 +51,30 @@ const getUserBalances = async (req, res) => {
   apiResponse(res, 200, 'Leave balances fetched', balances);
 };
 
+const getUserLeaveSummary = async (req, res) => {
+  const summary = await leaveService.getUserLeaveSummary(req.params.userId, req.user);
+  apiResponse(res, 200, 'Leave summary fetched', summary);
+};
+
 const getPolicies = async (req, res) => {
   const policies = await leaveService.getPolicies(req.user);
   apiResponse(res, 200, 'Policies fetched', policies);
+};
+
+const getActivePolicyVersion = async (req, res) => {
+  const version = await leaveService.getActivePolicyVersion(req.user);
+  apiResponse(res, 200, 'Active policy version fetched', version);
+};
+
+const getLeaveTypeLabels = async (req, res) => {
+  const labels = await leaveService.getLeaveTypeLabels(req.user);
+  apiResponse(res, 200, 'Leave type labels fetched', labels);
+};
+
+const getDailyLeaveCounts = async (req, res) => {
+  const days = Math.min(parseInt(req.query.days, 10) || 14, 90);
+  const counts = await leaveService.getDailyLeaveCounts(req.user, days);
+  apiResponse(res, 200, 'Daily leave counts fetched', counts);
 };
 
 const createPolicy = async (req, res) => {
@@ -86,6 +107,11 @@ const approvePolicyRules = async (req, res) => {
   apiResponse(res, 200, 'Policy rules approved', document);
 };
 
+const saveManualPolicyRules = async (req, res) => {
+  const result = await leaveService.saveManualPolicyRules(req.body.leavePolicies, req.user);
+  apiResponse(res, 200, 'Policy rules activated', result);
+};
+
 const evaluateLeave = async (req, res) => {
   const decision = await leaveService.evaluateExistingLeave(req.params.id, req.user);
   apiResponse(res, 200, 'Leave evaluated', decision);
@@ -99,7 +125,7 @@ const getDecisionExplanation = async (req, res) => {
 module.exports = {
   applyLeave, approveLeave, rejectLeave, cancelLeave,
   getLeaves, getMyLeaves, getPendingLeaves, getLeaveById,
-  getMyBalances, getUserBalances, getPolicies, createPolicy, updatePolicy,
+  getMyBalances, getUserBalances, getUserLeaveSummary, getPolicies, getActivePolicyVersion, getLeaveTypeLabels, getDailyLeaveCounts, createPolicy, updatePolicy,
   uploadPolicyDocument, extractPolicyDocument, aiParsePolicyDocument,
-  approvePolicyRules, evaluateLeave, getDecisionExplanation,
+  approvePolicyRules, saveManualPolicyRules, evaluateLeave, getDecisionExplanation,
 };

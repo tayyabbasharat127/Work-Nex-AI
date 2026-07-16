@@ -4,10 +4,17 @@
  * Requires: backend on :5000, AI service on :8000 (optional)
  */
 
-const BACKEND   = 'http://localhost:5000/api/v1';
-const AI_SVC    = 'http://localhost:8000';
-const ADMIN_EMAIL    = 'tbasharat804@gmail.com';
-const ADMIN_PASSWORD = 'tayyab123@GMAIL';
+const requiredEnv = (name) => {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+};
+const BACKEND_ORIGIN = requiredEnv('BACKEND_URL').replace(/\/$/, '');
+const BACKEND = `${BACKEND_ORIGIN}/api/v1`;
+const AI_SVC = process.env.AI_SERVICE_URL;
+const ADMIN_EMAIL = requiredEnv('TEST_ADMIN_EMAIL');
+const ADMIN_PASSWORD = requiredEnv('TEST_ADMIN_PASSWORD');
+const TEST_USER_PASSWORD = requiredEnv('TEST_USER_PASSWORD');
 
 // Unique per-run identifiers — avoids data collisions on repeated runs
 const RUN_ID     = Date.now();
@@ -73,19 +80,19 @@ const leaveDate = () => {
 async function testHealth() {
   section('1. HEALTH CHECK');
   try {
-    const r = await fetch('http://localhost:5000/health');
+    const r = await fetch(`${BACKEND_ORIGIN}/health`);
     const j = await r.json();
-    if (j.status === 'ok' && j.database === 'migrated')
+    if (j.status === 'ok' && j.database === 'ready')
       pass('Backend health', `DB: ${j.database}`);
     else
       fail('Backend health', `status=${j.status} db=${j.database}`);
-  } catch { fail('Backend health', 'Cannot reach localhost:5000 — is backend running?'); }
+  } catch { fail('Backend health', 'Cannot reach BACKEND_URL'); }
 
   try {
     const r = await fetch(`${AI_SVC}/health`);
-    if (r.ok) pass('AI service health', 'localhost:8000 responding');
+    if (r.ok) pass('AI service health', 'AI_SERVICE_URL responding');
     else warn('AI service health', `HTTP ${r.status}`);
-  } catch { warn('AI service health', 'localhost:8000 not reachable — AI features use fallback'); }
+  } catch { warn('AI service health', 'AI_SERVICE_URL not reachable — AI features use fallback'); }
 }
 
 async function testAuth() {
@@ -443,7 +450,7 @@ async function testRBAC() {
   }
 
   const empEmail = emp?.email ?? TEST_EMAIL;
-  const empPass  = emp?.email?.includes('@worknex-demo.com') ? 'WorkNex@2025' : null;
+  const empPass  = emp?.email?.includes('@worknex-demo.com') ? TEST_USER_PASSWORD : null;
 
   if (!empPass) {
     warn('RBAC: Employee login', 'Cannot login as test user (no known password) — skipping RBAC checks');

@@ -19,9 +19,11 @@
 
 const axios   = require('axios');
 const prisma  = require('../../../config/db');
+const { config } = require('../../../config/env');
 const ETLLogger = require('../etl.logger');
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const AI_SERVICE_URL = config.aiServiceUrl;
+const { aiServiceHeaders } = require('../../../utils/aiServiceAuth');
 const ML_TIMEOUT_MS  = 5000;
 
 class PerformanceETL {
@@ -40,7 +42,10 @@ class PerformanceETL {
       const y = parseInt(year, 10);
       const startDate = new Date(y, m - 1, 1);
       const endDate   = new Date(y, m, 0, 23, 59, 59);
-      const workingDays = this._countWorkingDays(startDate, endDate);
+      const now = new Date();
+      const isCurrentMonth = now.getFullYear() === y && now.getMonth() === m - 1;
+      const scoringEndDate = isCurrentMonth && now < endDate ? now : endDate;
+      const workingDays = this._countWorkingDays(startDate, scoringEndDate);
 
       const where = { isActive: true };
       if (organizationId) where.organizationId = organizationId;
@@ -148,6 +153,7 @@ class PerformanceETL {
     let mlPredictedScore = null;
     try {
       mlPredictedScore = await this._callMLPrediction({
+        organizationId:            orgId,
         employeeId:               user.employeeId,
         attendanceRate:           attendanceScore,
         lateCount:                metrics.lateDays,
@@ -279,7 +285,7 @@ class PerformanceETL {
     const response = await axios.post(
       `${AI_SERVICE_URL}/predict/performance`,
       { employeeId: features.employeeId, features },
-      { timeout: ML_TIMEOUT_MS },
+      { headers: aiServiceHeaders(features.organizationId), timeout: ML_TIMEOUT_MS },
     );
     return response.data?.predictedScore ?? null;
   }

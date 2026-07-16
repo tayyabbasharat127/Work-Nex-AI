@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -18,11 +18,13 @@ import {
   TrendingDown,
   Bell,
   BookOpen,
-  Brain,
   Zap,
   Database,
   Monitor,
-  Sparkles
+  Sparkles,
+  Shield,
+  Fingerprint,
+  ClipboardList
 } from 'lucide-react';
 import { authAPI } from '@/lib/api';
 
@@ -30,9 +32,12 @@ const ADMIN_MENU = [
   { label: 'Dashboard', href: '/dashboard/admin', icon: Home },
   { label: 'Analytics', href: '/dashboard/admin/analytics', icon: BarChart3 },
   { label: 'Users', href: '/dashboard/admin/users', icon: Users },
+  { label: 'Roles', href: '/dashboard/admin/roles', icon: Shield },
   { label: 'Attendance', href: '/dashboard/admin/attendance', icon: Clock },
+  { label: 'Biometric Integration', href: '/dashboard/admin/biometric-integration', icon: Fingerprint },
   { label: 'Leaves', href: '/dashboard/admin/leaves', icon: CalendarX },
   { label: 'Departments', href: '/dashboard/admin/departments', icon: Users },
+  { label: 'Staff Categories', href: '/dashboard/admin/staff-categories', icon: ClipboardList },
   { label: 'Performance', href: '/dashboard/admin/performance', icon: Award },
   { label: 'Reports', href: '/dashboard/admin/reports', icon: TrendingUp },
   { label: 'Forecast', href: '/dashboard/admin/forecast', icon: Zap },
@@ -111,7 +116,7 @@ export default function Sidebar({ role = 'admin' }) {
         isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       } z-40`}>
         {/* Logo */}
-        <div className="p-6 border-b border-sidebar-border">
+        <div className="px-4 py-4 border-b border-sidebar-border">
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition">
             <div className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center">
               <span className="text-sidebar-primary-foreground font-bold">W</span>
@@ -121,7 +126,7 @@ export default function Sidebar({ role = 'admin' }) {
         </div>
 
         {/* User Info */}
-        <div className="p-6 border-b border-sidebar-border">
+        <div className="px-4 py-3.5 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-sidebar-primary flex items-center justify-center">
               <Users size={20} className="text-sidebar-primary-foreground" />
@@ -138,8 +143,8 @@ export default function Sidebar({ role = 'admin' }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-4">
-          <ul className="space-y-2">
+        <nav className="worknex-sidebar-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-3">
+          <ul className="space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
@@ -149,7 +154,7 @@ export default function Sidebar({ role = 'admin' }) {
                   <Link
                     href={item.href}
                     onClick={() => setIsOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition ${
                       isActive
                         ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                         : 'text-sidebar-foreground hover:bg-sidebar-accent'
@@ -161,25 +166,24 @@ export default function Sidebar({ role = 'admin' }) {
                 </li>
               );
             })}
+            {/* Logout — right after the last menu item (Settings), same list */}
+            <li>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-destructive/20 transition"
+              >
+                <LogOut size={20} />
+                <span className="text-sm font-medium">Logout</span>
+              </button>
+            </li>
           </ul>
         </nav>
-
-        {/* Logout Button */}
-        <div className="p-4 border-t border-sidebar-border">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-destructive/20 transition"
-          >
-            <LogOut size={20} />
-            <span className="text-sm font-medium">Logout</span>
-          </button>
-        </div>
       </aside>
 
       {/* Mobile Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          className="fixed inset-0 bg-overlay z-30 md:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}

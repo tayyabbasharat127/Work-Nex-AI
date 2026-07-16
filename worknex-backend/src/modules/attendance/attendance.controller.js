@@ -1,5 +1,38 @@
 const attendanceService = require('./attendance.service');
+const universityAttendanceService = require('./university-attendance.service');
+const webhookProvider = require('./providers/webhook.provider');
 const { apiResponse } = require('../../utils/ApiResponse');
+
+// Device push (ADMS). Not a logged-in user — accepts the device serial
+// number and an optional communication key from query params, headers, or
+// body, whichever the device's firmware sends. Records can arrive as a
+// single punch object or an array of punches.
+const tmsWebhook = async (req, res) => {
+  const serialNumber = req.query.SN || req.query.sn || req.body.SN || req.body.serialNumber;
+  const rawRecords = Array.isArray(req.body.records) ? req.body.records : [req.body];
+
+  const result = await webhookProvider.receivePush({
+    serialNumber,
+    signature: req.headers['x-worknex-signature'],
+    timestamp: req.headers['x-worknex-timestamp'],
+    nonce: req.headers['x-worknex-nonce'],
+    rawBody: req.rawBody,
+    records: rawRecords,
+  });
+  apiResponse(res, 200, 'Push received', result);
+};
+
+const universityPunch = async (req, res) => {
+  const record = await universityAttendanceService.ingestPunch({
+    serialNumber: req.query.SN,
+    signature: req.headers['x-worknex-signature'],
+    timestamp: req.headers['x-worknex-timestamp'],
+    nonce: req.headers['x-worknex-nonce'],
+    rawBody: req.rawBody,
+    punch: req.body,
+  });
+  apiResponse(res, 201, 'University attendance punch recorded', record);
+};
 
 const checkIn = async (req, res) => {
   const { latitude, longitude } = req.body;
@@ -43,6 +76,11 @@ const getAttendanceSummary = async (req, res) => {
   apiResponse(res, 200, 'Summary fetched', summary);
 };
 
+const getWeeklyHoursShortfall = async (req, res) => {
+  const rows = await attendanceService.getWeeklyHoursShortfall(req.user);
+  apiResponse(res, 200, 'Weekly hours shortfall fetched', rows);
+};
+
 const manualEntry = async (req, res) => {
   const record = await attendanceService.manualEntry(req.body, req.user, req);
   apiResponse(res, 200, 'Attendance recorded', record);
@@ -59,13 +97,29 @@ const syncFromTMS = async (req, res) => {
 };
 
 const getHolidays = async (req, res) => {
-  const holidays = await attendanceService.getHolidays(req.user);
+  const holidays = await attendanceService.getHolidays(req.user, req.query.year);
   apiResponse(res, 200, 'Holidays fetched', holidays);
 };
 
 const createHoliday = async (req, res) => {
   const holiday = await attendanceService.createHoliday(req.body, req.user);
+  res.locals.entityId = holiday.id;
+  res.locals.auditData = holiday;
   apiResponse(res, 201, 'Holiday created', holiday);
+};
+
+const updateHoliday = async (req, res) => {
+  const holiday = await attendanceService.updateHoliday(req.params.id, req.body, req.user);
+  res.locals.entityId = holiday.id;
+  res.locals.auditData = holiday;
+  apiResponse(res, 200, 'Holiday updated', holiday);
+};
+
+const deleteHoliday = async (req, res) => {
+  const holiday = await attendanceService.deleteHoliday(req.params.id, req.user);
+  res.locals.entityId = holiday.id;
+  res.locals.auditData = { name: holiday.name, date: holiday.date };
+  apiResponse(res, 200, 'Holiday deleted', holiday);
 };
 
 const generateAbsences = async (req, res) => {
@@ -74,8 +128,9 @@ const generateAbsences = async (req, res) => {
 };
 
 module.exports = {
+  tmsWebhook, universityPunch,
   checkIn, checkOut, autoPing, getTodayAttendance, getMyAttendance,
-  getAllAttendance, getUserAttendance, getAttendanceSummary,
+  getAllAttendance, getUserAttendance, getAttendanceSummary, getWeeklyHoursShortfall,
   manualEntry, updateAttendance, syncFromTMS,
-  getHolidays, createHoliday, generateAbsences,
+  getHolidays, createHoliday, updateHoliday, deleteHoliday, generateAbsences,
 };

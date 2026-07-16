@@ -11,7 +11,7 @@ import {
   TrendingDown, AlertTriangle, Users, RefreshCw, ShieldAlert, UserMinus,
 } from 'lucide-react';
 
-const RISK_COLORS = { HIGH: '#ef4444', MEDIUM: '#f59e0b', LOW: '#22c55e' };
+const RISK_COLORS = { HIGH: 'var(--destructive)', MEDIUM: 'var(--warning)', LOW: 'var(--success)' };
 
 const MONTHS = [
   'January','February','March','April','May','June',
@@ -20,9 +20,9 @@ const MONTHS = [
 
 function RiskBadge({ label }) {
   const cls = {
-    HIGH: 'bg-red-500/20 text-red-400',
-    MEDIUM: 'bg-yellow-500/20 text-yellow-400',
-    LOW: 'bg-green-500/20 text-green-400',
+    HIGH: 'bg-destructive/20 text-destructive',
+    MEDIUM: 'bg-warning/20 text-warning',
+    LOW: 'bg-success/20 text-success',
   };
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${cls[label] || 'bg-muted text-muted-foreground'}`}>
@@ -37,7 +37,7 @@ function ScoreBar({ score, label }) {
       <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
         <div
           className="h-2 rounded-full transition-all"
-          style={{ width: `${Math.min(score, 100)}%`, backgroundColor: RISK_COLORS[label] || '#6b7280' }}
+          style={{ width: `${Math.min(score, 100)}%`, backgroundColor: RISK_COLORS[label] || 'var(--muted-foreground)' }}
         />
       </div>
       <span className="text-xs font-mono w-8 text-right">{Math.round(score)}%</span>
@@ -84,7 +84,7 @@ export default function AttritionPage() {
         <div className="sticky top-0 bg-card border-b border-border p-6 z-20 flex flex-wrap justify-between items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
-              <TrendingDown size={28} className="text-red-400" />
+              <TrendingDown size={28} className="text-destructive" />
               Attrition Risk
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
@@ -122,25 +122,25 @@ export default function AttritionPage() {
 
           {/* Risk Level Legend */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="flex items-start gap-3 p-4 rounded-xl border border-red-500/30 bg-red-500/5">
-              <div className="w-3 h-3 rounded-full bg-red-500 mt-1 shrink-0" />
+            <div className="flex items-start gap-3 p-4 rounded-xl border border-destructive/30 bg-destructive/5">
+              <div className="w-3 h-3 rounded-full bg-destructive mt-1 shrink-0" />
               <div>
-                <p className="font-semibold text-red-400 text-sm">HIGH Risk (&gt;60%)</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Likely to leave within 3 months. Immediate manager intervention recommended.</p>
+                <p className="font-semibold text-destructive text-sm">HIGH Risk (&gt;60%)</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Elevated attrition signals present. Recommend a proactive manager check-in.</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/5">
-              <div className="w-3 h-3 rounded-full bg-yellow-500 mt-1 shrink-0" />
+            <div className="flex items-start gap-3 p-4 rounded-xl border border-warning/30 bg-warning/5">
+              <div className="w-3 h-3 rounded-full bg-warning mt-1 shrink-0" />
               <div>
-                <p className="font-semibold text-yellow-400 text-sm">MEDIUM Risk (30–60%)</p>
+                <p className="font-semibold text-warning text-sm">MEDIUM Risk (30–60%)</p>
                 <p className="text-xs text-muted-foreground mt-0.5">Early warning signs detected. Monitor attendance, leaves, and performance closely.</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-4 rounded-xl border border-green-500/30 bg-green-500/5">
-              <div className="w-3 h-3 rounded-full bg-green-500 mt-1 shrink-0" />
+            <div className="flex items-start gap-3 p-4 rounded-xl border border-success/30 bg-success/5">
+              <div className="w-3 h-3 rounded-full bg-success mt-1 shrink-0" />
               <div>
-                <p className="font-semibold text-green-400 text-sm">LOW Risk (&lt;30%)</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Employee appears stable. Low probability of leaving in the near term.</p>
+                <p className="font-semibold text-success text-sm">LOW Risk (&lt;30%)</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Employee appears stable. No significant attrition signals detected at this time.</p>
               </div>
             </div>
           </div>
@@ -161,7 +161,7 @@ export default function AttritionPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-card border border-border rounded-xl p-5">
                   <div className="flex items-center gap-2 mb-2">
-                    <Users size={16} className="text-blue-400" />
+                    <Users size={16} className="text-info" />
                     <p className="text-sm text-muted-foreground">Analyzed</p>
                   </div>
                   <p className="text-3xl font-bold">{data.totalAnalyzed}</p>
@@ -169,18 +169,18 @@ export default function AttritionPage() {
 
                 <div className="bg-card border border-border rounded-xl p-5">
                   <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle size={16} className="text-yellow-400" />
+                    <AlertTriangle size={16} className="text-warning" />
                     <p className="text-sm text-muted-foreground">At Risk</p>
                   </div>
-                  <p className="text-3xl font-bold text-yellow-400">{data.atRiskCount ?? 0}</p>
+                  <p className="text-3xl font-bold text-warning">{data.atRiskCount ?? 0}</p>
                 </div>
 
                 <div className="bg-card border border-border rounded-xl p-5">
                   <div className="flex items-center gap-2 mb-2">
-                    <ShieldAlert size={16} className="text-red-400" />
+                    <ShieldAlert size={16} className="text-destructive" />
                     <p className="text-sm text-muted-foreground">Critical (HIGH)</p>
                   </div>
-                  <p className="text-3xl font-bold text-red-400">{data.summary?.HIGH?.count ?? 0}</p>
+                  <p className="text-3xl font-bold text-destructive">{data.summary?.HIGH?.count ?? 0}</p>
                 </div>
 
                 <div className="bg-card border border-border rounded-xl p-5">
@@ -200,7 +200,7 @@ export default function AttritionPage() {
                   {riskChartData.some((d) => d.count > 0) ? (
                     <ResponsiveContainer width="100%" height={200}>
                       <BarChart data={riskChartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                         <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                         <Tooltip
@@ -213,7 +213,7 @@ export default function AttritionPage() {
                         />
                         <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                           {riskChartData.map((entry) => (
-                            <Cell key={entry.label} fill={RISK_COLORS[entry.label] || '#6b7280'} />
+                            <Cell key={entry.label} fill={RISK_COLORS[entry.label] || 'var(--muted-foreground)'} />
                           ))}
                         </Bar>
                       </BarChart>

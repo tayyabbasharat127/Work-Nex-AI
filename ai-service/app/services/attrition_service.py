@@ -28,6 +28,7 @@ from typing import Any
 import httpx
 
 from app.core.config import settings
+from app.core.auth import get_current_token
 
 logger = logging.getLogger(__name__)
 
@@ -53,15 +54,18 @@ FEATURE_COLS = [
     "warnings_issued",
 ]
 
+# Templates interpolated with the employee's actual numbers at response-build
+# time (see _factor_labels_for) instead of static generic text — a defensible
+# explanation names the number that tripped the threshold, not just the rule.
 FACTOR_LABELS = {
-    "high_absenteeism":  "Attendance rate below 78% threshold",
-    "low_performance":   "Overall performance score below 70",
-    "excessive_leave":   "Leave days taken exceed 8 in current period",
-    "late_pattern":      "More than 4 late arrivals this month",
-    "tenure_risk":       "Short tenure (< 6 months) or long tenure (> 4 years) without progression",
-    "manager_change":    "Multiple manager changes — instability signal",
-    "disciplinary":      "One or more warnings/disciplinary actions on record",
-    "perf_declining":    "Performance score dropped vs previous month",
+    "high_absenteeism":  "Attendance rate is {attendance_rate:.0f}% (below the 78% threshold)",
+    "low_performance":   "Performance score is {performance_score:.0f} (below the 70 threshold)",
+    "excessive_leave":   "{leave_days_taken:.0f} leave days taken this period (exceeds the 8-day threshold)",
+    "late_pattern":      "{late_count:.0f} late arrivals this month (exceeds the 4-arrival threshold)",
+    "tenure_risk":       "Tenure is {tenure_months:.0f} months (outside the 6–48 month stable range)",
+    "manager_change":    "{manager_change_count:.0f} manager change(s) recorded — instability signal",
+    "disciplinary":      "{warnings_issued:.0f} warning(s)/disciplinary action(s) on record",
+    "perf_declining":    "Performance dropped from {prev_month_score:.0f} to {performance_score:.0f} vs previous month",
 }
 
 RECOMMENDATIONS = {
@@ -117,13 +121,14 @@ def _load_artifact(path: Path, meta_path: Path):
 # ─── Backend data fetcher ─────────────────────────────────────────────────────
 
 async def _fetch(path: str) -> Any:
-    if not settings.BACKEND_TOKEN:
+    token = get_current_token()
+    if not token:
         return None
     try:
         async with httpx.AsyncClient(timeout=12.0) as client:
             r = await client.get(
                 f"{settings.BACKEND_URL}{path}",
-                headers={"Authorization": f"Bearer {settings.BACKEND_TOKEN}"},
+                headers={"Authorization": f"Bearer {token}"},
             )
         if r.status_code == 200:
             return r.json().get("data")
@@ -177,6 +182,38 @@ def _detect_factors(emp: dict, risk_score: float) -> list[str]:
     if prev - perf > 8:
         factors.append("perf_declining")
     return factors
+
+
+# Only the numeric fields FACTOR_LABELS templates actually reference — kept
+# separate from the full `emp` dict since that also carries non-numeric
+# fields (name, department, employeeId) that would break str.format() safely
+# coercing every value.
+_LABEL_NUMERIC_FIELDS = [
+    "attendance_rate", "performance_score", "leave_days_taken", "late_count",
+    "tenure_months", "manager_change_count", "warnings_issued", "prev_month_score",
+]
+
+
+def _factor_labels_for(emp: dict, factors: list[str]) -> list[str]:
+    """Interpolate each factor's template with this employee's actual numbers
+    (falls back to the raw template if formatting unexpectedly fails)."""
+    values = {}
+    for key in _LABEL_NUMERIC_FIELDS:
+        try:
+            values[key] = float(emp.get(key, 0) or 0)
+        except (TypeError, ValueError):
+            values[key] = 0.0
+
+    labels = []
+    for f in factors:
+        template = FACTOR_LABELS.get(f)
+        if not template:
+            continue
+        try:
+            labels.append(template.format(**values))
+        except (KeyError, ValueError):
+            labels.append(template)
+    return labels
 
 
 def _risk_level(score: float) -> str:
@@ -234,7 +271,7 @@ def _run_ml_inference(employees: list[dict]) -> list[dict]:
             "performanceScore": round(float(emp.get("performance_score", 0)), 1),
             "attendanceRate":  round(float(emp.get("attendance_rate", 0)), 1),
             "factors":         factors,
-            "factorLabels":    [FACTOR_LABELS[f] for f in factors if f in FACTOR_LABELS],
+            "factorLabels":    _factor_labels_for(emp, factors),
             "recommendations": list({RECOMMENDATIONS[f] for f in factors if f in RECOMMENDATIONS}),
             "mlUsed":          ml_used,
         })

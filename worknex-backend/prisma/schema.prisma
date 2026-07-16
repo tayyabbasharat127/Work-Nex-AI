@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
@@ -19,141 +19,309 @@ model Department {
   organization   Organization @relation(fields: [organizationId], references: [id])
 
   @@unique([organizationId, name])
+  @@unique([id, organizationId])
   @@index([organizationId])
+}
+
+// Org-defined, admin-named grouping (e.g. "Faculty"/"NTS" for a university,
+// "Engineering"/"Remote" for a software house, or none at all) — drives
+// per-category attendance rules (late threshold, 3-lates-to-absence,
+// weekly-hours target) without hardcoding any org's own terminology.
+model StaffCategory {
+  id                String       @id @default(uuid())
+  organizationId    String
+  name              String
+  lateThresholdTime String? // "08:40" — null = no lateness rule for this category
+  latesPerAbsence   Int? // 3 — null = 3-strikes rule doesn't apply
+  minHoursPerDay    Float?
+  minHoursPerWeek   Float?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  users             User[]
+  organization      Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, name])
+  @@unique([id, organizationId])
+  @@index([organizationId])
+}
+
+enum GoalStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  MISSED
+}
+
+enum ReviewStatus {
+  DRAFT
+  SUBMITTED
+}
+
+model Goal {
+  id             String       @id @default(uuid())
+  organizationId String
+  userId         String // owner/employee
+  title          String
+  description    String?
+  metric         String? // free-text target, e.g. "Ship 3 features"
+  dueDate        DateTime?
+  progress       Int          @default(0) // 0-100
+  status         GoalStatus   @default(NOT_STARTED)
+  createdById    String // employee or manager who created it
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation("GoalOwner", fields: [userId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([id, organizationId])
+  @@index([organizationId, userId])
+}
+
+model PerformanceReview {
+  id              String       @id @default(uuid())
+  organizationId  String
+  userId          String // reviewee
+  managerId       String // reviewer, snapshotted at creation time
+  cycle           String // free text, e.g. "Q1 2026"
+  managerRating   Int? // 1-5
+  managerComments String?      @db.Text
+  status          ReviewStatus @default(DRAFT)
+  submittedAt     DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  user            User         @relation("ReviewSubject", fields: [userId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  manager         User         @relation("ReviewManager", fields: [managerId, organizationId], references: [id, organizationId])
+  organization    Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([userId, managerId, cycle])
+  @@unique([id, organizationId])
+  @@index([organizationId, userId])
+  @@index([organizationId, managerId])
 }
 
 model User {
-  id             String              @id @default(uuid())
-  organizationId String
-  employeeId     String              @unique
-  firstName      String
-  lastName       String
-  email          String              @unique
-  passwordHash   String
-  role           Role                @default(EMPLOYEE)
-  departmentId   String?
-  managerId      String?
-  designation    String?
-  joiningDate    DateTime?
-  isActive       Boolean             @default(true)
-  twoFAEnabled   Boolean             @default(false)
-  twoFASecret    String?
-  profilePicture String?
-  phone          String?
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  attendance       Attendance[]
-  auditLogs        AuditLog[]
-  leaveBalances    LeaveBalance[]
-  approvedLeaves   LeaveRequest[]      @relation("ApproverLeaves")
-  leaveRequests    LeaveRequest[]      @relation("EmployeeLeaves")
-  notifications    Notification[]
-  performance      PerformanceRecord[]
-  attritionRecords AttritionRecord[]
-  refreshTokens    RefreshToken[]
-  uploadedPolicyDocuments PolicyDocument[] @relation("UploadedPolicyDocuments")
-  approvedPolicyVersions LeavePolicyVersion[] @relation("ApprovedPolicyVersions")
-  employeeLeaveDecisionLogs LeaveDecisionLog[] @relation("EmployeeLeaveDecisionLogs")
-  evaluatedLeaveDecisionLogs LeaveDecisionLog[] @relation("EvaluatorLeaveDecisionLogs")
-  department     Department?         @relation(fields: [departmentId], references: [id])
-  manager        User?               @relation("ManagerSubordinates", fields: [managerId], references: [id])
-  organization   Organization        @relation(fields: [organizationId], references: [id])
-  subordinates   User[]              @relation("ManagerSubordinates")
+  id                         String                    @id @default(uuid())
+  organizationId             String
+  employeeId                 String
+  firstName                  String
+  lastName                   String
+  email                      String                    @unique
+  passwordHash               String
+  roleId                     String
+  departmentId               String?
+  staffCategoryId            String?
+  managerId                  String?
+  designation                String?
+  joiningDate                DateTime?
+  isActive                   Boolean                   @default(true)
+  twoFAEnabled               Boolean                   @default(false)
+  twoFASecret                String?
+  profilePicture             String?
+  phone                      String?
+  emailVerifiedAt            DateTime?
+  authVersion                Int                       @default(0)
+  createdAt                  DateTime                  @default(now())
+  updatedAt                  DateTime                  @updatedAt
+  attendance                 Attendance[]
+  universityAttendancePunches UniversityAttendancePunch[]
+  auditLogs                  AuditLog[]
+  leaveBalances              LeaveBalance[]
+  approvedLeaves             LeaveRequest[]            @relation("ApproverLeaves")
+  managerReviewedLeaves      LeaveRequest[]            @relation("ManagerReviewedLeaves")
+  adminReviewedLeaves        LeaveRequest[]            @relation("AdminReviewedLeaves")
+  leaveRequests              LeaveRequest[]            @relation("EmployeeLeaves")
+  notifications              Notification[]
+  performance                PerformanceRecord[]
+  attritionRecords           AttritionRecord[]
+  refreshTokens              RefreshToken[]
+  passwordResetTokens        PasswordResetToken[]
+  authenticationChallenges   AuthenticationChallenge[]
+  uploadedPolicyDocuments    PolicyDocument[]          @relation("UploadedPolicyDocuments")
+  approvedPolicyVersions     LeavePolicyVersion[]      @relation("ApprovedPolicyVersions")
+  employeeLeaveDecisionLogs  LeaveDecisionLog[]        @relation("EmployeeLeaveDecisionLogs")
+  evaluatedLeaveDecisionLogs LeaveDecisionLog[]        @relation("EvaluatorLeaveDecisionLogs")
+  goals                      Goal[]                    @relation("GoalOwner")
+  reviewsReceived            PerformanceReview[]       @relation("ReviewSubject")
+  reviewsGiven               PerformanceReview[]       @relation("ReviewManager")
+  department                 Department?               @relation(fields: [departmentId, organizationId], references: [id, organizationId])
+  staffCategory              StaffCategory?            @relation(fields: [staffCategoryId, organizationId], references: [id, organizationId])
+  manager                    User?                     @relation("ManagerSubordinates", fields: [managerId, organizationId], references: [id, organizationId])
+  organization               Organization              @relation(fields: [organizationId], references: [id])
+  subordinates               User[]                    @relation("ManagerSubordinates")
+  customRole                 Role                      @relation(fields: [roleId], references: [id])
 
+  @@unique([organizationId, employeeId])
+  @@unique([id, organizationId])
   @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@index([organizationId, roleId])
+  @@index([organizationId, managerId])
+  @@index([organizationId, departmentId])
 }
 
 model RefreshToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
+  id                  String    @id @default(uuid())
+  token               String?   @unique
+  tokenHash           String?   @unique
+  userId              String
+  expiresAt           DateTime
+  lastUsedAt          DateTime?
+  revokedAt           DateTime?
+  replacedByTokenHash String?
+  ipAddress           String?
+  userAgent           String?
+  createdAt           DateTime  @default(now())
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
   userId    String
   expiresAt DateTime
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, usedAt])
+  @@index([expiresAt])
+}
+
+model AuthenticationChallenge {
+  id        String    @id
+  userId    String
+  type      String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type, usedAt])
+  @@index([expiresAt])
 }
 
 model LeavePolicy {
-  id              String         @id @default(uuid())
-  organizationId  String
-  leaveType       LeaveType
-  totalDays       Int
-  carryForward    Boolean        @default(false)
-  maxCarryForward Int            @default(0)
-  applicableRoles Role[]
-  description     String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  leaveBalances   LeaveBalance[]
-  organization    Organization   @relation(fields: [organizationId], references: [id])
+  id                String         @id @default(uuid())
+  organizationId    String
+  leaveType         LeaveType
+  totalDays         Int
+  carryForward      Boolean        @default(false)
+  maxCarryForward   Int            @default(0)
+  applicableRoleIds String[]       @default([])
+  description       String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  leaveBalances     LeaveBalance[]
+  organization      Organization   @relation(fields: [organizationId], references: [id])
 
   @@unique([organizationId, leaveType])
+  @@unique([id, organizationId])
   @@index([organizationId, leaveType])
 }
 
 model LeaveBalance {
-  id            String      @id @default(uuid())
+  id             String       @id @default(uuid())
   organizationId String
-  userId        String
-  policyId      String
-  year          Int
-  totalDays     Int
-  usedDays      Int         @default(0)
-  remainingDays Int
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  policy        LeavePolicy @relation(fields: [policyId], references: [id])
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization  Organization @relation(fields: [organizationId], references: [id])
+  userId         String
+  policyId       String
+  year           Int
+  totalDays      Int
+  usedDays       Int          @default(0)
+  remainingDays  Int
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  policy         LeavePolicy  @relation(fields: [policyId, organizationId], references: [id, organizationId])
+  user           User         @relation(fields: [userId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   @@unique([userId, policyId, year])
   @@index([organizationId])
 }
 
 model LeaveRequest {
-  id           String      @id @default(uuid())
-  organizationId String
-  employeeId   String
-  approverId   String?
-  leaveType    LeaveType
-  startDate    DateTime
-  endDate      DateTime
-  totalDays    Int
-  reason       String
-  status       LeaveStatus @default(PENDING)
-  approverNote String?
-  appliedAt    DateTime    @default(now())
-  reviewedAt   DateTime?
-  updatedAt    DateTime    @updatedAt
-  approver     User?       @relation("ApproverLeaves", fields: [approverId], references: [id])
-  employee     User        @relation("EmployeeLeaves", fields: [employeeId], references: [id])
-  organization Organization @relation(fields: [organizationId], references: [id])
-  decisionLogs LeaveDecisionLog[]
+  id                    String             @id @default(uuid())
+  organizationId        String
+  employeeId            String
+  approverId            String?
+  leaveType             LeaveType
+  otherLeaveName        String?
+  balanceLeaveType      LeaveType?
+  emergencyRecoveryDate DateTime?
+  startDate             DateTime
+  endDate               DateTime
+  totalDays             Int
+  reason                String
+  status                LeaveStatus        @default(PENDING)
+  approverNote          String?
+  appliedAt             DateTime           @default(now())
+  reviewedAt            DateTime?
+  managerApproverId     String?
+  managerReviewedAt     DateTime?
+  managerNote           String?
+  adminApproverId       String?
+  adminReviewedAt       DateTime?
+  adminNote             String?
+  updatedAt             DateTime           @updatedAt
+  isSandwiched          Boolean            @default(false)
+  sandwichExtraDays     Int                @default(0)
+  aiRecommendation      AiLeaveRecommendation?
+  aiConfidence          Int?
+  aiReasoning           Json?
+  aiPolicyObservations  Json?
+  aiGeneratedAt         DateTime?
+  aiModel               String?
+  approver              User?              @relation("ApproverLeaves", fields: [approverId, organizationId], references: [id, organizationId])
+  managerApprover       User?              @relation("ManagerReviewedLeaves", fields: [managerApproverId, organizationId], references: [id, organizationId])
+  adminApprover         User?              @relation("AdminReviewedLeaves", fields: [adminApproverId, organizationId], references: [id, organizationId])
+  employee              User               @relation("EmployeeLeaves", fields: [employeeId, organizationId], references: [id, organizationId])
+  organization          Organization       @relation(fields: [organizationId], references: [id])
+  decisionLogs          LeaveDecisionLog[]
 
+  @@unique([id, organizationId])
   @@index([organizationId, status])
+  @@index([organizationId, emergencyRecoveryDate])
 }
 
 model Attendance {
-  id           String           @id @default(uuid())
+  id             String           @id @default(uuid())
   organizationId String
-  userId       String
-  date         DateTime         @db.Date
-  checkIn      DateTime?
-  checkOut     DateTime?
-  status       AttendanceStatus @default(PRESENT)
-  workingHours Float?
-  source       String           @default("MANUAL")
-  latitude     Float?
-  longitude    Float?
-  ipAddress    String?
-  notes        String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization     @relation(fields: [organizationId], references: [id])
+  userId         String
+  date           DateTime         @db.Date
+  checkIn        DateTime?
+  checkOut       DateTime?
+  status         AttendanceStatus @default(PRESENT)
+  workingHours   Float?
+  source         String           @default("MANUAL")
+  latitude       Float?
+  longitude      Float?
+  ipAddress      String?
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  user           User             @relation(fields: [userId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  organization   Organization     @relation(fields: [organizationId], references: [id])
 
   @@unique([userId, date])
   @@index([organizationId, date])
   @@index([ipAddress])
+}
+
+model UniversityAttendancePunch {
+  id             String       @id @default(uuid())
+  organizationId String
+  userId         String
+  externalUserId String
+  checkInTime    DateTime
+  type           String
+  receivedAt     DateTime     @default(now())
+  user           User         @relation(fields: [userId, organizationId], references: [id, organizationId])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, checkInTime])
+  @@index([userId, checkInTime])
 }
 
 model Holiday {
@@ -166,69 +334,157 @@ model Holiday {
   createdAt      DateTime     @default(now())
   organization   Organization @relation(fields: [organizationId], references: [id])
 
+  @@unique([organizationId, date])
   @@index([organizationId])
 }
 
 model Notification {
-  id        String           @id @default(uuid())
+  id             String           @id @default(uuid())
   organizationId String
-  userId    String
-  type      NotificationType
-  title     String
-  message   String
-  isRead    Boolean          @default(false)
-  metadata  Json?
-  createdAt DateTime         @default(now())
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization  @relation(fields: [organizationId], references: [id])
+  userId         String
+  type           NotificationType
+  title          String
+  message        String
+  isRead         Boolean          @default(false)
+  metadata       Json?
+  createdAt      DateTime         @default(now())
+  user           User             @relation(fields: [userId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  organization   Organization     @relation(fields: [organizationId], references: [id])
 
   @@index([organizationId, userId, isRead])
 }
 
+enum BiometricIntegrationType {
+  DATABASE
+  API
+  ADMS
+}
+
+// Per-organization config for connecting an attendance sync source (currently
+// ZKTeco/BioTime). Feeds tms.provider.js, which today reads this from env
+// vars — this table replaces that with an admin-editable, per-org config.
+// All credential fields are stored encrypted (see utils/encryption.js) and
+// are never returned to the frontend once saved.
+model BiometricIntegration {
+  id              String                   @id @default(uuid())
+  organizationId  String                   @unique
+  integrationType BiometricIntegrationType @default(DATABASE)
+  enabled         Boolean                  @default(false)
+
+  dbType              String?
+  dbHost              String?
+  dbPort              Int?
+  dbName              String?
+  dbUsername          String?
+  dbPasswordEncrypted String?
+  dbTableName         String?
+
+  apiBaseUrl      String?
+  apiKeyEncrypted String?
+
+  admsCommunicationKeyEncrypted String?
+
+  fieldMapping        Json @default("{}")
+  syncIntervalMinutes Int  @default(60)
+
+  lastTestedAt   DateTime?
+  lastTestResult Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id])
+  devices      BiometricDevice[]
+
+  @@unique([id, organizationId])
+}
+
+enum BiometricDeviceStatus {
+  ONLINE
+  OFFLINE
+  UNKNOWN
+}
+
+model BiometricDevice {
+  id                     String                @id @default(uuid())
+  organizationId         String
+  biometricIntegrationId String?
+  name                   String
+  deviceSerial           String?
+  hmacSecretEncrypted    String?
+  ipAddress              String?
+  port                   Int?
+  location               String?
+  status                 BiometricDeviceStatus @default(UNKNOWN)
+  lastSeenAt             DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
+  organization  Organization            @relation(fields: [organizationId], references: [id])
+  integration   BiometricIntegration?   @relation(fields: [biometricIntegrationId, organizationId], references: [id, organizationId], onDelete: NoAction)
+  webhookNonces BiometricWebhookNonce[]
+
+  @@unique([deviceSerial])
+  @@index([organizationId])
+}
+
+model BiometricWebhookNonce {
+  id        String          @id @default(uuid())
+  deviceId  String
+  nonce     String
+  expiresAt DateTime
+  createdAt DateTime        @default(now())
+  device    BiometricDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, nonce])
+  @@index([expiresAt])
+}
+
 model PerformanceRecord {
-  id                String   @id @default(uuid())
-  organizationId    String
-  userId            String
-  month             Int
-  year              Int
-  presentDays       Int      @default(0)
-  absentDays        Int      @default(0)
-  lateDays          Int      @default(0)
-  leaveDays         Int      @default(0)
-  avgWorkingHours   Float    @default(0)
-  attendanceScore   Float    @default(0)
-  leaveScore        Float    @default(0)
-  punctualityScore  Float    @default(0)
-  overallScore      Float    @default(0)
-  mlPredictedScore  Float?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization      Organization @relation(fields: [organizationId], references: [id])
-  attritionRecords  AttritionRecord[]
+  id               String            @id @default(uuid())
+  organizationId   String
+  userId           String
+  month            Int
+  year             Int
+  presentDays      Int               @default(0)
+  absentDays       Int               @default(0)
+  lateDays         Int               @default(0)
+  leaveDays        Int               @default(0)
+  avgWorkingHours  Float             @default(0)
+  attendanceScore  Float             @default(0)
+  leaveScore       Float             @default(0)
+  punctualityScore Float             @default(0)
+  overallScore     Float             @default(0)
+  mlPredictedScore Float?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  user             User              @relation(fields: [userId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  attritionRecords AttritionRecord[]
 
   @@unique([userId, month, year])
+  @@unique([id, organizationId])
   @@index([organizationId, year, month])
 }
 
 model AttritionRecord {
-  id                  String            @id @default(uuid())
+  id                  String             @id @default(uuid())
   organizationId      String
   userId              String
   month               Int
   year                Int
   riskScore           Float
   riskLabel           String
-  willLeaveProb       Float             @default(0)
-  factors             Json              @default("[]")
-  modelVersion        String            @default("deterministic-v1")
-  source              String            @default("DETERMINISTIC")
+  willLeaveProb       Float              @default(0)
+  factors             Json               @default("[]")
+  modelVersion        String             @default("deterministic-v1")
+  source              String             @default("DETERMINISTIC")
   performanceRecordId String?
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization        Organization      @relation(fields: [organizationId], references: [id])
-  performanceRecord   PerformanceRecord? @relation(fields: [performanceRecordId], references: [id], onDelete: SetNull)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  user                User               @relation(fields: [userId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  organization        Organization       @relation(fields: [organizationId], references: [id])
+  performanceRecord   PerformanceRecord? @relation(fields: [performanceRecordId, organizationId], references: [id, organizationId], onDelete: NoAction)
 
   @@unique([userId, month, year])
   @@index([organizationId, year, month])
@@ -236,53 +492,63 @@ model AttritionRecord {
 }
 
 model EtlSyncLog {
-  id          String    @id @default(uuid())
+  id             String        @id @default(uuid())
   organizationId String?
-  source      String
-  status      String
-  recordsIn   Int       @default(0)
-  recordsOut  Int       @default(0)
-  errorLog    String?
-  startedAt   DateTime
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  organization Organization? @relation(fields: [organizationId], references: [id])
+  source         String
+  status         String
+  recordsIn      Int           @default(0)
+  recordsOut     Int           @default(0)
+  errorLog       String?
+  startedAt      DateTime
+  completedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
-  @@index([organizationId])
+  @@index([organizationId, createdAt])
+  @@index([status, createdAt])
 }
 
 model Organization {
-  id           String        @id @default(uuid())
-  name         String
-  slug         String        @unique
-  industry     String?
-  country      String        @default("Pakistan")
-  logoUrl      String?
-  address      String?
-  website      String?
-  phone        String?
-  ownerId      String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  invoices     Invoice[]
-  users        User[]
-  departments  Department[]
-  attendance   Attendance[]
-  leavePolicies LeavePolicy[]
-  leaveBalances LeaveBalance[]
-  leaveRequests LeaveRequest[]
-  notifications Notification[]
-  performanceRecords PerformanceRecord[]
-  attritionRecords   AttritionRecord[]
-  holidays     Holiday[]
-  auditLogs    AuditLog[]
-  etlSyncLogs  EtlSyncLog[]
-  settings     OrganizationSettings?
-  policyDocuments PolicyDocument[]
+  id                   String                @id @default(uuid())
+  name                 String
+  slug                 String                @unique
+  industry             String?
+  country              String                @default("Pakistan")
+  logoUrl              String?
+  address              String?
+  website              String?
+  phone                String?
+  ownerId              String?
+  termsAcceptedAt      DateTime?
+  termsVersion         String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  invoices             Invoice[]
+  users                User[]
+  departments          Department[]
+  staffCategories      StaffCategory[]
+  attendance           Attendance[]
+  universityAttendancePunches UniversityAttendancePunch[]
+  leavePolicies        LeavePolicy[]
+  leaveBalances        LeaveBalance[]
+  leaveRequests        LeaveRequest[]
+  notifications        Notification[]
+  performanceRecords   PerformanceRecord[]
+  attritionRecords     AttritionRecord[]
+  goals                Goal[]
+  performanceReviews   PerformanceReview[]
+  holidays             Holiday[]
+  auditLogs            AuditLog[]
+  etlSyncLogs          EtlSyncLog[]
+  settings             OrganizationSettings?
+  policyDocuments      PolicyDocument[]
   extractedPolicyRules ExtractedPolicyRule[]
-  leavePolicyVersions LeavePolicyVersion[]
-  leaveDecisionLogs LeaveDecisionLog[]
-  subscription Subscription?
+  leavePolicyVersions  LeavePolicyVersion[]
+  leaveDecisionLogs    LeaveDecisionLog[]
+  subscription         Subscription?
+  customRoles          Role[]
+  biometricIntegration BiometricIntegration?
+  biometricDevices     BiometricDevice[]
 }
 
 model OrganizationSettings {
@@ -295,7 +561,11 @@ model OrganizationSettings {
   officeIpRanges          Json?
   wifiVerificationEnabled Boolean      @default(false)
   leaveAutomationEnabled  Boolean      @default(true)
+  sandwichLeaveEnabled    Boolean      @default(false)
+  aiLeaveAdvisorEnabled   Boolean      @default(false)
   attendancePolicyJson    Json?
+  onboardingCompleted     Boolean      @default(false)
+  onboardingStep          String       @default("HR_CONFIGURATION")
   createdAt               DateTime     @default(now())
   updatedAt               DateTime     @updatedAt
   organization            Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -303,22 +573,45 @@ model OrganizationSettings {
   @@index([organizationId])
 }
 
+model OrganizationSignup {
+  id                       String    @id @default(uuid())
+  email                    String    @unique
+  firstName                String
+  lastName                 String
+  passwordHash             String
+  verificationCodeHash     String
+  verificationExpiresAt    DateTime
+  verificationAttempts     Int       @default(0)
+  lastCodeSentAt           DateTime  @default(now())
+  verifiedAt               DateTime?
+  completionTokenHash      String?   @unique
+  completionTokenExpiresAt DateTime?
+  termsAcceptedAt          DateTime
+  termsVersion             String
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  @@index([verificationExpiresAt])
+  @@index([completionTokenExpiresAt])
+}
+
 model PolicyDocument {
-  id             String               @id @default(uuid())
+  id             String                @id @default(uuid())
   organizationId String
   uploadedById   String
   fileName       String
   fileType       String
   filePath       String?
   extractedText  String?
-  status         PolicyDocumentStatus @default(UPLOADED)
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  uploadedBy     User                 @relation("UploadedPolicyDocuments", fields: [uploadedById], references: [id])
+  status         PolicyDocumentStatus  @default(UPLOADED)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedBy     User                  @relation("UploadedPolicyDocuments", fields: [uploadedById, organizationId], references: [id, organizationId])
   extractedRules ExtractedPolicyRule[]
   policyVersions LeavePolicyVersion[]
 
+  @@unique([id, organizationId])
   @@index([organizationId])
   @@index([organizationId, status])
 }
@@ -334,7 +627,7 @@ model ExtractedPolicyRule {
   createdAt        DateTime                  @default(now())
   updatedAt        DateTime                  @updatedAt
   organization     Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  policyDocument   PolicyDocument            @relation(fields: [policyDocumentId], references: [id], onDelete: Cascade)
+  policyDocument   PolicyDocument            @relation(fields: [policyDocumentId, organizationId], references: [id, organizationId], onDelete: Cascade)
 
   @@index([organizationId])
   @@index([organizationId, status])
@@ -354,11 +647,12 @@ model LeavePolicyVersion {
   createdAt        DateTime                 @default(now())
   updatedAt        DateTime                 @updatedAt
   organization     Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  policyDocument   PolicyDocument?          @relation(fields: [policyDocumentId], references: [id], onDelete: SetNull)
-  approvedBy       User?                    @relation("ApprovedPolicyVersions", fields: [approvedById], references: [id], onDelete: SetNull)
+  policyDocument   PolicyDocument?          @relation(fields: [policyDocumentId, organizationId], references: [id, organizationId], onDelete: NoAction)
+  approvedBy       User?                    @relation("ApprovedPolicyVersions", fields: [approvedById, organizationId], references: [id, organizationId], onDelete: NoAction)
   decisionLogs     LeaveDecisionLog[]
 
   @@unique([organizationId, version])
+  @@unique([id, organizationId])
   @@index([organizationId])
   @@index([organizationId, status])
 }
@@ -376,10 +670,10 @@ model LeaveDecisionLog {
   evaluatedBy       String?
   createdAt         DateTime            @default(now())
   organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  leaveRequest      LeaveRequest        @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
-  employee          User                @relation("EmployeeLeaveDecisionLogs", fields: [employeeId], references: [id])
-  evaluator         User?               @relation("EvaluatorLeaveDecisionLogs", fields: [evaluatedBy], references: [id], onDelete: SetNull)
-  policyVersion     LeavePolicyVersion? @relation(fields: [policyVersionId], references: [id], onDelete: SetNull)
+  leaveRequest      LeaveRequest        @relation(fields: [leaveRequestId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  employee          User                @relation("EmployeeLeaveDecisionLogs", fields: [employeeId, organizationId], references: [id, organizationId])
+  evaluator         User?               @relation("EvaluatorLeaveDecisionLogs", fields: [evaluatedBy, organizationId], references: [id, organizationId], onDelete: NoAction)
+  policyVersion     LeavePolicyVersion? @relation(fields: [policyVersionId, organizationId], references: [id, organizationId], onDelete: NoAction)
 
   @@index([organizationId])
   @@index([organizationId, leaveRequestId])
@@ -392,8 +686,8 @@ model Subscription {
   status             SubscriptionStatus @default(TRIAL)
   billingCycle       BillingCycle       @default(MONTHLY)
   maxEmployees       Int                @default(25)
-  pricePerMonth      Float
-  discountPercent    Float              @default(0)
+  pricePerMonth      Decimal            @default(0) @db.Decimal(12, 2)
+  discountPercent    Decimal            @default(0) @db.Decimal(5, 2)
   trialEndsAt        DateTime?
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
@@ -403,6 +697,8 @@ model Subscription {
   updatedAt          DateTime           @updatedAt
   invoices           Invoice[]
   organization       Organization       @relation(fields: [organizationId], references: [id])
+
+  @@unique([id, organizationId])
 }
 
 model Invoice {
@@ -412,10 +708,10 @@ model Invoice {
   invoiceNumber    String        @unique
   plan             PlanType
   billingCycle     BillingCycle
-  amount           Float
-  discount         Float         @default(0)
-  tax              Float         @default(0)
-  totalAmount      Float
+  amount           Decimal       @db.Decimal(12, 2)
+  discount         Decimal       @default(0) @db.Decimal(12, 2)
+  tax              Decimal       @default(0) @db.Decimal(12, 2)
+  totalAmount      Decimal       @db.Decimal(12, 2)
   status           PaymentStatus @default(PENDING)
   paymentMethod    String?
   paymentReference String?
@@ -426,49 +722,87 @@ model Invoice {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   organization     Organization  @relation(fields: [organizationId], references: [id])
-  subscription     Subscription? @relation(fields: [subscriptionId], references: [id])
+  subscription     Subscription? @relation(fields: [subscriptionId, organizationId], references: [id, organizationId])
+
+  @@index([organizationId, createdAt])
 }
 
 model AuditLog {
-  id        String      @id @default(uuid())
+  id             String        @id @default(uuid())
   organizationId String?
-  userId    String?
-  action    AuditAction
-  entity    String
-  entityId  String?
-  oldValues Json?
-  newValues Json?
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime    @default(now())
-  user      User?       @relation(fields: [userId], references: [id])
-  organization Organization? @relation(fields: [organizationId], references: [id])
+  userId         String?
+  action         AuditAction
+  entity         String
+  entityId       String?
+  oldValues      Json?
+  newValues      Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime      @default(now())
+  user           User?         @relation(fields: [userId], references: [id])
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
   @@index([organizationId])
+  @@index([organizationId, entity, createdAt])
+  @@index([userId, createdAt])
 }
 
-enum Role {
+enum RoleTier {
   SUPER_ADMIN
   ADMIN
   MANAGER
   EMPLOYEE
 }
 
+// Dynamic, admin-configurable role. Every row inherits its access-scope
+// behavior (self/subordinates/org) from `tier`, but has its own display
+// name and capability list, so orgs can define custom roles (e.g. "Dean")
+// without needing new scoping logic.
+model Role {
+  id             String        @id @default(uuid())
+  organizationId String?
+  name           String
+  tier           RoleTier
+  permissions    String[]      @default([])
+  isSystem       Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  users          User[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
 enum LeaveStatus {
   PENDING
+  PENDING_MANAGER
+  PENDING_ADMIN
   APPROVED
   REJECTED
   CANCELLED
 }
 
 enum LeaveType {
+  EMERGENCY
   ANNUAL
   SICK
   CASUAL
   MATERNITY
   PATERNITY
   UNPAID
+  BEREAVEMENT
+  MARRIAGE
+  STUDY
+  HAJJ
+  COMPENSATORY
   OTHER
+}
+
+enum AiLeaveRecommendation {
+  APPROVE
+  REJECT
+  REVIEW
 }
 
 enum AttendanceStatus {
@@ -490,6 +824,7 @@ enum NotificationType {
 }
 
 enum AuditAction {
+  READ
   CREATE
   UPDATE
   DELETE

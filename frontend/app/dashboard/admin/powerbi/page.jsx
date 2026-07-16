@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { analyticsAPI } from '@/lib/api';
+import { useLeaveTypeLabels, formatLeaveType } from '@/hooks/useLeaveTypeLabels';
 import {
   AlertCircle, BarChart3, RefreshCw, TrendingUp, Users, CalendarX,
   Clock, Upload, CheckCircle2, XCircle, Info, Database,
@@ -13,10 +14,10 @@ import {
 } from 'recharts';
 
 const LEAVE_COLORS = {
-  ANNUAL: '#06b6d4',
-  SICK: '#f59e0b',
-  CASUAL: '#10b981',
-  UNPAID: '#ef4444',
+  ANNUAL: 'var(--info)',
+  SICK: 'var(--warning)',
+  CASUAL: 'var(--success)',
+  UNPAID: 'var(--destructive)',
 };
 
 export default function PowerBIPage() {
@@ -39,6 +40,7 @@ export default function PowerBIPage() {
   const [headcount, setHeadcount] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState('');
+  const { labels: typeLabels } = useLeaveTypeLabels();
 
   const year = new Date().getFullYear();
   const month = new Date().getMonth() + 1;
@@ -61,9 +63,9 @@ export default function PowerBIPage() {
       if (byType.status === 'fulfilled') {
         const raw = Array.isArray(byType.value) ? byType.value : [];
         setLeaveByType(raw.map((r) => ({
-          name: r.leaveType || r._count,
+          name: r.leaveType ? formatLeaveType(typeLabels, r.leaveType) : r._count,
           value: Number(r._count?.leaveType || r._count || 0),
-          color: LEAVE_COLORS[r.leaveType] || '#8884d8',
+          color: LEAVE_COLORS[r.leaveType] || 'var(--chart-4)',
         })));
       }
       if (dept.status === 'fulfilled') setDeptAttendance(Array.isArray(dept.value) ? dept.value : []);
@@ -73,9 +75,9 @@ export default function PowerBIPage() {
     } finally {
       setDataLoading(false);
     }
-  }, [month, year]);
+  }, [month, year, typeLabels]);
 
-  // Load Power BI embed token
+  // Load Power BI embed token and render report using powerbi-client npm package
   const loadEmbed = useCallback(async () => {
     setEmbedState('loading');
     setEmbedMsg('');
@@ -87,25 +89,28 @@ export default function PowerBIPage() {
         setEmbedMsg('Embed token received but POWERBI_REPORT_ID or POWERBI_EMBED_URL is not configured.');
         return;
       }
-      const pbi = typeof window !== 'undefined' ? window.powerbi : null;
-      if (pbi?.embed && pbi?.models) {
-        pbi.embed(reportRef.current, {
-          type: 'report',
-          id: data.reportId,
-          embedUrl: data.embedUrl,
-          accessToken: data.embedToken,
-          tokenType: pbi.models.TokenType.Embed,
-          settings: { panes: { filters: { visible: false }, pageNavigation: { visible: true } } },
-        });
-        setEmbedState('embedded');
-      } else {
-        setEmbedState('setup');
-        setEmbedMsg(
-          data.rlsApplied
-            ? `RLS embed token generated for ${data.userEmail} (${data.userRole}). Load powerbi-client JS to render.`
-            : 'Embed token ready. Load powerbi-client JS to render the report.',
-        );
+      const pbi = await import('powerbi-client');
+      const powerbiService = new pbi.service.Service(
+        pbi.factories.hpmFactory,
+        pbi.factories.wpmpFactory,
+        pbi.factories.routerFactory,
+      );
+      // Reset first — React Strict Mode (dev) invokes this effect twice, and
+      // the "Reload embed" button re-runs it too. Without resetting, embed()
+      // on a container that already has a component throws "could not find
+      // the existing component in the list of active components".
+      if (reportRef.current) {
+        try { powerbiService.reset(reportRef.current); } catch { /* nothing embedded yet — fine */ }
       }
+      powerbiService.embed(reportRef.current, {
+        type: 'report',
+        id: data.reportId,
+        embedUrl: data.embedUrl,
+        accessToken: data.embedToken,
+        tokenType: pbi.models.TokenType.Embed,
+        settings: { panes: { filters: { visible: false }, pageNavigation: { visible: true } } },
+      });
+      setEmbedState('embedded');
     } catch (err) {
       setEmbedState('setup');
       setEmbedMsg(err?.message || 'Power BI credentials not configured on the backend.');
@@ -177,9 +182,9 @@ export default function PowerBIPage() {
 
           {/* ── Power BI Embed Section ── */}
           {embedState === 'setup' && (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5">
+            <div className="rounded-xl border border-warning/30 bg-warning/10 p-5">
               <div className="flex items-start gap-3">
-                <AlertCircle className="text-amber-400 mt-0.5 shrink-0" size={20} />
+                <AlertCircle className="text-warning mt-0.5 shrink-0" size={20} />
                 <div className="space-y-2">
                   <h2 className="font-semibold">Power BI embed not configured</h2>
                   <p className="text-sm text-muted-foreground">{embedMsg}</p>
@@ -205,17 +210,39 @@ export default function PowerBIPage() {
             </div>
           )}
 
-          {/* Embedded report */}
+          {/* Embedded report — iframe fallback when POWERBI_EMBED_URL is a public "Publish to web" URL */}
+          {embedState === 'setup' && embedMsg === '' && process.env.NEXT_PUBLIC_POWERBI_EMBED_URL && (
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning dark:text-warning">
+                <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                <span>
+                  Demo/public view — &quot;Publish to Web&quot; links have no row-level security and are visible to
+                  anyone with the URL. Do not use with real tenant data; use the RLS-protected embed above once
+                  Power BI service-principal setup is complete.
+                </span>
+              </div>
+              <div className="h-[720px] rounded-xl border border-border bg-card overflow-hidden">
+                <iframe
+                  title="WorkNex Power BI Report"
+                  src={process.env.NEXT_PUBLIC_POWERBI_EMBED_URL}
+                  className="w-full h-full border-0"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Embedded report — SDK path (requires Azure service principal setup) */}
           <div className={embedState === 'embedded' ? 'h-[720px] rounded-xl border border-border bg-card overflow-hidden' : 'hidden'}>
             <div ref={reportRef} className="w-full h-full" />
           </div>
 
           {/* RLS token info when embed is ready but no JS SDK */}
           {embedState === 'setup' && embedToken?.embedToken && (
-            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm flex items-start gap-2">
-              <CheckCircle2 size={16} className="text-emerald-400 mt-0.5 shrink-0" />
+            <div className="rounded-lg border border-success/30 bg-success/10 p-4 text-sm flex items-start gap-2">
+              <CheckCircle2 size={16} className="text-success mt-0.5 shrink-0" />
               <div>
-                <span className="font-semibold text-emerald-300">Embed token generated</span>
+                <span className="font-semibold text-success">Embed token generated</span>
                 {' — '}
                 <span className="text-muted-foreground">
                   {embedToken.rlsApplied
@@ -250,8 +277,8 @@ export default function PowerBIPage() {
             </div>
 
             {pushState === 'success' && pushResult && (
-              <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm space-y-1">
-                <div className="flex items-center gap-2 text-emerald-300 font-semibold">
+              <div className="mt-4 rounded-lg border border-success/30 bg-success/10 p-4 text-sm space-y-1">
+                <div className="flex items-center gap-2 text-success font-semibold">
                   <CheckCircle2 size={15} /> Push successful — {pushResult.totalRowsPushed?.toLocaleString()} rows synced
                 </div>
                 <div className="text-muted-foreground text-xs">
@@ -259,7 +286,7 @@ export default function PowerBIPage() {
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {pushResult.tables?.map((t) => (
-                    <span key={t.table} className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs">
+                    <span key={t.table} className="px-2 py-0.5 rounded-full bg-success/20 text-success text-xs">
                       {t.table}: {t.pushed} rows
                     </span>
                   ))}
@@ -268,16 +295,16 @@ export default function PowerBIPage() {
             )}
 
             {pushState === 'error' && pushResult && (
-              <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm flex items-start gap-2">
-                <XCircle size={15} className="text-red-400 mt-0.5 shrink-0" />
-                <span className="text-red-300">{pushResult.error}</span>
+              <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm flex items-start gap-2">
+                <XCircle size={15} className="text-destructive mt-0.5 shrink-0" />
+                <span className="text-destructive">{pushResult.error}</span>
               </div>
             )}
           </div>
 
           {/* ── Live KPI Cards (real data) ── */}
           {dataError && (
-            <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-sm flex items-center gap-2 text-red-300">
+            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm flex items-center gap-2 text-destructive">
               <AlertCircle size={15} /> {dataError}
             </div>
           )}
@@ -318,14 +345,14 @@ export default function PowerBIPage() {
               </h2>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={attendanceTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#283142" />
-                  <XAxis dataKey="date" stroke="#9ca3af" tick={{ fontSize: 11 }} />
-                  <YAxis stroke="#9ca3af" />
-                  <Tooltip contentStyle={{ background: '#111827', border: '1px solid #273244', borderRadius: 8 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="date" stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} />
+                  <YAxis stroke="var(--muted-foreground)" />
+                  <Tooltip contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border)', borderRadius: 8 }} />
                   <Legend />
-                  <Bar dataKey="PRESENT" stackId="a" fill="#06b6d4" name="Present" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="LATE" stackId="a" fill="#f59e0b" name="Late" />
-                  <Bar dataKey="ABSENT" stackId="a" fill="#ef4444" name="Absent" />
+                  <Bar dataKey="PRESENT" stackId="a" fill="var(--info)" name="Present" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="LATE" stackId="a" fill="var(--warning)" name="Late" />
+                  <Bar dataKey="ABSENT" stackId="a" fill="var(--destructive)" name="Absent" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -341,7 +368,7 @@ export default function PowerBIPage() {
                     <Pie data={leaveByType} dataKey="value" nameKey="name" innerRadius={60} outerRadius={100} paddingAngle={3}>
                       {leaveByType.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                     </Pie>
-                    <Tooltip contentStyle={{ background: '#111827', border: '1px solid #273244', borderRadius: 8 }} />
+                    <Tooltip contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border)', borderRadius: 8 }} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mt-2">
@@ -371,7 +398,7 @@ export default function PowerBIPage() {
                           className="h-2 rounded-full transition-all"
                           style={{
                             width: `${item.rate}%`,
-                            backgroundColor: item.rate >= 90 ? '#10b981' : item.rate >= 75 ? '#f59e0b' : '#ef4444',
+                            backgroundColor: item.rate >= 90 ? 'var(--success)' : item.rate >= 75 ? 'var(--warning)' : 'var(--destructive)',
                           }}
                         />
                       </div>

@@ -1,21 +1,36 @@
 """Chat controller — routes to LangChain agent (personal + aggregate) or statistical fallback."""
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from app.core.auth import AuthenticatedPrincipal, require_principal, require_user
 from app.models.schemas import ChatRequest, ChatResponse
 from app.services.chat_service import detect_intent, generate_response, is_langchain_mode
 
-router = APIRouter(prefix="/chat", tags=["Chat"])
+router = APIRouter(prefix="/chat", tags=["Chat"], dependencies=[Depends(require_principal)])
 
 
 @router.post("", response_model=ChatResponse)
-async def chat(req: ChatRequest) -> ChatResponse:
-    ctx = req.userContext or {}
-    role       = ctx.get("role", "EMPLOYEE")
-    user_id    = req.userId or ""
-    auth_token = req.authToken or ""
-    first_name = ctx.get("firstName", "")
-    last_name  = ctx.get("lastName", "")
-    user_name  = f"{first_name} {last_name}".strip() or ctx.get("name", "")
+async def chat(req: ChatRequest, principal: AuthenticatedPrincipal = Depends(require_user)) -> ChatResponse:
+    role = principal.role
+    user_id = principal.user_id
+    auth_token = principal.token
+    user_name = "User"
     intent     = detect_intent(req.message)
+
+    # Policy answers are retrieval tasks, not open-ended generation. Direct
+    # retrieval keeps answers grounded and preserves citations if an external
+    # provider or its tool-calling path is unavailable.
+    if intent == "policy":
+        from app.services.rag_service import answer as rag_answer
+        rag = await rag_answer(req.message, role=role, user_context={"organizationId": principal.organization_id})
+        return ChatResponse(
+            message=rag["answer"],
+            answer=rag["answer"],
+            intent=intent,
+            data={"mode": "retrieval", "actions": rag.get("actions", [])},
+            sources=rag.get("sources", []),
+            confidence=rag.get("confidence", 0),
+            actions=rag.get("actions", []),
+            fallback=rag.get("fallback", False),
+        )
 
     if is_langchain_mode():
         try:
@@ -44,7 +59,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
     # Statistical + RAG fallback
     response = await generate_response(intent, req.message, role, user_id)
     from app.services.rag_service import answer as rag_answer
-    rag = await rag_answer(req.message, role=role, user_context=ctx)
+    rag = await rag_answer(req.message, role=role, user_context={"organizationId": principal.organization_id})
     answer_text = response.get("text", rag.get("answer", ""))
     return ChatResponse(
         message=answer_text,
@@ -60,9 +75,16 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
 @router.get("/status", tags=["Chat"])
 async def chat_status():
-    from app.services.langchain_agent import is_langchain_ready
     from app.core.config import settings
-    lc_ready = is_langchain_mode() and is_langchain_ready()
+    lc_ready = False
+    if is_langchain_mode():
+        try:
+            from app.services.langchain_agent import is_langchain_ready
+            lc_ready = is_langchain_ready()
+        except (ImportError, ModuleNotFoundError):
+            # LangChain is an optional provider. Status must remain available
+            # when the statistical demo runtime intentionally omits it.
+            lc_ready = False
     provider = (
         "groq"      if settings.GROK_API_KEY       else
         "openai"    if settings.OPENAI_API_KEY      else
@@ -74,7 +96,7 @@ async def chat_status():
         "mode": "langchain" if lc_ready else "statistical",
         "langchainReady": lc_ready,
         "llmProvider": provider,
-        "backendConnected": bool(settings.BACKEND_TOKEN),
+        "backendConnected": bool(settings.BACKEND_URL),
         "personalToolsEnabled": bool(lc_ready),
         "ragBackend": "chromadb-semantic",
     }

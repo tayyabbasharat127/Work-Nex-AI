@@ -7,12 +7,18 @@
 const fs = require('fs');
 const path = require('path');
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-const AI_URL = process.env.AI_URL || 'http://localhost:8000';
+const requiredUrl = (name) => {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value.replace(/\/$/, '');
+};
+const BACKEND_URL = requiredUrl('BACKEND_URL');
+const FRONTEND_URL = requiredUrl('FRONTEND_URL');
+const AI_URL = requiredUrl('AI_SERVICE_URL');
 const API = `${BACKEND_URL}/api/v1`;
 const TEST_PREFIX = process.env.TEST_PREFIX || `worknex_e2e_${Date.now()}`;
-const TEST_PASSWORD = 'NovaPay@2025';
+const TEST_PASSWORD = process.env.TEST_USER_PASSWORD;
+if (!TEST_PASSWORD) throw new Error('TEST_USER_PASSWORD is required');
 const REPORT_DIR = path.join(process.cwd(), 'reports');
 const JSON_REPORT = path.join(REPORT_DIR, 'full-module-test-report.json');
 const MD_REPORT = path.join(REPORT_DIR, 'full-module-test-report.md');
@@ -302,7 +308,7 @@ async function cleanupStaleTestData() {
       // Skip departments from the current run
       if (deptName.startsWith('worknex_e2e_') && !deptName.startsWith(TEST_PREFIX)) {
         const res = await request('DELETE', `${API}/users/departments/${dept.id}`, { role: 'admin' });
-        const ok = res.status === 200 || (res.status === 409 && /active users/i.test(res.text || JSON.stringify(res.data)));
+        const ok = res.status === 200 || (res.status === 409 && /assigned users|users assigned|user\(s\).*assigned|active users/i.test(res.text || JSON.stringify(res.data)));
         add('Preflight Cleanup', `delete stale department ${deptName}`, ok ? 'PASS' : 'FAIL', `HTTP ${res.status} ${snippet(res.data || res.text)}`);
       }
     }
@@ -580,13 +586,32 @@ async function leaveTests() {
         body: { leaveType, startDate, endDate: startDate, reason: `E2E overlap ${TEST_PREFIX}` },
       });
       await checkJson('Leave', 'manager can evaluate subordinate leave', 'POST', `${API}/leave/${leave.id}/evaluate`, 200, { role: 'testManager' });
-      if (leave.status === 'PENDING') {
-        await checkJson('Leave', 'manager approves direct subordinate leave', 'PUT', `${API}/leave/${leave.id}/approve`, 200, {
+      if (['PENDING', 'PENDING_MANAGER'].includes(leave.status)) {
+        await checkJson('Leave', 'admin cannot bypass manager approval', 'PUT', `${API}/leave/${leave.id}/approve`, 409, {
+          role: 'admin',
+          body: { note: 'premature admin approval' },
+        });
+        const managerApproval = await checkJson('Leave', 'manager approves and forwards subordinate leave', 'PUT', `${API}/leave/${leave.id}/approve`, 200, {
           role: 'testManager',
-          body: { note: 'E2E approval' },
+          body: { note: 'E2E manager approval' },
+        });
+        add(
+          'Leave',
+          'manager approval leaves request pending for admin',
+          dataOf(managerApproval)?.status === 'PENDING_ADMIN' ? 'PASS' : 'FAIL',
+          dataOf(managerApproval)?.status,
+        );
+        await checkJson('Leave', 'admin grants final leave approval', 'PUT', `${API}/leave/${leave.id}/approve`, 200, {
+          role: 'admin',
+          body: { note: 'E2E final approval' },
+        });
+      } else if (leave.status === 'PENDING_ADMIN') {
+        await checkJson('Leave', 'admin grants final leave approval', 'PUT', `${API}/leave/${leave.id}/approve`, 200, {
+          role: 'admin',
+          body: { note: 'E2E final approval' },
         });
       } else {
-        add('Leave', 'manager approval only when pending', 'SKIPPED', `automation status=${leave.status}`);
+        add('Leave', 'hierarchical approval only when pending', 'SKIPPED', `automation status=${leave.status}`);
       }
     }
     const excess = await checkJson('Leave', 'excess leave is rejected or blocked', 'POST', `${API}/leave`, [400, 409], {
@@ -599,7 +624,7 @@ async function leaveTests() {
   const adminLeaves = await checkJson('Leave', 'admin gets leave list', 'GET', `${API}/leave?limit=1`, 200, { role: 'admin' });
   const unrelated = firstArray(adminLeaves).find((l) => l.employeeId !== state.created.employeeId);
   if (unrelated) {
-    await checkJson('Leave', 'manager cannot approve non-subordinate leave', 'PUT', `${API}/leave/${unrelated.id}/approve`, [400, 403], {
+    await checkJson('Leave', 'manager cannot approve non-subordinate leave', 'PUT', `${API}/leave/${unrelated.id}/approve`, [400, 403, 409], {
       role: 'testManager',
       body: { note: 'should not approve' },
     });
@@ -760,10 +785,12 @@ async function aiBackendTests() {
 async function aiDirectTests() {
   await checkJson('AI Direct', 'AI health', 'GET', `${AI_URL}/health`, 200);
   const chat = await checkJson('AI Direct', 'direct /chat', 'POST', `${AI_URL}/chat`, 200, {
-    body: { userId: state.created.employeeId || 'e2e', userContext: { role: 'EMPLOYEE' }, message: 'What is the attendance policy?' },
+    role: 'testEmployee',
+    body: { message: 'What is the attendance policy?' },
   });
   add('AI Direct', 'direct chat has answer', chat.status === 200 && (chat.data?.answer || chat.data?.message) ? 'PASS' : 'FAIL', snippet(chat.data));
   const pred = await checkJson('AI Direct', 'direct /predict/performance', 'POST', `${AI_URL}/predict/performance`, 200, {
+    role: 'testEmployee',
     body: {
       employeeId: state.created.employeeId || 'e2e',
       features: {
@@ -785,11 +812,11 @@ async function aiDirectTests() {
 // ─── Phase 18: Power BI ───────────────────────────────────────────────────────
 
 async function powerBiTests() {
-  const res = await request('GET', `${API}/analytics/powerbi/token`, { role: 'admin' });
+  const res = await request('GET', `${API}/analytics/powerbi/embed-token`, { role: 'admin' });
   if (res.status === 200) {
     const payload = dataOf(res);
     add('Power BI', 'token endpoint returns embed config when configured', payload?.accessToken || payload?.embedUrl ? 'PASS' : 'FAIL', snippet(payload), {
-      endpoint: `${API}/analytics/powerbi/token`,
+      endpoint: `${API}/analytics/powerbi/embed-token`,
       role: 'admin',
       expected: '200 with token/embed config',
       actualStatus: res.status,
@@ -798,7 +825,7 @@ async function powerBiTests() {
     add('Power BI', 'missing credentials reported honestly', 'PASS', snippet(res.data));
   } else {
     add('Power BI', 'token endpoint behavior', 'FAIL', snippet(res.data || res.text), {
-      endpoint: `${API}/analytics/powerbi/token`,
+      endpoint: `${API}/analytics/powerbi/embed-token`,
       role: 'admin',
       expected: '200 configured or 503 honest setup message',
       actualStatus: res.status,
@@ -857,7 +884,7 @@ async function cleanup() {
   if (state.created.departmentId && state.tokens.admin) {
     const res = await request('DELETE', `${API}/users/departments/${state.created.departmentId}`, { role: 'admin' });
     if (res.status === 200) addCleanup('delete test department', 'PASS', 'deleted');
-    else if (res.status === 409 && /active users/i.test(res.text || JSON.stringify(res.data))) addCleanup('delete test department', 'PASS', 'correctly blocked by active users');
+    else if (res.status === 409 && /assigned users|users assigned|user\(s\).*assigned|active users/i.test(res.text || JSON.stringify(res.data))) addCleanup('delete test department', 'PASS', 'correctly blocked by assigned users');
     else addCleanup('delete test department', 'FAIL', `HTTP ${res.status} ${snippet(res.data || res.text)}`);
   }
   if (state.created.policyDocumentId) {
@@ -874,8 +901,8 @@ async function cleanupRegisteredOrganization() {
   const cleanupName = 'delete billing signup test organization';
   let PrismaClient;
   try {
-    require('../worknex-backend/node_modules/dotenv').config({ path: path.join(process.cwd(), 'worknex-backend/.env') });
-    ({ PrismaClient } = require('../worknex-backend/node_modules/@prisma/client'));
+    require('dotenv').config({ path: path.join(__dirname, '../.env') });
+    ({ PrismaClient } = require('@prisma/client'));
   } catch (err) {
     addCleanup(cleanupName, 'FAIL', `Prisma cleanup unavailable: ${err.message}`);
     return;

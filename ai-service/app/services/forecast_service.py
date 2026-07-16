@@ -1,6 +1,7 @@
 """Leave demand forecasting — ML model with statistical fallback."""
 from __future__ import annotations
 
+import json
 import logging
 import os
 import statistics
@@ -9,14 +10,17 @@ from pathlib import Path
 from typing import Optional
 
 import httpx
+from app.core.auth import get_current_token
 
 logger = logging.getLogger(__name__)
 
 BACKEND_INTERNAL_URL = os.getenv("BACKEND_URL", "http://localhost:5000/api/v1")
-BACKEND_INTERNAL_KEY = os.getenv("AI_SERVICE_SECRET", "")
 
 ROOT = Path(__file__).resolve().parents[2]
 MODEL_PATH = ROOT / "models" / "leave_forecast_model.pkl"
+MODEL_META_PATH = ROOT / "models" / "leave_forecast_model_metadata.json"
+
+DEFAULT_ROLLING_AVG = 2.5
 
 DAY_WEIGHTS   = {0: 1.3, 1: 0.9, 2: 0.8, 3: 0.9, 4: 1.4, 5: 0.3, 6: 0.1}
 MONTH_WEIGHTS = {1: 0.85, 2: 0.80, 3: 0.90, 4: 1.00, 5: 1.10, 6: 1.35,
@@ -43,17 +47,70 @@ def _load_model():
     return None
 
 
+def _extract_rows(payload) -> list:
+    """Backend responses are wrapped as {success, message, data}, not a bare
+    list — the array always lives under payload['data']. A previous version
+    of this extraction used `payload.get("data") or payload if
+    isinstance(payload, list) else []`, which — due to Python's `if/else`
+    binding looser than `or` — evaluated to `[] ` whenever payload was a dict
+    (i.e. always), silently discarding every response. Kept explicit here to
+    avoid repeating that mistake."""
+    if isinstance(payload, dict):
+        return payload.get("data") or []
+    if isinstance(payload, list):
+        return payload
+    return []
+
+
+def _load_model_mae() -> float:
+    """Model's mean-absolute-error on its held-out test set — used as the
+    basis for the forecast's confidence interval. Falls back to a
+    conservative 1.0 if metadata is missing (no trained model, or MAE wasn't
+    recorded), rather than claiming false precision."""
+    try:
+        if MODEL_META_PATH.exists():
+            meta = json.loads(MODEL_META_PATH.read_text(encoding="utf-8"))
+            mae = meta.get("mae")
+            if isinstance(mae, (int, float)) and mae > 0:
+                return float(mae)
+    except Exception as exc:
+        logger.debug("Could not read forecast model metadata: %s", exc)
+    return 1.0
+
+
+async def _fetch_recent_leave_history(days: int = 14) -> Optional[float]:
+    """Real trailing daily-leave-count average from the org's own history,
+    used to seed the rolling-average feature instead of a fixed constant.
+    Returns None (caller falls back to DEFAULT_ROLLING_AVG) on any failure —
+    same fail-open pattern as _fetch_holiday_dates."""
+    try:
+        token = get_current_token()
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            r = await client.get(
+                f"{BACKEND_INTERNAL_URL}/leave/history/daily-counts",
+                params={"days": days},
+                headers=headers,
+            )
+            if r.status_code == 200:
+                rows = _extract_rows(r.json())
+                counts = [float(row.get("count", 0)) for row in rows if isinstance(row, dict)]
+                if counts:
+                    return round(statistics.mean(counts), 2)
+    except Exception as exc:
+        logger.debug("Leave history fetch failed (using default baseline): %s", exc)
+    return None
+
+
 async def _fetch_holiday_dates(start: datetime, end: datetime) -> set[str]:
     """Fetch public holiday dates from backend. Returns a set of 'YYYY-MM-DD' strings."""
     try:
-        headers: dict = {}
-        if BACKEND_INTERNAL_KEY:
-            headers["X-Internal-Key"] = BACKEND_INTERNAL_KEY
+        token = get_current_token()
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
         async with httpx.AsyncClient(timeout=4.0) as client:
             r = await client.get(f"{BACKEND_INTERNAL_URL}/attendance/holidays", headers=headers)
             if r.status_code == 200:
-                payload = r.json()
-                holidays = payload.get("data") or payload if isinstance(payload, list) else []
+                holidays = _extract_rows(r.json())
                 dates: set[str] = set()
                 for h in holidays:
                     raw = h.get("date") or h.get("holidayDate") or ""
@@ -101,12 +158,19 @@ async def generate_leave_forecast(department_id: Optional[str] = None) -> dict:
     model = _load_model()
     use_ml = model is not None
     algorithm = "ml-gradient-boosting-v1" if use_ml else "statistical-moving-average"
+    mae = _load_model_mae()
 
     # Fetch real public holidays from backend (30-day window)
     end_date = today + timedelta(days=30)
     holiday_dates = await _fetch_holiday_dates(today, end_date)
 
-    rolling_avg = 2.5
+    # Seed the rolling average from the org's own recent leave history instead
+    # of a fixed constant — falls back to DEFAULT_ROLLING_AVG only when no
+    # history is reachable (fetch failure), not when history is genuinely zero.
+    seeded_avg = await _fetch_recent_leave_history(days=14)
+    used_real_history = seeded_avg is not None
+    rolling_avg = seeded_avg if used_real_history else DEFAULT_ROLLING_AVG
+
     forecast = []
 
     for i in range(30):
@@ -119,15 +183,24 @@ async def generate_leave_forecast(department_id: Optional[str] = None) -> dict:
                 raw = float(model.predict([fv])[0])
                 predicted = round(max(0, raw), 1)
             except Exception:
-                predicted = round(2.5 * DAY_WEIGHTS.get(dow, 1.0) * MONTH_WEIGHTS.get(d.month, 1.0), 1)
+                predicted = round(rolling_avg * DAY_WEIGHTS.get(dow, 1.0) * MONTH_WEIGHTS.get(d.month, 1.0), 1)
         else:
-            predicted = round(2.5 * DAY_WEIGHTS.get(dow, 1.0) * MONTH_WEIGHTS.get(d.month, 1.0), 1)
+            predicted = round(rolling_avg * DAY_WEIGHTS.get(dow, 1.0) * MONTH_WEIGHTS.get(d.month, 1.0), 1)
 
         rolling_avg = round((rolling_avg * 6 + predicted) / 7, 2)
+
+        # ~95% interval from the model's held-out MAE — an approximation
+        # (assumes roughly normal residuals), not a true predictive interval;
+        # surfaced via confidenceNote so it isn't presented as more precise
+        # than it is.
+        low = round(max(0, predicted - 1.96 * mae), 1)
+        high = round(predicted + 1.96 * mae, 1)
 
         forecast.append({
             "date": d.strftime("%Y-%m-%d"),
             "predicted": predicted,
+            "low": low,
+            "high": high,
             "dayOfWeek": d.strftime("%A"),
             "riskLevel": "HIGH" if predicted > 4 else "MEDIUM" if predicted > 2 else "LOW",
         })
@@ -146,4 +219,9 @@ async def generate_leave_forecast(department_id: Optional[str] = None) -> dict:
         "generatedAt": today.isoformat(),
         "algorithm": algorithm,
         "mlModel": use_ml,
+        "baselineSource": "organization-history" if used_real_history else "default-fallback",
+        "confidenceNote": (
+            f"Shaded range is an approximate 95% interval (±{round(1.96 * mae, 1)} leaves/day), "
+            f"based on the model's historical average error ({mae} leaves/day) — not a guaranteed bound."
+        ),
     }

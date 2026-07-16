@@ -6,8 +6,11 @@
 
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const { ensureSystemRoles, ensurePlatformSuperAdminRole } = require('../src/utils/systemRoles');
 
 const prisma = new PrismaClient();
+const SEED_PASSWORD = process.env.SEED_USER_PASSWORD;
+if (!SEED_PASSWORD) throw new Error('SEED_USER_PASSWORD is required');
 const YEAR = 2025;
 const HASH = '$2a$12$demo.hash.placeholder'; // replaced per user below
 
@@ -146,6 +149,15 @@ async function main() {
   }
   console.log(`   ✓ ${deptData.length} departments created`);
 
+  const systemRoles = await ensureSystemRoles(prisma, org.id);
+  const superAdminRole = await ensurePlatformSuperAdminRole(prisma);
+  const roleIdByTier = {
+    SUPER_ADMIN: superAdminRole.id,
+    ADMIN: systemRoles.ADMIN.id,
+    MANAGER: systemRoles.MANAGER.id,
+    EMPLOYEE: systemRoles.EMPLOYEE.id,
+  };
+
   // ── 2. LEAVE POLICIES ───────────────────────────────────────────────────────
   console.log('📋 Creating leave policies...');
 
@@ -160,12 +172,14 @@ async function main() {
 
   const policies = {};
   for (const p of policyData) {
+    const { applicableRoles, ...policyFields } = p;
+    const applicableRoleIds = applicableRoles.map((tier) => roleIdByTier[tier]).filter(Boolean);
     const existing = await prisma.leavePolicy.findFirst({
       where: { organizationId: org.id, leaveType: p.leaveType },
     });
     const policy = existing
-      ? await prisma.leavePolicy.update({ where: { id: existing.id }, data: { ...p, organizationId: org.id } })
-      : await prisma.leavePolicy.create({ data: { ...p, organizationId: org.id } });
+      ? await prisma.leavePolicy.update({ where: { id: existing.id }, data: { ...policyFields, applicableRoleIds, organizationId: org.id } })
+      : await prisma.leavePolicy.create({ data: { ...policyFields, applicableRoleIds, organizationId: org.id } });
     policies[p.leaveType] = policy;
   }
   const demoPolicyRules = {
@@ -225,7 +239,7 @@ async function main() {
   // ── 4. USERS ────────────────────────────────────────────────────────────────
   console.log('👥 Creating users...');
 
-  const pw = await hash('NovaPay@2025');
+  const pw = await hash(SEED_PASSWORD);
 
   // Super Admin — CEO / Owner
   const owner = await prisma.user.upsert({
@@ -235,7 +249,7 @@ async function main() {
       organizationId: org.id,
       employeeId: 'NP-001', firstName: 'Zaid',    lastName: 'Khan',
       email: 'zaid.khan@novapay.pk',       passwordHash: pw,
-      role: 'SUPER_ADMIN', departmentId: depts['Finance & Accounts'].id,
+      roleId: roleIdByTier.SUPER_ADMIN, departmentId: depts['Finance & Accounts'].id,
       designation: 'Chief Executive Officer', joiningDate: d(2022, 1, 10),
       phone: '+92-300-1110001',
     },
@@ -249,7 +263,7 @@ async function main() {
       organizationId: org.id,
       employeeId: 'NP-002', firstName: 'Sara',    lastName: 'Malik',
       email: 'sara.malik@novapay.pk',       passwordHash: pw,
-      role: 'ADMIN', departmentId: depts['Human Resources'].id,
+      roleId: roleIdByTier.ADMIN, departmentId: depts['Human Resources'].id,
       managerId: owner.id, designation: 'HR Director', joiningDate: d(2022, 3, 1),
       phone: '+92-300-1110002',
     },
@@ -263,7 +277,7 @@ async function main() {
       organizationId: org.id,
       employeeId: 'NP-003', firstName: 'Ali',     lastName: 'Raza',
       email: 'ali.raza@novapay.pk',         passwordHash: pw,
-      role: 'MANAGER', departmentId: depts['Engineering'].id,
+      roleId: roleIdByTier.MANAGER, departmentId: depts['Engineering'].id,
       managerId: owner.id, designation: 'Engineering Manager', joiningDate: d(2022, 4, 15),
       phone: '+92-300-1110003',
     },
@@ -276,7 +290,7 @@ async function main() {
       organizationId: org.id,
       employeeId: 'NP-004', firstName: 'Hina',    lastName: 'Shah',
       email: 'hina.shah@novapay.pk',        passwordHash: pw,
-      role: 'MANAGER', departmentId: depts['Product'].id,
+      roleId: roleIdByTier.MANAGER, departmentId: depts['Product'].id,
       managerId: owner.id, designation: 'Product Manager', joiningDate: d(2022, 6, 1),
       phone: '+92-300-1110004',
     },
@@ -289,7 +303,7 @@ async function main() {
       organizationId: org.id,
       employeeId: 'NP-005', firstName: 'Omar',    lastName: 'Farooq',
       email: 'omar.farooq@novapay.pk',      passwordHash: pw,
-      role: 'MANAGER', departmentId: depts['Risk & Compliance'].id,
+      roleId: roleIdByTier.MANAGER, departmentId: depts['Risk & Compliance'].id,
       managerId: owner.id, designation: 'Risk & Compliance Manager', joiningDate: d(2022, 7, 20),
       phone: '+92-300-1110005',
     },
@@ -302,7 +316,7 @@ async function main() {
       organizationId: org.id,
       employeeId: 'NP-006', firstName: 'Nadia',   lastName: 'Hussain',
       email: 'nadia.hussain@novapay.pk',    passwordHash: pw,
-      role: 'MANAGER', departmentId: depts['Sales'].id,
+      roleId: roleIdByTier.MANAGER, departmentId: depts['Sales'].id,
       managerId: owner.id, designation: 'Sales Manager', joiningDate: d(2023, 1, 5),
       phone: '+92-300-1110006',
     },
@@ -360,7 +374,7 @@ async function main() {
         create: {
           organizationId: org.id,
           employeeId: e.id, firstName: e.fn, lastName: e.ln,
-          email: e.email, passwordHash: pw, role: 'EMPLOYEE',
+          email: e.email, passwordHash: pw, roleId: roleIdByTier.EMPLOYEE,
           departmentId: depts[group.deptKey].id,
           managerId: group.manager.id,
           designation: e.desig, joiningDate: e.joined,
@@ -1029,7 +1043,7 @@ async function main() {
   console.log('  ETL Logs    : 8 sync runs');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('\n  Login credentials (all users):');
-  console.log('  Password: NovaPay@2025\n');
+  console.log('  Password supplied through SEED_USER_PASSWORD\n');
   console.log('  SUPER_ADMIN : zaid.khan@novapay.pk');
   console.log('  ADMIN       : sara.malik@novapay.pk');
   console.log('  MANAGER     : ali.raza@novapay.pk       (Engineering)');

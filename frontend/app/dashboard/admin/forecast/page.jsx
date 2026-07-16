@@ -5,7 +5,34 @@ import Sidebar from '@/components/Sidebar';
 import { aiAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import { AlertTriangle, Brain, RefreshCw, Users, Calendar } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis } from 'recharts';
+import { LineChart, Line, Bar, ComposedChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis } from 'recharts';
+
+// Custom tooltip for the leave-forecast chart — the default recharts tooltip
+// would also surface the two synthetic stacked-area series (bandBase/bandRange)
+// used to draw the confidence band, which aren't meaningful to a viewer on their own.
+const ForecastTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  const point = payload[0]?.payload;
+  if (point?.forecastAvailable === false) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-3 text-sm shadow-xl">
+        <p className="font-medium">{label}</p>
+        <p className="mt-1 text-muted-foreground">
+          No forecast — {point.holidayName || (point.nonWorkingReason === 'WEEKEND' ? 'weekend' : 'non-working day')}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div style={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px' }}>
+      <p className="text-xs text-muted-foreground mb-1">{label}</p>
+      <p className="text-sm text-foreground">Predicted: <span className="font-semibold">{point?.predicted}</span></p>
+      {point?.low != null && point?.high != null && (
+        <p className="text-xs text-muted-foreground mt-0.5">Range: {point.low}–{point.high}</p>
+      )}
+    </div>
+  );
+};
 
 export default function AdminForecast() {
   const [leaveForecast, setLeaveForecast] = useState(null);
@@ -43,8 +70,14 @@ export default function AdminForecast() {
     }
   };
 
-  // Build forecast chart data
-  const forecastChartData = leaveForecast?.forecast || leaveForecast?.predictions || [];
+  // Build forecast chart data — bandBase/bandRange are a stacked-area trick
+  // to render the low..high confidence band behind the Bar (see ForecastTooltip
+  // for why they're hidden from the tooltip).
+  const forecastChartData = (leaveForecast?.forecast || leaveForecast?.predictions || []).map((f) => ({
+    ...f,
+    bandBase: f.low ?? f.predicted,
+    bandRange: (f.high ?? f.predicted) - (f.low ?? f.predicted),
+  }));
   const attritionData = attritionRisk?.employees || attritionRisk?.risks || [];
   const anomalyData = anomalies?.anomalies || anomalies?.data || [];
 
@@ -68,7 +101,7 @@ export default function AdminForecast() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-card border border-border rounded-xl p-5">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-blue-500/20"><Calendar size={20} className="text-blue-400" /></div>
+                <div className="p-2 rounded-lg bg-info/20"><Calendar size={20} className="text-info" /></div>
                 <p className="font-semibold">Leave Forecast</p>
               </div>
               <p className="text-3xl font-bold">{loading ? '...' : (leaveForecast?.totalPredicted ?? leaveForecast?.total ?? '—')}</p>
@@ -77,7 +110,7 @@ export default function AdminForecast() {
 
             <div className="bg-card border border-border rounded-xl p-5">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-yellow-500/20"><AlertTriangle size={20} className="text-yellow-400" /></div>
+                <div className="p-2 rounded-lg bg-warning/20"><AlertTriangle size={20} className="text-warning" /></div>
                 <p className="font-semibold">Attendance Anomalies</p>
               </div>
               <p className="text-3xl font-bold">{loading ? '...' : (anomalies?.count ?? anomalyData.length ?? '—')}</p>
@@ -86,7 +119,7 @@ export default function AdminForecast() {
 
             <div className="bg-card border border-border rounded-xl p-5">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-red-500/20"><Users size={20} className="text-red-400" /></div>
+                <div className="p-2 rounded-lg bg-destructive/20"><Users size={20} className="text-destructive" /></div>
                 <p className="font-semibold">Attrition Risk</p>
               </div>
               <p className="text-3xl font-bold">{loading ? '...' : (attritionRisk?.highRiskCount ?? attritionData.length ?? '—')}</p>
@@ -96,7 +129,7 @@ export default function AdminForecast() {
 
           <div className="bg-card border border-border rounded-xl p-6">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Brain size={20} className="text-purple-400" />
+              <Brain size={20} className="text-chart-4" />
               Performance Prediction
             </h2>
             {performancePrediction ? (
@@ -133,19 +166,26 @@ export default function AdminForecast() {
             {/* Leave Forecast Chart */}
             <div className="bg-card border border-border rounded-xl p-6">
               <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <Brain size={20} className="text-blue-400" />
+                <Brain size={20} className="text-info" />
                 Leave Forecast (Next 30 Days)
               </h2>
               {forecastChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={forecastChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="date" stroke="#9ca3af" tick={{ fontSize: 11 }} />
-                    <YAxis stroke="#9ca3af" />
-                    <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} />
-                    <Bar dataKey="predicted" fill="#3b82f6" name="Predicted Leaves" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <ComposedChart data={forecastChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="date" stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} />
+                      <YAxis stroke="var(--muted-foreground)" />
+                      <Tooltip content={<ForecastTooltip />} />
+                      <Area dataKey="bandBase" stackId="band" stroke="none" fill="transparent" isAnimationActive={false} />
+                      <Area dataKey="bandRange" stackId="band" stroke="none" fill="var(--chart-1)" fillOpacity={0.15} isAnimationActive={false} name="Confidence range" />
+                      <Bar dataKey="predicted" fill="var(--chart-1)" name="Predicted Leaves" radius={[4, 4, 0, 0]} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                  {leaveForecast?.confidenceNote && (
+                    <p className="text-xs text-muted-foreground mt-2">{leaveForecast.confidenceNote}</p>
+                  )}
+                </>
               ) : (
                 <div className="h-60 flex items-center justify-center border border-dashed border-border rounded-lg">
                   <div className="text-center">
@@ -164,7 +204,7 @@ export default function AdminForecast() {
             {/* Attrition Risk */}
             <div className="bg-card border border-border rounded-xl p-6">
               <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <AlertTriangle size={20} className="text-red-400" />
+                <AlertTriangle size={20} className="text-destructive" />
                 Attrition Risk Analysis
               </h2>
               {attritionData.length > 0 ? (
@@ -179,7 +219,7 @@ export default function AdminForecast() {
                         <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                           <div className="h-full rounded-full" style={{
                             width: `${emp.riskScore || emp.risk || 50}%`,
-                            backgroundColor: (emp.riskScore || emp.risk || 50) > 70 ? '#ef4444' : (emp.riskScore || emp.risk || 50) > 40 ? '#f59e0b' : '#10b981'
+                            backgroundColor: (emp.riskScore || emp.risk || 50) > 70 ? 'var(--destructive)' : (emp.riskScore || emp.risk || 50) > 40 ? 'var(--warning)' : 'var(--success)'
                           }} />
                         </div>
                         <span className="text-xs font-mono">{emp.riskScore || emp.risk || '—'}%</span>
@@ -199,15 +239,15 @@ export default function AdminForecast() {
           {anomalyData.length > 0 && (
             <div className="bg-card border border-border rounded-xl p-6">
               <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <AlertTriangle size={20} className="text-yellow-400" />
+                <AlertTriangle size={20} className="text-warning" />
                 Attendance Anomalies Detected
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {anomalyData.slice(0, 6).map((a, i) => (
-                  <div key={i} className="p-4 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
+                  <div key={i} className="p-4 rounded-lg border border-warning/30 bg-warning/5">
                     <p className="font-medium text-sm">{a.employeeName || a.name || `Employee ${i + 1}`}</p>
                     <p className="text-xs text-muted-foreground mt-1">{a.description || a.reason || a.type || 'Unusual pattern'}</p>
-                    <p className="text-xs text-yellow-400 mt-2">{a.date || a.detectedAt || ''}</p>
+                    <p className="text-xs text-warning mt-2">{a.date || a.detectedAt || ''}</p>
                   </div>
                 ))}
               </div>

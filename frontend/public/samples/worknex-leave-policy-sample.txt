@@ -1,8 +1,42 @@
 WORKNEX LEAVE POLICY SAMPLE
 
-Instructions:
-Replace the sample values below with your organization's rules, then upload this file from Leave Management.
-Supported role names are EMPLOYEE, MANAGER, ADMIN, and SUPER_ADMIN.
+WHAT IS THIS FILE?
+This is a starting template for your organization's leave rules. Replace the
+sample numbers below with your own, then upload this file from
+Leave Management > Policy Document Automation. WorkNex will read it and show
+you the rules it understood, before anything goes live — you approve before
+it's activated.
+
+Prefer clicking instead of editing a text file? Use the "Add Manually" button
+on the same page instead — same result, no file needed.
+
+HOW TO WRITE A RULE (plain English, no special syntax)
+Each leave type is its own block, starting with a heading like "CASUAL LEAVE"
+followed by plain sentences. WorkNex looks for phrases like these:
+
+  "Annual quota: 12 days per year."          -> how many days per year
+  "Maximum consecutive 3 days."               -> longest single request allowed
+  "Minimum notice: 1 day."                    -> how far in advance to apply
+  "... up to 1 day are auto-approved ..."     -> short requests approve instantly,
+                                                  no manager needed
+  "... up to 30% of the team ..."             -> pauses auto-approval if that many
+                                                  of the employee's department are
+                                                  already on leave the same days
+  "Carry forward is allowed up to 5 days."    -> unused days roll into next year
+                                                  (up to that cap)
+  "No carry forward."                         -> unused days expire at year end
+  "Manager approval is required."             -> needs a manager to review
+  "Manager approval and HR approval are required." -> needs manager AND admin
+  "A medical certificate is required after 2 days." -> sick-leave document rule
+  "Applicable roles: EMPLOYEE, MANAGER, ADMIN." -> who this leave type is for
+    (supported role names: EMPLOYEE, MANAGER, ADMIN)
+
+You don't need every phrase in every block — only include the ones that apply.
+
+Supported leave types: ANNUAL, SICK, CASUAL, MATERNITY, PATERNITY, UNPAID,
+BEREAVEMENT, MARRIAGE, STUDY, HAJJ, COMPENSATORY, OTHER.
+
+--------------------------------------------------------------------------
 
 ANNUAL LEAVE
 Annual quota: 18 days per year.
@@ -25,8 +59,10 @@ CASUAL LEAVE
 Annual quota: 7 days per year.
 Maximum consecutive 3 days.
 Minimum notice: 1 day.
+Casual leave requests up to 1 day are auto-approved without manager sign-off.
+Casual leave auto-approval pauses once up to 30% of the employee's department
+is already on leave for the same dates — those requests go to a manager instead.
 Applicable roles: EMPLOYEE, MANAGER, ADMIN.
-Manager approval is required.
 No carry forward.
 
 MATERNITY LEAVE
@@ -45,3 +81,12 @@ Maximum consecutive 30 days.
 Minimum notice: 7 days.
 Applicable roles: EMPLOYEE, MANAGER, ADMIN.
 Manager approval and HR approval are required.
+
+HAJJ LEAVE
+Annual quota: 40 days per year.
+Applicable roles: EMPLOYEE, MANAGER, ADMIN.
+Manager approval and HR approval are required.
+No carry forward.
+
+Delete any leave type block you don't need, or add your own (e.g. BEREAVEMENT,
+MARRIAGE, STUDY, COMPENSATORY) using the same plain-English style as above.

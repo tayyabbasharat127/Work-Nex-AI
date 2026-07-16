@@ -2,6 +2,8 @@ const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
+const TEST_USER_PASSWORD = process.env.TEST_USER_PASSWORD;
+if (!TEST_USER_PASSWORD) throw new Error('TEST_USER_PASSWORD is required');
 
 // Helper function to generate random date within range
 function randomDate(start, end) {
@@ -53,7 +55,7 @@ async function seedTestData() {
 
     // Create managers (one per department)
     console.log('👔 Creating managers...');
-    const managerPassword = await bcrypt.hash('manager123', 12);
+    const managerPassword = await bcrypt.hash(TEST_USER_PASSWORD, 12);
     const managers = [];
     
     for (let i = 0; i < departments.length; i++) {
@@ -80,7 +82,7 @@ async function seedTestData() {
 
     // Create employees (10 per manager = 50 total)
     console.log('👥 Creating employees...');
-    const employeePassword = await bcrypt.hash('employee123', 12);
+    const employeePassword = await bcrypt.hash(TEST_USER_PASSWORD, 12);
     const employees = [];
     
     const firstNames = ['Usman', 'Ayesha', 'Bilal', 'Zainab', 'Imran', 'Hira', 'Kamran', 'Sana', 'Faisal', 'Nida'];
@@ -341,8 +343,7 @@ async function seedTestData() {
     console.log(`   - Leave Requests: ${leaveCount}`);
     console.log(`   - Performance Reviews: ${performanceCount}`);
     console.log('\n🔑 Login Credentials:');
-    console.log('   Manager: manager1@worknex.com / manager123');
-    console.log('   Employee: employee1@worknex.com / employee123');
+    console.log('   Test user password supplied through TEST_USER_PASSWORD');
 
   } catch (error) {
     console.error('❌ Error seeding data:', error);

@@ -139,7 +139,7 @@ export default function ManagerTeam() {
                   <div className="flex items-center justify-between pt-4 border-t border-border">
                     <span className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
                       member.isActive 
-                        ? 'bg-green-500/20 text-green-400'
+                        ? 'bg-success/20 text-success'
                         : 'bg-muted/20 text-muted-foreground'
                     }`}>
                       {member.isActive ? 'Active' : 'Inactive'}

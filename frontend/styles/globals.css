@@ -127,3 +127,18 @@
     font-size: 18px;
   }
 }
+
+/* Keep the browser's native time-picker clock visible on dark inputs. */
+.time-picker-visible {
+  color-scheme: dark;
+}
+
+.time-picker-visible::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(1);
+  opacity: 0.9;
+}
+
+.time-picker-visible::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}

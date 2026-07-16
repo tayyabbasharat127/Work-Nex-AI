@@ -16,16 +16,14 @@
 const axios  = require('axios');
 const prisma = require('../../config/db');
 const logger = require('../../config/logger');
+const { config } = require('../../config/env');
 
-const AI_SERVICE_URL     = process.env.AI_SERVICE_URL || 'http://localhost:8000';
-const POLL_INTERVAL_MS   = parseInt(process.env.ALERT_POLL_INTERVAL_MS || String(5 * 60 * 1000), 10);
+const AI_SERVICE_URL     = config.aiServiceUrl;
 const ALERT_TIMEOUT_MS   = 8000;
+const { aiServiceHeaders } = require('../../utils/aiServiceAuth');
 
 // Map of orgId → Set<res> (SSE response streams)
 const _clients = new Map();
-
-let _pollTimer = null;
-let _isPolling = false;
 
 // ─── SSE client management ─────────────────────────────────────────────────────
 
@@ -35,7 +33,6 @@ function registerClient(orgId, res) {
   logger.info(`[Alerts] SSE client registered for org ${orgId}. Total: ${_clients.get(orgId).size}`);
 
   // Start poller if first client
-  if (!_pollTimer) _startPolling();
 }
 
 function unregisterClient(orgId, res) {
@@ -45,7 +42,6 @@ function unregisterClient(orgId, res) {
     if (set.size === 0) _clients.delete(orgId);
   }
   // Stop poller if no clients left
-  if ([..._clients.values()].every(s => s.size === 0)) _stopPolling();
   logger.info(`[Alerts] SSE client disconnected from org ${orgId}`);
 }
 
@@ -71,38 +67,11 @@ function _broadcast(orgId, event) {
 
 // ─── Polling loop ──────────────────────────────────────────────────────────────
 
-function _startPolling() {
-  if (_pollTimer) return;
-  logger.info(`[Alerts] Starting anomaly poll every ${POLL_INTERVAL_MS / 1000}s`);
-  _pollTimer = setInterval(_poll, POLL_INTERVAL_MS);
-  _poll(); // immediate first poll
-}
-
-function _stopPolling() {
-  if (_pollTimer) {
-    clearInterval(_pollTimer);
-    _pollTimer = null;
-    logger.info('[Alerts] Polling stopped — no SSE clients');
-  }
-}
-
-async function _poll() {
-  if (_isPolling) return;
-  _isPolling = true;
-
-  try {
-    const orgs = [..._clients.keys()];
-    for (const orgId of orgs) {
-      await _pollOrg(orgId);
-    }
-  } catch (err) {
-    logger.error('[Alerts] Poll cycle error:', err.message);
-  } finally {
-    _isPolling = false;
-  }
-}
-
 async function _pollOrg(orgId) {
+  if (!AI_SERVICE_URL) {
+    logger.warn('[Alerts] Scan skipped because AI_SERVICE_URL is not configured');
+    return;
+  }
   const today = new Date().toISOString().slice(0, 10);
   let anomalies;
 
@@ -110,7 +79,7 @@ async function _pollOrg(orgId) {
     const resp = await axios.post(
       `${AI_SERVICE_URL}/detect/anomalies`,
       { organizationId: orgId, date: today },
-      { timeout: ALERT_TIMEOUT_MS },
+      { headers: aiServiceHeaders(orgId), timeout: ALERT_TIMEOUT_MS },
     );
     anomalies = resp.data?.anomalies ?? resp.data ?? [];
   } catch (err) {

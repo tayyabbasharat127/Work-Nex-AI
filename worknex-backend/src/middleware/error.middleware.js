@@ -1,4 +1,5 @@
 const logger = require('../config/logger');
+const { config } = require('../config/env');
 const { ApiError } = require('../utils/ApiError');
 
 const errorHandler = (err, req, res, next) => {
@@ -25,6 +26,14 @@ const errorHandler = (err, req, res, next) => {
     return res.status(404).json({ success: false, message: 'Record not found' });
   }
 
+  // Foreign-key conflicts are expected business conflicts, not server errors.
+  if (err.code === 'P2003') {
+    return res.status(409).json({
+      success: false,
+      message: 'This record is still referenced by other data and cannot be deleted.',
+    });
+  }
+
   // Prisma table does not exist — migrations not applied
   if (err.code === 'P2021' || /does not exist in the current database/i.test(err.message || '')) {
     logger.error('Migration check failed on request:', req.method, req.originalUrl, err.message);
@@ -36,7 +45,7 @@ const errorHandler = (err, req, res, next) => {
 
   return res.status(500).json({
     success: false,
-    message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
+    message: config.isProduction ? 'Internal server error' : err.message,
   });
 };
 

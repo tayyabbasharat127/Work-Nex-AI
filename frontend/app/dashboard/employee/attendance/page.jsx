@@ -115,7 +115,7 @@ export default function EmployeeAttendance() {
                   <button
                     onClick={handleCheckIn}
                     disabled={loading}
-                    className="px-6 py-3 rounded-lg bg-success text-white font-semibold hover:bg-success/90 transition disabled:opacity-50"
+                    className="px-6 py-3 rounded-lg bg-success text-success-foreground font-semibold hover:bg-success/90 transition disabled:opacity-50"
                   >
                     Check In
                   </button>
@@ -123,7 +123,7 @@ export default function EmployeeAttendance() {
                   <button
                     onClick={handleCheckOut}
                     disabled={loading}
-                    className="px-6 py-3 rounded-lg bg-destructive text-white font-semibold hover:bg-destructive/90 transition disabled:opacity-50"
+                    className="px-6 py-3 rounded-lg bg-destructive text-destructive-foreground font-semibold hover:bg-destructive/90 transition disabled:opacity-50"
                   >
                     Check Out
                   </button>
@@ -192,7 +192,6 @@ export default function EmployeeAttendance() {
                       <th className="text-left py-3 px-4 font-semibold">Check In</th>
                       <th className="text-left py-3 px-4 font-semibold">Check Out</th>
                       <th className="text-left py-3 px-4 font-semibold">Work Hours</th>
-                      <th className="text-left py-3 px-4 font-semibold">IP Address</th>
                       <th className="text-left py-3 px-4 font-semibold">Status</th>
                     </tr>
                   </thead>
@@ -203,9 +202,6 @@ export default function EmployeeAttendance() {
                         <td className="py-4 px-4 text-muted-foreground">{formatTime(record.checkIn || record.check_in)}</td>
                         <td className="py-4 px-4 text-muted-foreground">{formatTime(record.checkOut || record.check_out)}</td>
                         <td className="py-4 px-4 font-medium">{formatHours(record)}</td>
-                        <td className="py-4 px-4 text-muted-foreground text-xs font-mono">
-                          {record.ipAddress || '---'}
-                        </td>
                         <td className="py-4 px-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusClass(record.status)}`}>
                             {(record.status || '').replace('_', ' ')}

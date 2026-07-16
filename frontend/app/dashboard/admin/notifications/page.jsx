@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import { notificationsAPI } from '@/lib/api';
 import { Bell, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
@@ -12,6 +13,7 @@ function normalizeArray(value) {
 }
 
 export default function AdminNotifications() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -40,6 +42,13 @@ export default function AdminNotifications() {
     await loadNotifications();
   };
 
+  const openNotification = async (notification) => {
+    if (!notification.isRead) await notificationsAPI.markAsRead(notification.id);
+    const target = notification.metadata?.targetRoute || notification.metadata?.deepLink;
+    if (typeof target === 'string' && target.startsWith('/dashboard/')) router.push(target);
+    else await loadNotifications();
+  };
+
   return (
     <div className="flex h-screen bg-background">
       <Sidebar role="admin" />
@@ -63,7 +72,16 @@ export default function AdminNotifications() {
           )}
           <div className="space-y-4 max-w-3xl">
             {notifications.length ? notifications.map((notif) => (
-              <div key={notif.id} className="bg-card border border-border rounded-lg p-4 flex items-start gap-4 hover:border-primary transition">
+              <div
+                key={notif.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openNotification(notif)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') openNotification(notif);
+                }}
+                className="bg-card border border-border rounded-lg p-4 flex items-start gap-4 hover:border-primary transition cursor-pointer"
+              >
                 <div className={`p-2 rounded-lg ${notif.type === 'ALERT' ? 'bg-destructive/20' : 'bg-primary/20'}`}>
                   {notif.type === 'ALERT' ? (
                     <AlertCircle size={24} className="text-destructive" />
@@ -79,7 +97,7 @@ export default function AdminNotifications() {
                   </p>
                 </div>
                 {!notif.isRead && (
-                  <button onClick={() => markRead(notif.id)} className="text-muted-foreground hover:text-foreground" title="Mark as read">
+                  <button onClick={(event) => { event.stopPropagation(); markRead(notif.id); }} className="text-muted-foreground hover:text-foreground" title="Mark as read">
                     <CheckCircle size={20} />
                   </button>
                 )}

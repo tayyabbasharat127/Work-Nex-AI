@@ -2,13 +2,24 @@
 
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { reportsAPI } from '@/lib/api';
+import { reportsAPI, hoursShortfallAPI } from '@/lib/api';
 import { toast } from 'sonner';
-import { Download, FileText, RefreshCw, BarChart3, Users, Calendar } from 'lucide-react';
+import { Download, FileText, RefreshCw, BarChart3, Users, Calendar, Clock } from 'lucide-react';
+
+const humanizeKey = (key) => key
+  .replace(/([a-z])([A-Z])/g, '$1 $2')
+  .replace(/^./, (c) => c.toUpperCase());
+
+const formatSummary = (summary) => {
+  if (!summary || typeof summary !== 'object') return 'No summary yet';
+  const entries = Object.entries(summary);
+  if (!entries.length) return 'No summary yet';
+  return entries.map(([key, value]) => `${humanizeKey(key)}: ${value}`).join(' · ');
+};
 
 export default function AdminReports() {
   const [activeTab, setActiveTab] = useState('attendance');
-  const [reports, setReports] = useState({ attendance: null, leave: null, performance: null, department: null });
+  const [reports, setReports] = useState({ attendance: null, leave: null, performance: null, department: null, hoursShortfall: null });
   const [reportErrors, setReportErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState(new Date().getMonth() + 1);
@@ -23,6 +34,7 @@ export default function AdminReports() {
       leave: reportsAPI.leave({ startDate, endDate }),
       performance: reportsAPI.performance({ month, year }),
       department: reportsAPI.department({ year }),
+      hoursShortfall: hoursShortfallAPI.getAll(),
     };
     const entries = Object.entries(requests);
     const results = await Promise.allSettled(entries.map(([, request]) => request));
@@ -32,7 +44,11 @@ export default function AdminReports() {
     results.forEach((result, index) => {
       const type = entries[index][0];
       if (result.status === 'fulfilled') {
-        nextReports[type] = result.value;
+        // hoursShortfall returns a plain array — wrap it into the same
+        // { rows, reportType } shape every other report already uses.
+        nextReports[type] = type === 'hoursShortfall'
+          ? { rows: Array.isArray(result.value) ? result.value : [], reportType: 'hours_shortfall', summary: { belowTarget: (result.value || []).length } }
+          : result.value;
       } else {
         nextReports[type] = null;
         nextErrors[type] = result.reason?.message || `Failed to load ${type} report`;
@@ -80,6 +96,7 @@ export default function AdminReports() {
     { id: 'leave', label: 'Leave', icon: FileText },
     { id: 'performance', label: 'Performance', icon: BarChart3 },
     { id: 'department', label: 'Departments', icon: Users },
+    { id: 'hoursShortfall', label: 'Hours Shortfall', icon: Clock },
   ];
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const currentReport = reports[activeTab];
@@ -124,8 +141,8 @@ export default function AdminReports() {
 
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold capitalize">{activeTab} Report</h2>
-              <p className="text-sm text-muted-foreground">{currentReport?.summary ? JSON.stringify(currentReport.summary) : 'No summary yet'}</p>
+              <h2 className="text-xl font-bold">{tabs.find((t) => t.id === activeTab)?.label} Report</h2>
+              <p className="text-sm text-muted-foreground">{formatSummary(currentReport?.summary)}</p>
             </div>
             <button onClick={() => exportCSV(currentReport)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition text-sm">
               <Download size={16} />
@@ -159,7 +176,10 @@ function ReportTable({ loading, report, error, onRetry }) {
   if (!rows.length) {
     return <div className="h-48 flex items-center justify-center border border-dashed border-border rounded-xl text-muted-foreground">No report rows found</div>;
   }
-  const headers = Object.keys(rows[0]);
+  // Raw internal UUID primary/foreign keys ("id", "userId") aren't useful to
+  // read on screen — employeeId/employeeName etc. are the human-meaningful
+  // identifiers and stay.
+  const headers = Object.keys(rows[0]).filter((h) => h !== 'id' && h !== 'userId');
   return (
     <div className="bg-card border border-border rounded-xl overflow-auto">
       <table className="w-full text-sm">

@@ -4,17 +4,6 @@ const MULTI_AGENT_API_URL = (
   process.env.NEXT_PUBLIC_MULTI_AGENT_API_URL || 'http://127.0.0.1:8010'
 ).replace(/\/$/, '');
 
-function getStoredUser() {
-  if (typeof window === 'undefined') return null;
-  const raw = window.localStorage.getItem('user');
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
 export const multiAgentChat = {
   async sendMessage(message, threadId) {
     const token = getAuthToken();
@@ -22,7 +11,6 @@ export const multiAgentChat = {
       throw new Error('Your session token is not available. Please log in again before using the agent.');
     }
 
-    const user = getStoredUser();
     const response = await fetch(`${MULTI_AGENT_API_URL}/api/chat`, {
       method: 'POST',
       headers: {
@@ -32,8 +20,6 @@ export const multiAgentChat = {
       body: JSON.stringify({
         message,
         threadId,
-        userId: user?.id,
-        userContext: user,
       }),
     });
 

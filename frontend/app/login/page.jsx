@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
@@ -16,6 +16,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => setHydrated(true), []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -97,8 +100,9 @@ export default function LoginPage() {
 
           {/* Email Field */}
           <div>
-            <label className="block text-sm font-medium mb-2">Email Address</label>
+            <label htmlFor="login-email" className="block text-sm font-medium mb-2">Email Address</label>
             <input
+              id="login-email"
               type="email"
               name="email"
               value={formData.email}
@@ -110,9 +114,10 @@ export default function LoginPage() {
 
           {/* Password Field */}
           <div>
-            <label className="block text-sm font-medium mb-2">Password</label>
+            <label htmlFor="login-password" className="block text-sm font-medium mb-2">Password</label>
             <div className="relative">
               <input
+                id="login-password"
                 type={showPassword ? 'text' : 'password'}
                 name="password"
                 value={formData.password}
@@ -144,7 +149,7 @@ export default function LoginPage() {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={!hydrated || loading}
             className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed mt-6"
           >
             {loading ? 'Signing in...' : 'Sign In'}

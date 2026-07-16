@@ -1,21 +1,24 @@
-const fs = require('fs');
 const path = require('path');
+const { TextDecoder } = require('util');
+const { randomUUID } = require('crypto');
 const axios = require('axios');
 const prisma = require('../../config/db');
+const { config } = require('../../config/env');
 const { ApiError } = require('../../utils/ApiError');
 const { countBusinessDays } = require('../../utils/dateHelpers');
+const { getHolidaysInRange } = require('../attendance/attendance.processor');
+const leaveWorkflow = require('./leave.workflow');
+const storage = require('../../services/storage/storage.service');
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const AI_SERVICE_URL = config.aiServiceUrl;
+const { aiServiceHeaders } = require('../../utils/aiServiceAuth');
 const AI_TIMEOUT_MS  = 12000;
 
-const DATA_DIR = path.join(process.cwd(), 'storage', 'leave-automation');
-const DOC_DIR = path.join(DATA_DIR, 'documents');
-
-const ensureDocumentStorage = () => {
-  fs.mkdirSync(DOC_DIR, { recursive: true });
-};
-
 const normalizeLeaveType = (value = '') => value.toUpperCase().replace(/[^A-Z_]/g, '_');
+
+// Default label when an org hasn't set a custom displayName for a leave type —
+// matches what every page already showed before displayName existed.
+const titleCaseLeaveType = (type = '') => type.charAt(0) + type.slice(1).toLowerCase();
 
 const assertDocumentAccess = (doc, user) => {
   if (user.role !== 'SUPER_ADMIN' && doc.organizationId !== user.organizationId) {
@@ -42,9 +45,14 @@ const safeRequire = (pkg) => {
 };
 
 const extractText = async (doc) => {
-  if (!doc.filePath || !fs.existsSync(doc.filePath)) throw new ApiError(404, 'Policy document file not found');
+  if (!doc.filePath) throw new ApiError(404, 'Policy document file not found');
   const ext = path.extname(doc.fileName).toLowerCase();
-  const buffer = fs.readFileSync(doc.filePath);
+  let buffer;
+  try {
+    buffer = await storage.get(doc.filePath);
+  } catch {
+    throw new ApiError(404, 'Policy document file not found');
+  }
 
   if (ext === '.txt') return buffer.toString('utf8');
 
@@ -80,33 +88,87 @@ const parseRoles = (text) => {
 
 const deterministicParse = (text) => {
   const upper = text.toUpperCase();
-  const knownTypes = ['ANNUAL', 'SICK', 'CASUAL', 'MATERNITY', 'PATERNITY', 'UNPAID', 'OTHER'];
+  const knownTypes = ['ANNUAL', 'SICK', 'CASUAL', 'MATERNITY', 'PATERNITY', 'UNPAID', 'BEREAVEMENT', 'MARRIAGE', 'STUDY', 'HAJJ', 'COMPENSATORY', 'OTHER'];
   const found = knownTypes.filter((type) => upper.includes(type));
   const types = found.length ? found : ['ANNUAL'];
+  // Blank-line-delimited paragraphs — each leave-type section is one paragraph
+  // in the expected document format ("CASUAL LEAVE\n...\n\nANNUAL LEAVE\n...").
+  const paragraphs = text.split(/\n\s*\n/);
 
   return {
-    parser: process.env.OPENAI_API_KEY ? 'deterministic-fallback-no-llm-call' : 'deterministic-fallback',
+    parser: config.modelKeysConfigured ? 'deterministic-fallback-no-llm-call' : 'deterministic-fallback',
     confidence: found.length ? 0.72 : 0.42,
     leavePolicies: types.map((leaveType) => {
       const lowerType = leaveType.toLowerCase();
-      const window = text.match(new RegExp(`.{0,120}${leaveType}.{0,240}`, 'is'))?.[0] || text;
+      // Anchor on the section heading ("CASUAL LEAVE", "ANNUAL LEAVE", ...) and use only
+      // that paragraph — every section's quota line reads "Annual quota: N days", so a
+      // bare `${leaveType}` substring search on "ANNUAL" would false-positive inside
+      // CASUAL's own "Annual quota:" line and grab the wrong section's numbers.
+      const headingRegex = new RegExp(`^\\s*${leaveType}\\s+LEAVE\\b`, 'i');
+      const headingParagraph = paragraphs.find((p) => headingRegex.test(p));
+      const window = headingParagraph || text.match(new RegExp(`.{0,120}${leaveType}.{0,240}`, 'is'))?.[0] || text;
       return {
         leaveType,
-        annualQuota: parseNumberNear(window, /(\d+)\s*(?:days?|annual quota|per year)/i, leaveType === 'ANNUAL' ? 18 : null),
+        // Anchor on "quota" / "per year" specifically — real-world documents often
+        // mention a monthly figure too ("Monthly per: 1 day"), and a bare
+        // `(\d+)\s*days?` search would grab that number instead of the actual
+        // yearly quota if it happens to appear first in the paragraph.
+        annualQuota: parseNumberNear(window, /(?:annual\s*)?quota[:\s]*(\d+)\s*days?/i, null)
+          ?? parseNumberNear(window, /(\d+)\s*days?\s*per\s*year/i, null)
+          ?? parseNumberNear(window, /(\d+)\s*(?:days?|annual quota|per year)/i, leaveType === 'ANNUAL' ? 18 : null),
         maxConsecutiveDays: parseNumberNear(window, /max(?:imum)?\s*(?:consecutive)?\s*(\d+)\s*days?/i, null),
         minNoticeDays: parseNumberNear(window, /(?:notice|min(?:imum)? notice).*?(\d+)\s*days?/i, lowerType === 'annual' ? 7 : null),
         applicableRoles: parseRoles(window),
-        carryForwardAllowed: /carry\s*forward/i.test(window),
+        carryForwardAllowed: /carry\s*forward/i.test(window) && !/no\s+carry\s*forward/i.test(window),
         maxCarryForwardDays: parseNumberNear(window, /carry\s*forward.*?(\d+)\s*days?/i, 0),
-        requiresManagerApproval: !/auto[- ]?approve/i.test(window),
+        ...(() => {
+          const hasAutoApprovePhrase = /auto[- ]?approve/i.test(window);
+          const autoApproveMaxDays = hasAutoApprovePhrase
+            ? parseNumberNear(window, /up to\s*(\d+)\s*(?:consecutive\s*)?days?/i, null)
+            : null;
+          // A day-limited auto-approve ("up to 1 day") is a conditional exception —
+          // manager approval still applies beyond that limit, so requiresManagerApproval
+          // stays true and the decision engine grants the exception itself via
+          // autoApproveMaxDays. Only an unqualified "auto-approve" (no day limit found)
+          // turns manager approval off for the whole leave type.
+          return {
+            requiresManagerApproval: !(hasAutoApprovePhrase && autoApproveMaxDays == null),
+            autoApproveMaxDays,
+          };
+        })(),
         requiresAdminApproval: /admin approval|hr approval|human resources approval/i.test(window),
         requiresMedicalCertificateAfterDays: leaveType === 'SICK'
           ? parseNumberNear(window, /medical certificate.*?(\d+)\s*days?/i, 2)
           : null,
         probationAllowed: !/probation.*not allowed|not allowed.*probation/i.test(window),
+        maxConcurrentLeavePercent: parseNumberNear(
+          window,
+          /(?:no more than|maximum|up to)\s*(\d+)\s*%\s*(?:of\s*(?:the\s*)?)?(?:team|department|staff)/i,
+          null,
+        ),
       };
     }),
   };
+};
+
+// Whichever rule for a given leaveType has real configuration on it — used
+// to resolve duplicates without needing to guess submission order/intent.
+const isMeaningfulRule = (rule) => rule.autoApproveMaxDays != null || rule.annualQuota != null || rule.maxConsecutiveDays != null;
+
+// Collapses multiple entries for the same leaveType down to one, keeping
+// whichever is meaningfully configured — a stray blank block (e.g. left
+// over from "Add another leave type" in the policy builder UI, or a
+// duplicate/lower-confidence extraction from a parsed document) must never
+// silently overwrite a fully-configured rule for the same type.
+const dedupeRulesByType = (rules) => {
+  const byType = new Map();
+  for (const rule of rules) {
+    const existing = byType.get(rule.leaveType);
+    if (!existing || (!isMeaningfulRule(existing) && isMeaningfulRule(rule))) {
+      byType.set(rule.leaveType, rule);
+    }
+  }
+  return [...byType.values()];
 };
 
 const validateParsedRules = (parsed) => {
@@ -116,8 +178,9 @@ const validateParsedRules = (parsed) => {
   return {
     parser: parsed.parser || 'unknown',
     confidence: Number(parsed.confidence || 0),
-    leavePolicies: parsed.leavePolicies.map((rule) => ({
+    leavePolicies: dedupeRulesByType(parsed.leavePolicies.map((rule) => ({
       leaveType: normalizeLeaveType(rule.leaveType || 'OTHER'),
+      displayName: rule.displayName && String(rule.displayName).trim() ? String(rule.displayName).trim() : null,
       annualQuota: rule.annualQuota === null || rule.annualQuota === undefined ? null : Number(rule.annualQuota),
       maxConsecutiveDays: rule.maxConsecutiveDays === null || rule.maxConsecutiveDays === undefined ? null : Number(rule.maxConsecutiveDays),
       minNoticeDays: rule.minNoticeDays === null || rule.minNoticeDays === undefined ? null : Number(rule.minNoticeDays),
@@ -125,12 +188,16 @@ const validateParsedRules = (parsed) => {
       carryForwardAllowed: Boolean(rule.carryForwardAllowed),
       maxCarryForwardDays: Number(rule.maxCarryForwardDays || 0),
       requiresManagerApproval: rule.requiresManagerApproval !== false,
+      autoApproveMaxDays: rule.autoApproveMaxDays === null || rule.autoApproveMaxDays === undefined ? null : Number(rule.autoApproveMaxDays),
       requiresAdminApproval: Boolean(rule.requiresAdminApproval),
       requiresMedicalCertificateAfterDays: rule.requiresMedicalCertificateAfterDays === null || rule.requiresMedicalCertificateAfterDays === undefined
         ? null
         : Number(rule.requiresMedicalCertificateAfterDays),
       probationAllowed: rule.probationAllowed !== false,
-    })),
+      maxConcurrentLeavePercent: rule.maxConcurrentLeavePercent === null || rule.maxConcurrentLeavePercent === undefined
+        ? null
+        : Number(rule.maxConcurrentLeavePercent),
+    }))),
   };
 };
 
@@ -159,7 +226,6 @@ const serializeDocument = (doc) => {
     originalName: doc.fileName,
     fileName: doc.fileName,
     fileType: doc.fileType,
-    path: doc.filePath,
     status,
     extractedText: doc.extractedText,
     parsedRules,
@@ -174,29 +240,52 @@ const serializeDocument = (doc) => {
 
 const uploadPolicyDocument = async (file, user) => {
   if (!file) throw new ApiError(400, 'Policy document file is required');
-  const ext = path.extname(file.originalname).toLowerCase();
+  const originalName = path.basename(file.originalname || '');
+  if (!originalName || originalName.length > 255) throw new ApiError(400, 'Policy document filename is invalid');
+  const ext = path.extname(originalName).toLowerCase();
   if (!['.txt', '.pdf', '.docx'].includes(ext)) {
     throw new ApiError(400, 'Only .txt, .pdf, and .docx policy documents are supported');
   }
-  ensureDocumentStorage();
-  const documentId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  const destination = path.join(DOC_DIR, `${documentId}${ext}`);
-  fs.copyFileSync(file.path, destination);
-  fs.unlinkSync(file.path);
 
-  const doc = await prisma.policyDocument.create({
-    data: {
-      id: documentId,
-      organizationId: user.organizationId,
-      uploadedById: user.id,
-      fileName: file.originalname,
-      fileType: ext.slice(1),
-      filePath: destination,
-      status: 'UPLOADED',
-    },
-    include: { extractedRules: true, policyVersions: { orderBy: { version: 'desc' } } },
-  });
-  return serializeDocument(doc);
+  const buffer = file.buffer;
+  const validPdf = ext !== '.pdf' || buffer.subarray(0, 5).toString('ascii') === '%PDF-';
+  const validDocx = ext !== '.docx'
+    || (buffer[0] === 0x50 && buffer[1] === 0x4b && buffer.includes(Buffer.from('[Content_Types].xml')));
+  let validText = true;
+  if (ext === '.txt') {
+    try {
+      if (buffer.includes(0)) throw new Error('binary');
+      new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+    } catch {
+      validText = false;
+    }
+  }
+  if (!validPdf || !validDocx || !validText) {
+    throw new ApiError(400, 'Policy document contents do not match the file type');
+  }
+
+  const documentId = randomUUID();
+  const storageKey = `organizations/${user.organizationId}/policy-documents/${documentId}${ext}`;
+  await storage.put(storageKey, buffer, file.mimetype);
+
+  try {
+    const doc = await prisma.policyDocument.create({
+      data: {
+        id: documentId,
+        organizationId: user.organizationId,
+        uploadedById: user.id,
+        fileName: originalName,
+        fileType: ext.slice(1),
+        filePath: storageKey,
+        status: 'UPLOADED',
+      },
+      include: { extractedRules: true, policyVersions: { orderBy: { version: 'desc' } } },
+    });
+    return serializeDocument(doc);
+  } catch (error) {
+    await storage.remove(storageKey).catch(() => {});
+    throw error;
+  }
 };
 
 const extractPolicyDocument = async (documentId, user) => {
@@ -216,12 +305,12 @@ const aiParsePolicyDocument = async (documentId, user) => {
 
   // Attempt AI service LLM extraction (Groq/OpenAI); fall back to deterministic
   let parsedRules;
-  if (process.env.AI_SERVICE_URL || process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY) {
+  if (config.aiServiceUrl || config.modelKeysConfigured) {
     try {
       const resp = await axios.post(
         `${AI_SERVICE_URL}/predict/leave-policy`,
-        { text: extractedText, organization_id: doc.organizationId },
-        { timeout: AI_TIMEOUT_MS },
+        { text: extractedText },
+        { headers: aiServiceHeaders(doc.organizationId), timeout: AI_TIMEOUT_MS },
       );
       const aiResult = resp.data;
       if (aiResult?.leavePolicies?.length) {
@@ -262,46 +351,103 @@ const aiParsePolicyDocument = async (documentId, user) => {
   return serializeDocument(updated);
 };
 
+// The legacy LeavePolicy table is still what LeaveBalance rows key against
+// (a hard FK — LeaveBalance.policyId -> LeavePolicy.id), so it can't simply
+// be replaced by LeavePolicyVersion. Instead, every time a new rules version
+// goes ACTIVE, sync LeavePolicy's totals/carry-forward/roles to match — so
+// anything that still reads LeavePolicy (new-user balance provisioning, the
+// annual carry-forward reset job) sees the real configured numbers instead
+// of stale defaults from org registration. Existing rows for leave types no
+// longer in the active policy are left alone (not deleted — employees may
+// already have LeaveBalance rows against them), just no longer picked up by
+// new-user provisioning (see users.service.js createUser).
+const syncLegacyLeavePolicies = async (tx, organizationId, leavePolicies) => {
+  const roles = await tx.role.findMany({ where: { organizationId }, select: { id: true, tier: true } });
+  // A tier can have more than one Role row (the system role plus any custom
+  // roles an org defines at that same tier, e.g. a custom "Internee" role
+  // alongside the system "Employee" role) — a policy that applies to the
+  // EMPLOYEE tier must cover every role at that tier, not just whichever
+  // one happened to be the last row Object.fromEntries kept.
+  const roleIdsByTier = {};
+  for (const r of roles) {
+    (roleIdsByTier[r.tier] ??= []).push(r.id);
+  }
+
+  for (const rule of leavePolicies) {
+    const applicableRoleIds = (rule.applicableRoles || [])
+      .flatMap((tier) => roleIdsByTier[tier] || []);
+    const description = rule.displayName ? `${rule.displayName} — synced from active leave policy` : undefined;
+    await tx.leavePolicy.upsert({
+      where: { organizationId_leaveType: { organizationId, leaveType: rule.leaveType } },
+      update: {
+        totalDays: rule.annualQuota ?? 0,
+        carryForward: rule.carryForwardAllowed,
+        maxCarryForward: rule.maxCarryForwardDays,
+        applicableRoleIds,
+        ...(description ? { description } : {}),
+      },
+      create: {
+        organizationId,
+        leaveType: rule.leaveType,
+        totalDays: rule.annualQuota ?? 0,
+        carryForward: rule.carryForwardAllowed,
+        maxCarryForward: rule.maxCarryForwardDays,
+        applicableRoleIds,
+        description: description || null,
+      },
+    });
+  }
+};
+
+// Shared by both the document-upload approval path and manual policy entry —
+// archives the current ACTIVE version and activates a new one. `documentId` is
+// null for manually-entered rules (LeavePolicyVersion.policyDocumentId is optional).
+const activateRulesVersion = async (organizationId, approvedRules, user, documentId, tx) => {
+  const latest = await tx.leavePolicyVersion.findFirst({
+    where: { organizationId },
+    orderBy: { version: 'desc' },
+    select: { version: true },
+  });
+  await tx.leavePolicyVersion.updateMany({
+    where: { organizationId, status: 'ACTIVE' },
+    data: { status: 'ARCHIVED', effectiveTo: new Date() },
+  });
+  const version = await tx.leavePolicyVersion.create({
+    data: {
+      organizationId,
+      policyDocumentId: documentId || null,
+      version: (latest?.version || 0) + 1,
+      status: 'ACTIVE',
+      effectiveFrom: new Date(),
+      rulesJson: approvedRules,
+      approvedById: user.id,
+      approvedAt: new Date(),
+    },
+  });
+  await tx.auditLog.create({
+    data: {
+      organizationId,
+      userId: user.id,
+      action: 'APPROVE',
+      entity: documentId ? 'LeavePolicyDocument' : 'LeavePolicyVersion',
+      entityId: documentId || version.id,
+      newValues: approvedRules,
+    },
+  });
+  await syncLegacyLeavePolicies(tx, organizationId, approvedRules.leavePolicies);
+  return version;
+};
+
 const approvePolicyRules = async (documentId, rules, user) => {
   const doc = await findDocument(documentId, user);
   const sourceRules = rules?.leavePolicies ? rules : parsedRulesFromRecords(doc.extractedRules);
   const approvedRules = validateParsedRules(sourceRules);
 
   const updated = await prisma.$transaction(async (tx) => {
-    const latest = await tx.leavePolicyVersion.findFirst({
-      where: { organizationId: doc.organizationId },
-      orderBy: { version: 'desc' },
-      select: { version: true },
-    });
-    await tx.leavePolicyVersion.updateMany({
-      where: { organizationId: doc.organizationId, status: 'ACTIVE' },
-      data: { status: 'ARCHIVED', effectiveTo: new Date() },
-    });
+    await activateRulesVersion(doc.organizationId, approvedRules, user, doc.id, tx);
     await tx.extractedPolicyRule.updateMany({
       where: { policyDocumentId: doc.id },
       data: { status: 'APPROVED' },
-    });
-    await tx.leavePolicyVersion.create({
-      data: {
-        organizationId: doc.organizationId,
-        policyDocumentId: doc.id,
-        version: (latest?.version || 0) + 1,
-        status: 'ACTIVE',
-        effectiveFrom: new Date(),
-        rulesJson: approvedRules,
-        approvedById: user.id,
-        approvedAt: new Date(),
-      },
-    });
-    await tx.auditLog.create({
-      data: {
-        organizationId: doc.organizationId,
-        userId: user.id,
-        action: 'APPROVE',
-        entity: 'LeavePolicyDocument',
-        entityId: doc.id,
-        newValues: approvedRules,
-      },
     });
     return tx.policyDocument.update({
       where: { id: doc.id },
@@ -313,6 +459,18 @@ const approvePolicyRules = async (documentId, rules, user) => {
   return serializeDocument(updated);
 };
 
+// Manual policy builder — lets a non-technical admin set rules directly through
+// a form instead of uploading and parsing a document. Feeds the exact same
+// LeavePolicyVersion pipeline the document flow uses, so evaluateLeaveRequest()
+// never needs to know which path the active rules came from.
+const saveManualPolicyRules = async (leavePolicies, user) => {
+  const approvedRules = validateParsedRules({ parser: 'manual-entry', confidence: 1, leavePolicies });
+  const version = await prisma.$transaction(
+    (tx) => activateRulesVersion(user.organizationId, approvedRules, user, null, tx),
+  );
+  return { policyVersionId: version.id, version: version.version, rulesJson: approvedRules };
+};
+
 const getActiveRulesByType = async (organizationId) => {
   const active = await prisma.leavePolicyVersion.findFirst({
     where: { organizationId, status: 'ACTIVE' },
@@ -320,10 +478,42 @@ const getActiveRulesByType = async (organizationId) => {
   });
   const rules = {};
   if (!active?.rulesJson?.leavePolicies) return rules;
+  // If rulesJson somehow contains more than one entry for the same
+  // leaveType (e.g. a blank block left over from the policy-builder UI),
+  // prefer whichever entry actually has values set over one that's mostly
+  // null — a later blank duplicate should never silently blank out an
+  // earlier, fully-configured rule.
+  const isMeaningful = (rule) => rule.autoApproveMaxDays != null || rule.annualQuota != null || rule.maxConsecutiveDays != null;
   active.rulesJson.leavePolicies.forEach((rule) => {
+    const existing = rules[rule.leaveType];
+    if (existing && isMeaningful(existing) && !isMeaningful(rule)) return;
     rules[rule.leaveType] = { ...rule, policyVersionId: active.id };
   });
   return rules;
+};
+
+// Org-configurable display label per leave type — e.g. an org that calls
+// ANNUAL leave "EL" internally sets displayName once, and every page shows
+// "EL" instead of the raw enum's title-cased default.
+const getLeaveTypeLabels = async (organizationId) => {
+  const rulesByType = await getActiveRulesByType(organizationId);
+  const labels = {};
+  Object.entries(rulesByType).forEach(([type, rule]) => {
+    labels[type] = rule.displayName || titleCaseLeaveType(type);
+  });
+  return labels;
+};
+
+// Full active version, for the manual policy builder to pre-fill with current
+// rules instead of always starting from a blank form (so admins can edit, not
+// just re-create from scratch).
+const getActivePolicyVersion = async (organizationId) => {
+  const active = await prisma.leavePolicyVersion.findFirst({
+    where: { organizationId, status: 'ACTIVE' },
+    orderBy: { version: 'desc' },
+  });
+  if (!active) return null;
+  return { id: active.id, version: active.version, effectiveFrom: active.effectiveFrom, rulesJson: active.rulesJson };
 };
 
 const saveDecision = async (decision, actor = null) => {
@@ -370,14 +560,17 @@ const evaluateLeaveRequest = async ({ leave, draft, actor = null, excludeLeaveId
   const organizationId = request.organizationId || actor?.organizationId;
   const employee = await prisma.user.findFirst({
     where: { id: employeeId, organizationId },
-    select: { id: true, role: true, managerId: true, organizationId: true, joiningDate: true },
+    select: {
+      id: true, roleId: true, managerId: true, organizationId: true, joiningDate: true, departmentId: true,
+      customRole: { select: { name: true, tier: true } },
+    },
   });
   if (!employee) throw new ApiError(404, 'Employee not found in organization');
 
   const start = new Date(request.startDate);
   const end = new Date(request.endDate);
   const reasons = [];
-  const requiredApprovals = [];
+  let requiredApprovals = [];
 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
     reasons.push('Invalid leave date range');
@@ -385,22 +578,48 @@ const evaluateLeaveRequest = async ({ leave, draft, actor = null, excludeLeaveId
 
   const totalDays = request.totalDays || countBusinessDays(start, end);
   if (totalDays <= 0) reasons.push('Leave range has no working days');
+  if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end >= start) {
+    const holidays = await getHolidaysInRange(organizationId, start, end);
+    if (holidays.length) {
+      const holiday = holidays[0];
+      reasons.push(`Holiday conflict: ${holiday.name} on ${holiday.observedDate.toISOString().slice(0, 10)}`);
+    }
+  }
+
+  const balanceLeaveType = request.balanceLeaveType || leaveWorkflow.getBalanceLeaveType(request.leaveType);
+  const rulesByType = await getActiveRulesByType(organizationId);
+  const approvedRules = rulesByType[balanceLeaveType];
+  const leaveLabel = request.leaveType === 'EMERGENCY'
+    ? 'Emergency Leave'
+    : request.leaveType === 'OTHER' && request.otherLeaveName
+      ? request.otherLeaveName
+      : approvedRules?.displayName || titleCaseLeaveType(request.leaveType);
 
   const policy = await prisma.leavePolicy.findFirst({
-    where: { organizationId, leaveType: request.leaveType },
+    where: { organizationId, leaveType: balanceLeaveType },
   });
-  if (!policy) reasons.push(`No active ${request.leaveType} leave policy exists`);
-  if (policy && !policy.applicableRoles.includes(employee.role)) {
-    reasons.push(`${request.leaveType} is not applicable to role ${employee.role}`);
+  if (!policy) reasons.push(`No active ${leaveLabel} leave policy exists`);
+  if (policy && !policy.applicableRoleIds.includes(employee.roleId)) {
+    reasons.push(`${leaveLabel} is not applicable to role ${employee.customRole.name}`);
   }
 
   const year = start.getFullYear();
   const balance = policy
     ? await prisma.leaveBalance.findFirst({ where: { organizationId, userId: employeeId, policyId: policy.id, year } })
     : null;
-  if (!balance) reasons.push(`Leave balance for ${request.leaveType} does not exist for ${year}`);
-  if (balance && balance.remainingDays < totalDays) {
-    reasons.push(`Insufficient leave balance. Required ${totalDays}, available ${balance.remainingDays}`);
+  if (!balance) reasons.push(`Leave balance for ${leaveLabel} does not exist for ${year}`);
+  // Insufficient balance is NOT an auto-reject — it's routed to an admin as an
+  // emergency-advance request (see the ADMIN re-add right after the
+  // role-aware remap below — pushing it here alone isn't enough, since the
+  // employee-tier branch of that remap strips a plain 'ADMIN' entry). If
+  // approved, the balance goes negative and is paid back automatically out
+  // of whatever this employee earns/is granted next — the admin is the
+  // human judgment call on whether the advance is warranted, not a rule the
+  // system enforces itself.
+  const balanceInsufficient = Boolean(balance && balance.remainingDays < totalDays);
+  const appliesStandardThresholds = leaveWorkflow.appliesStandardPolicyThresholds(request.leaveType);
+  if (balanceInsufficient) {
+    reasons.push(`Balance insufficient (required ${totalDays}, available ${balance.remainingDays}) — routed to admin as an emergency advance request; approving will take the balance negative`);
   }
 
   const overlap = await prisma.leaveRequest.findFirst({
@@ -408,19 +627,21 @@ const evaluateLeaveRequest = async ({ leave, draft, actor = null, excludeLeaveId
       organizationId,
       employeeId,
       id: excludeLeaveId ? { not: excludeLeaveId } : undefined,
-      status: { in: ['PENDING', 'APPROVED'] },
+      status: { in: ['PENDING', 'PENDING_MANAGER', 'PENDING_ADMIN', 'APPROVED'] },
       startDate: { lte: end },
       endDate: { gte: start },
     },
   });
   if (overlap) reasons.push('Leave overlaps an existing pending or approved request');
 
-  const approvedRules = (await getActiveRulesByType(organizationId))[request.leaveType];
   if (approvedRules) {
-    if (approvedRules.maxConsecutiveDays && totalDays > approvedRules.maxConsecutiveDays) {
+    // Emergency leave deliberately bypasses ordinary notice and duration
+    // thresholds. The admin remains the human safety gate, while invalid
+    // dates, holidays, overlaps, role scope, and missing funding still fail.
+    if (appliesStandardThresholds && approvedRules.maxConsecutiveDays && totalDays > approvedRules.maxConsecutiveDays) {
       reasons.push(`Exceeds max consecutive days (${approvedRules.maxConsecutiveDays})`);
     }
-    if (approvedRules.minNoticeDays) {
+    if (appliesStandardThresholds && approvedRules.minNoticeDays) {
       const noticeMs = start.getTime() - Date.now();
       const noticeDays = Math.ceil(noticeMs / (1000 * 60 * 60 * 24));
       if (noticeDays < approvedRules.minNoticeDays) {
@@ -432,20 +653,79 @@ const evaluateLeaveRequest = async ({ leave, draft, actor = null, excludeLeaveId
       reasons.push(`Medical certificate required after ${approvedRules.requiresMedicalCertificateAfterDays} sick days`);
     }
     if (approvedRules.requiresAdminApproval) requiredApprovals.push('ADMIN');
-    if (approvedRules.requiresManagerApproval) requiredApprovals.push('MANAGER');
+
+    // Department staffing-shortage guard: even a request that otherwise qualifies for
+    // auto-approval gets routed to a manager if too many of the same department are
+    // already off on overlapping dates. This never rejects the request outright — a
+    // staffing squeeze isn't the employee's fault, it just needs a human's judgment.
+    let shortageBlocksAutoApprove = false;
+    if (approvedRules.maxConcurrentLeavePercent != null && employee.departmentId) {
+      const departmentHeadcount = await prisma.user.count({
+        where: { organizationId, departmentId: employee.departmentId, isActive: true },
+      });
+      const overlappingApproved = await prisma.leaveRequest.count({
+        where: {
+          organizationId,
+          id: excludeLeaveId ? { not: excludeLeaveId } : undefined,
+          status: 'APPROVED',
+          employee: { departmentId: employee.departmentId },
+          startDate: { lte: end },
+          endDate: { gte: start },
+        },
+      });
+      const concurrentPercent = departmentHeadcount ? ((overlappingApproved + 1) / departmentHeadcount) * 100 : 0;
+      if (concurrentPercent > approvedRules.maxConcurrentLeavePercent) {
+        shortageBlocksAutoApprove = true;
+        requiredApprovals.push('MANAGER');
+        reasons.push(`Department staffing threshold reached (${Math.round(concurrentPercent)}% would be on leave, limit ${approvedRules.maxConcurrentLeavePercent}%) — routed to manager for staffing review`);
+      }
+    }
+
+    const withinAutoApproveWindow = !shortageBlocksAutoApprove
+      && approvedRules.autoApproveMaxDays != null && totalDays <= approvedRules.autoApproveMaxDays;
+    if (approvedRules.requiresManagerApproval && !withinAutoApproveWindow) {
+      requiredApprovals.push('MANAGER');
+    } else if (withinAutoApproveWindow) {
+      reasons.push(`Within auto-approve window (up to ${approvedRules.autoApproveMaxDays} day(s) for ${request.leaveType})`);
+    }
   } else {
     requiredApprovals.push(employee.managerId ? 'MANAGER' : 'ADMIN');
   }
 
+  // Normalize policy flags into the mandatory organization hierarchy:
+  // employee -> assigned manager -> admin, manager -> admin, while an
+  // admin's own request has no additional human stage above it.
+  const requesterTier = employee.customRole?.tier;
+  const documentRequired = requiredApprovals.includes('DOCUMENT');
+  if (request.leaveType === 'EMERGENCY' && requesterTier !== 'ADMIN' && requesterTier !== 'SUPER_ADMIN') {
+    requiredApprovals = [...(documentRequired ? ['DOCUMENT'] : []), 'ADMIN'];
+    reasons.push('Emergency leave bypasses manager review and requires final admin approval');
+  } else if (requesterTier === 'ADMIN' || requesterTier === 'SUPER_ADMIN') {
+    requiredApprovals = documentRequired ? ['DOCUMENT'] : [];
+  } else if (requesterTier === 'MANAGER') {
+    requiredApprovals = [...(documentRequired ? ['DOCUMENT'] : []), 'ADMIN'];
+  } else {
+    requiredApprovals = [
+      ...(documentRequired ? ['DOCUMENT'] : []),
+      ...(employee.managerId ? ['MANAGER'] : []),
+      'ADMIN',
+    ];
+  }
+
+  // An emergency advance always retains explicit admin review.
+  if (balanceInsufficient && requesterTier !== 'ADMIN' && requesterTier !== 'SUPER_ADMIN' && !requiredApprovals.includes('ADMIN')) {
+    requiredApprovals.push('ADMIN');
+  }
+
   let decision = 'NEEDS_HUMAN_REVIEW';
-  if (reasons.some((reason) => /Invalid|No active|not applicable|does not exist|Insufficient|overlaps|Exceeds|notice/i.test(reason))) {
+  if (reasons.some((reason) => /Invalid|No active|not applicable|does not exist|overlaps|Exceeds|notice|Holiday conflict/i.test(reason))) {
     decision = 'AUTO_REJECTED';
   } else if (requiredApprovals.includes('DOCUMENT')) {
     decision = 'REQUIRES_DOCUMENT';
-  } else if (requiredApprovals.includes('ADMIN')) {
-    decision = 'PENDING_ADMIN';
   } else if (requiredApprovals.includes('MANAGER')) {
     decision = 'PENDING_MANAGER';
+  } else if (requiredApprovals.includes('ADMIN')) {
+    decision = 'PENDING_ADMIN';
   } else {
     decision = 'AUTO_APPROVED';
   }
@@ -467,6 +747,9 @@ module.exports = {
   extractPolicyDocument,
   aiParsePolicyDocument,
   approvePolicyRules,
+  saveManualPolicyRules,
+  getActivePolicyVersion,
+  getLeaveTypeLabels,
   evaluateLeaveRequest,
   saveDecision,
   getDecisionForLeave,

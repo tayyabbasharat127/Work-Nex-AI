@@ -10,16 +10,18 @@ venv/
 
 # Node
 node_modules/
+.demo-runtime/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Env files (keep .env.example and .env.production committed)
+# Environment and credential files (examples only may be committed)
 .env
-.env.local
-.env.*.local
+.env.*
+**/.env
+**/.env.*
 !.env.example
-!.env.production
+!**/.env.example
 
 # Build output
 dist/
@@ -32,6 +34,15 @@ build/
 *.out.log
 logs/
 reports/*.log
+
+# Runtime/customer data
+worknex-backend/storage/
+worknex-backend/uploads/
+ai-service/vector_store/chroma/
+ai-service/vector_store/knowledge_index.json
+
+# Local credential documentation
+**/DEV_CREDENTIALS.md
 
 # OS
 .DS_Store

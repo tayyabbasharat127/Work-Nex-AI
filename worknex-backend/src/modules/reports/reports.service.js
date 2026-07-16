@@ -4,6 +4,7 @@ const { getAccessibleUserIds } = require('../../utils/rbac');
 const { getOrganizationScope } = require('../../utils/tenant');
 
 const parseDate = (value) => (value ? new Date(value) : null);
+const reportLimit = (value) => Math.min(1000, Math.max(1, Number.parseInt(value, 10) || 500));
 
 const rangeFilter = (query) => {
   const start = parseDate(query.startDate);
@@ -54,7 +55,7 @@ const getAttendanceReport = async (query, user) => {
     where,
     include: { user: { select: { firstName: true, lastName: true, employeeId: true, department: { select: { name: true } } } } },
     orderBy: [{ date: 'desc' }, { checkIn: 'asc' }],
-    take: Number(query.limit || 500),
+    take: reportLimit(query.limit),
   });
   const summary = rows.reduce((acc, row) => {
     acc.total += 1;
@@ -82,7 +83,7 @@ const getLeaveReport = async (query, user) => {
     where,
     include: { employee: { select: { firstName: true, lastName: true, employeeId: true, department: { select: { name: true } } } } },
     orderBy: { appliedAt: 'desc' },
-    take: Number(query.limit || 500),
+    take: reportLimit(query.limit),
   });
   const summary = rows.reduce((acc, row) => {
     acc.total += 1;
@@ -111,7 +112,7 @@ const getPerformanceReport = async (query, user) => {
     where,
     include: { user: { select: { firstName: true, lastName: true, employeeId: true, department: { select: { name: true } } } } },
     orderBy: [{ year: 'desc' }, { month: 'desc' }, { overallScore: 'desc' }],
-    take: Number(query.limit || 500),
+    take: reportLimit(query.limit),
   });
   const avgScore = rows.length ? rows.reduce((sum, row) => sum + row.overallScore, 0) / rows.length : 0;
   return baseReport('performance', user, query, { total: rows.length, avgScore: Number(avgScore.toFixed(2)) }, rows.map((row) => ({
@@ -134,7 +135,10 @@ const getDepartmentReport = async (query, user) => {
   const userWhere = { ...deptWhere, isActive: true };
   const accessibleUserIds = await getAccessibleUserIds(user);
   if (accessibleUserIds !== null) userWhere.id = { in: accessibleUserIds };
-  const users = await prisma.user.findMany({ where: userWhere, select: { departmentId: true, role: true } });
+  const users = await prisma.user.findMany({
+    where: userWhere,
+    select: { departmentId: true, customRole: { select: { tier: true } } },
+  });
   if (user.role === 'MANAGER') {
     const departmentIds = [...new Set(users.map((item) => item.departmentId).filter(Boolean))];
     deptWhere.id = departmentIds.length ? { in: departmentIds } : '__none__';
@@ -147,8 +151,8 @@ const getDepartmentReport = async (query, user) => {
       name: dept.name,
       description: dept.description,
       activeUsers: members.length,
-      managers: members.filter((item) => item.role === 'MANAGER').length,
-      employees: members.filter((item) => item.role === 'EMPLOYEE').length,
+      managers: members.filter((item) => item.customRole.tier === 'MANAGER').length,
+      employees: members.filter((item) => item.customRole.tier === 'EMPLOYEE').length,
     };
   });
   return baseReport('department', user, query, { totalDepartments: rows.length, totalActiveUsers: users.length }, rows);
@@ -176,7 +180,11 @@ const getReports = async (query, user) => {
 const toCsv = (rows) => {
   if (!rows.length) return '';
   const headers = Object.keys(rows[0]);
-  const escape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const escape = (value) => {
+    let normalized = String(value ?? '');
+    if (/^[=+\-@\t\r]/.test(normalized)) normalized = `'${normalized}`;
+    return `"${normalized.replace(/"/g, '""')}"`;
+  };
   return [headers.join(','), ...rows.map((row) => headers.map((header) => escape(row[header])).join(','))].join('\n');
 };
 

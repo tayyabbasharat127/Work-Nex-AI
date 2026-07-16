@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import RoleGate from '@/components/RoleGate';
-import { aiAPI, analyticsAPI, performanceAPI, reportsAPI, userAPI } from '@/lib/api';
-import { Award, BarChart3, Brain, RefreshCw, ShieldAlert, Users } from 'lucide-react';
+import { aiAPI, analyticsAPI, performanceAPI, reportsAPI, userAPI, reviewsAPI } from '@/lib/api';
+import { Award, BarChart3, Brain, RefreshCw, ShieldAlert, Users, ClipboardCheck } from 'lucide-react';
 
 function toArray(value) {
   if (Array.isArray(value)) return value;
@@ -23,9 +23,9 @@ function employeeName(record, fallback = 'Employee') {
 }
 
 function scoreClass(score) {
-  if (score >= 80) return 'text-emerald-400';
-  if (score >= 60) return 'text-amber-400';
-  return 'text-red-400';
+  if (score >= 80) return 'text-success';
+  if (score >= 60) return 'text-warning';
+  return 'text-destructive';
 }
 
 export default function AdminPerformancePage() {
@@ -40,17 +40,19 @@ export default function AdminPerformancePage() {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedPerformance, setSelectedPerformance] = useState(null);
   const [prediction, setPrediction] = useState(null);
+  const [reviewStatus, setReviewStatus] = useState(null);
 
   const loadData = async () => {
     setLoading(true);
     setError('');
     try {
-      const [teamRes, boardRes, usersRes, analyticsRes, reportRes] = await Promise.allSettled([
+      const [teamRes, boardRes, usersRes, analyticsRes, reportRes, reviewStatusRes] = await Promise.allSettled([
         performanceAPI.getTeam(),
         performanceAPI.getLeaderboard(),
         userAPI.getAll({ limit: 200 }),
         analyticsAPI.getDashboard(),
         reportsAPI.performance({ limit: 50 }),
+        reviewsAPI.getTeamStatus(),
       ]);
 
       if (teamRes.status === 'fulfilled') setTeam(toArray(teamRes.value));
@@ -58,6 +60,7 @@ export default function AdminPerformancePage() {
       if (usersRes.status === 'fulfilled') setUsers(toArray(usersRes.value).filter((u) => u.role === 'EMPLOYEE' || u.role_id === 3));
       if (analyticsRes.status === 'fulfilled') setAnalytics(analyticsRes.value);
       if (reportRes.status === 'fulfilled') setReport(reportRes.value);
+      if (reviewStatusRes.status === 'fulfilled') setReviewStatus(reviewStatusRes.value);
 
       const rejected = [teamRes, boardRes, usersRes].find((item) => item.status === 'rejected');
       if (rejected) setError(rejected.reason?.message || 'Some performance data could not be loaded.');
@@ -118,13 +121,13 @@ export default function AdminPerformancePage() {
           </div>
 
           <div className="p-6 space-y-6">
-            {error && <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-200">{error}</div>}
+            {error && <div className="rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-warning">{error}</div>}
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {[
                 ['Employees', kpis.employees, Users],
-                ['Avg Overall', kpis.overall.toFixed(1), Award],
-                ['Avg Attendance', kpis.attendance.toFixed(1), BarChart3],
+                ['Avg Attendance & Punctuality', kpis.overall.toFixed(1), Award],
+                ['Avg Attendance Score', kpis.attendance.toFixed(1), BarChart3],
                 ['Low Score Flags', kpis.highRisk, ShieldAlert],
               ].map(([label, value, Icon]) => (
                 <div key={label} className="rounded-lg border border-border bg-card p-5">
@@ -132,6 +135,25 @@ export default function AdminPerformancePage() {
                   <p className="mt-3 text-3xl font-bold">{loading ? '...' : value}</p>
                 </div>
               ))}
+            </div>
+
+            {/* Review Completion — goals+reviews are the real performance signal;
+                the KPIs above are attendance-derived and shown separately. */}
+            <div className="rounded-lg border border-border bg-card p-5">
+              <div className="flex items-center gap-2 text-sm font-semibold mb-3">
+                <ClipboardCheck size={18} className="text-primary" />
+                Review Completion
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Draft</p>
+                  <p className="text-2xl font-bold">{loading ? '...' : (reviewStatus?.DRAFT ?? 0)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Submitted</p>
+                  <p className="text-2xl font-bold text-success">{loading ? '...' : (reviewStatus?.SUBMITTED ?? 0)}</p>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -151,7 +173,7 @@ export default function AdminPerformancePage() {
                           <th className="px-4 py-3 text-left">Rank</th>
                           <th className="px-4 py-3 text-left">Employee</th>
                           <th className="px-4 py-3 text-left">Department</th>
-                          <th className="px-4 py-3 text-left">Overall</th>
+                          <th className="px-4 py-3 text-left">Attendance & Punctuality</th>
                           <th className="px-4 py-3 text-left">Attendance</th>
                         </tr>
                       </thead>
@@ -224,7 +246,7 @@ export default function AdminPerformancePage() {
                       <p className="font-semibold">{employeeName(item, `Employee ${index + 1}`)}</p>
                       <p className="text-xs text-muted-foreground mt-1">{item.month || '-'} / {item.year || '-'}</p>
                       <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
-                        <span>Overall <b className={scoreClass(Number(item.overallScore || 0))}>{Number(item.overallScore || 0).toFixed(1)}</b></span>
+                        <span>Attend. <b className={scoreClass(Number(item.overallScore || 0))}>{Number(item.overallScore || 0).toFixed(1)}</b></span>
                         <span>Late <b>{item.lateDays || 0}</b></span>
                         <span>Hours <b>{Number(item.avgWorkingHours || 0).toFixed(1)}</b></span>
                       </div>

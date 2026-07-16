@@ -1,4 +1,5 @@
 const prisma = require('../../config/db');
+const { config } = require('../../config/env');
 const { getMonthRange } = require('../../utils/dateHelpers');
 const { ApiError } = require('../../utils/ApiError');
 const { addAccessibleUserScope, assertCanAccessUser, getAccessibleUserIds, isPlatformAdmin } = require('../../utils/rbac');
@@ -19,23 +20,35 @@ const getDashboardKPIs = async (requestingUser) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const userScope = await getUserScope(requestingUser, 'id');
-  const attendanceScope = await getUserScope(requestingUser);
   const leaveScope = await getUserScope(requestingUser, 'employeeId');
 
+  // The headcount denominator and attendance numerator must describe the
+  // exact same population. Admins/managers may have their own attendance
+  // records, but the workforce KPI is intentionally employee-only.
+  const employees = await prisma.user.findMany({
+    where: { ...userScope, isActive: true, customRole: { tier: 'EMPLOYEE' } },
+    select: { id: true },
+  });
+  const employeeIds = employees.map((employee) => employee.id);
+  const attendanceWhere = {
+    ...getOrganizationScope(requestingUser),
+    userId: { in: employeeIds },
+    date: today,
+  };
+
   const [
-    totalEmployees,
     activeToday,
     pendingLeaves,
     absentToday,
   ] = await Promise.all([
-    prisma.user.count({ where: { ...userScope, isActive: true, role: 'EMPLOYEE' } }),
-    prisma.attendance.count({ where: { ...attendanceScope, date: today, status: { in: ['PRESENT', 'LATE'] } } }),
-    prisma.leaveRequest.count({ where: { ...leaveScope, status: 'PENDING' } }),
-    prisma.attendance.count({ where: { ...attendanceScope, date: today, status: 'ABSENT' } }),
+    prisma.attendance.count({ where: { ...attendanceWhere, status: { in: ['PRESENT', 'LATE'] } } }),
+    prisma.leaveRequest.count({ where: { ...leaveScope, status: { in: ['PENDING', 'PENDING_MANAGER', 'PENDING_ADMIN'] } } }),
+    prisma.attendance.count({ where: { ...attendanceWhere, status: 'ABSENT' } }),
   ]);
 
+  const totalEmployees = employeeIds.length;
   const attendanceRate = totalEmployees > 0
-    ? parseFloat(((activeToday / totalEmployees) * 100).toFixed(1))
+    ? parseFloat((Math.min(activeToday / totalEmployees, 1) * 100).toFixed(1))
     : 0;
 
   return { totalEmployees, activeToday, pendingLeaves, absentToday, attendanceRate };
@@ -81,101 +94,48 @@ const getAttendanceHeatmap = async (userId, year, requestingUser) => {
   });
 };
 
-const _countWorkingDays = (start, end) => {
-  let count = 0;
-  const cur = new Date(start);
-  while (cur <= end) {
-    const d = cur.getDay();
-    if (d !== 0 && d !== 6) count++;
-    cur.setDate(cur.getDate() + 1);
-  }
-  return Math.max(count, 1);
-};
-
 const getDepartmentAttendance = async (month, year, requestingUser) => {
   const { start, end } = getMonthRange(parseInt(year), parseInt(month));
-  const workingDays = _countWorkingDays(start, end);
-
-  if (!isPlatformAdmin(requestingUser)) {
-    const orgScope = getOrganizationScope(requestingUser);
-
-    // Employee count per department (used as denominator)
-    const employees = await prisma.user.findMany({
-      where: { ...orgScope, isActive: true },
-      select: { department: { select: { name: true } } },
-    });
-    const empByDept = {};
-    employees.forEach((e) => {
-      const dept = e.department?.name || 'Unassigned';
-      empByDept[dept] = (empByDept[dept] || 0) + 1;
-    });
-
-    const where = await addAccessibleUserScope({
-      ...orgScope,
-      date: { gte: start, lte: end },
-    }, requestingUser);
-    const records = await prisma.attendance.findMany({
-      where,
-      select: {
-        id: true,
-        status: true,
-        user: { select: { department: { select: { name: true } } } },
-      },
-    });
-
-    const departments = {};
-    // Seed all departments that have employees
-    Object.keys(empByDept).forEach((dept) => {
-      departments[dept] = { department: dept, present: 0, absent: 0, total: 0 };
-    });
-    records.forEach((record) => {
-      const department = record.user?.department?.name || 'Unassigned';
-      if (!departments[department]) {
-        departments[department] = { department, present: 0, absent: 0, total: 0 };
-      }
-      if (['PRESENT', 'LATE'].includes(record.status)) departments[department].present += 1;
-      if (record.status === 'ABSENT') departments[department].absent += 1;
-      departments[department].total += 1;
-    });
-
-    return Object.values(departments)
-      .sort((a, b) => a.department.localeCompare(b.department))
-      .map((item) => {
-        const empCount = empByDept[item.department] || 1;
-        const expected = empCount * workingDays;
-        return {
-          ...item,
-          rate: parseFloat(Math.min((item.present / expected) * 100, 100).toFixed(1)),
-        };
-      });
-  }
-
-  const result = await prisma.$queryRaw`
-    SELECT d.name as department,
-           COUNT(CASE WHEN a.status IN ('PRESENT','LATE') THEN 1 END) as present,
-           COUNT(CASE WHEN a.status = 'ABSENT' THEN 1 END) as absent,
-           COUNT(a.id) as total,
-           COUNT(DISTINCT u.id) as emp_count
-    FROM "Attendance" a
-    JOIN "User" u ON a."userId" = u.id
-    JOIN "Department" d ON u."departmentId" = d.id
-    WHERE a.date >= ${start} AND a.date <= ${end}
-    GROUP BY d.name
-    ORDER BY d.name
-  `;
-
-  return result.map(r => {
-    const present = Number(r.present);
-    const empCount = Number(r.emp_count) || 1;
-    const expected = empCount * workingDays;
-    return {
-      department: r.department,
-      present,
-      absent: Number(r.absent),
-      total: Number(r.total),
-      rate: parseFloat(Math.min((present / expected) * 100, 100).toFixed(1)),
-    };
+  const userScope = await getUserScope(requestingUser, 'id');
+  const employees = await prisma.user.findMany({
+    where: {
+      ...userScope,
+      isActive: true,
+      customRole: { tier: 'EMPLOYEE' },
+      departmentId: { not: null },
+    },
+    select: { id: true },
   });
+  if (!employees.length) return [];
+
+  const records = await prisma.attendance.findMany({
+    where: {
+      ...getOrganizationScope(requestingUser),
+      userId: { in: employees.map((employee) => employee.id) },
+      date: { gte: start, lte: end },
+    },
+    select: {
+      status: true,
+      user: { select: { department: { select: { name: true } } } },
+    },
+  });
+
+  const departments = {};
+  records.forEach((record) => {
+    const department = record.user?.department?.name;
+    if (!department) return;
+    if (!departments[department]) departments[department] = { department, present: 0, absent: 0, total: 0 };
+    if (['PRESENT', 'LATE'].includes(record.status)) departments[department].present += 1;
+    if (record.status === 'ABSENT') departments[department].absent += 1;
+    departments[department].total += 1;
+  });
+
+  return Object.values(departments)
+    .sort((a, b) => a.department.localeCompare(b.department))
+    .map((item) => ({
+      ...item,
+      rate: parseFloat(((item.present / item.total) * 100).toFixed(1)),
+    }));
 };
 
 const getLeaveSummary = async (year, requestingUser) => {
@@ -263,22 +223,32 @@ const getLeaveByType = async (year, requestingUser) => {
 
 const getHeadcount = async (requestingUser) => {
   const where = await getUserScope(requestingUser, 'id');
+  // Prisma groupBy only works on scalar columns, so group by roleId (a real
+  // column) then resolve each id's tier — several custom roles can share a
+  // tier, so counts for the same tier are summed rather than overwritten.
   const groups = await prisma.user.groupBy({
-    by: ['role', 'isActive'],
+    by: ['roleId', 'isActive'],
     where,
-    _count: { role: true },
+    _count: { roleId: true },
   });
+
+  const roles = await prisma.role.findMany({
+    where: { id: { in: [...new Set(groups.map((g) => g.roleId))] } },
+    select: { id: true, tier: true },
+  });
+  const tierById = Object.fromEntries(roles.map((r) => [r.id, r.tier]));
 
   // Flatten into readable format
   const result = {};
   groups.forEach(g => {
-    const key = `${g.role}_${g.isActive ? 'active' : 'inactive'}`;
-    result[key] = g._count.role;
+    const tier = tierById[g.roleId] || 'UNKNOWN';
+    const key = `${tier}_${g.isActive ? 'active' : 'inactive'}`;
+    result[key] = (result[key] || 0) + g._count.roleId;
   });
 
   // Add totals
-  result.totalActive = groups.filter(g => g.isActive).reduce((s, g) => s + g._count.role, 0);
-  result.totalInactive = groups.filter(g => !g.isActive).reduce((s, g) => s + g._count.role, 0);
+  result.totalActive = groups.filter(g => g.isActive).reduce((s, g) => s + g._count.roleId, 0);
+  result.totalInactive = groups.filter(g => !g.isActive).reduce((s, g) => s + g._count.roleId, 0);
   result.total = result.totalActive + result.totalInactive;
 
   return result;
@@ -300,8 +270,8 @@ const getTurnoverRate = async (year, requestingUser) => {
 const POWERBI_BASE = 'https://api.powerbi.com/v1.0/myorg';
 
 const _requirePowerBIEnv = () => {
-  const missing = ['POWERBI_CLIENT_ID', 'POWERBI_CLIENT_SECRET', 'POWERBI_TENANT_ID']
-    .filter((k) => !process.env[k]);
+  const requiredFields = { POWERBI_CLIENT_ID: 'clientId', POWERBI_CLIENT_SECRET: 'clientSecret', POWERBI_TENANT_ID: 'tenantId' };
+  const missing = Object.entries(requiredFields).filter(([, field]) => !config.powerBi[field]).map(([name]) => name);
   if (missing.length) {
     throw new ApiError(503, `Power BI not configured. Missing env vars: ${missing.join(', ')}`);
   }
@@ -310,11 +280,11 @@ const _requirePowerBIEnv = () => {
 const _getPowerBIAccessToken = async () => {
   _requirePowerBIEnv();
   const tokenRes = await axios.post(
-    `https://login.microsoftonline.com/${process.env.POWERBI_TENANT_ID}/oauth2/v2.0/token`,
+    `https://login.microsoftonline.com/${config.powerBi.tenantId}/oauth2/v2.0/token`,
     new URLSearchParams({
       grant_type: 'client_credentials',
-      client_id: process.env.POWERBI_CLIENT_ID,
-      client_secret: process.env.POWERBI_CLIENT_SECRET,
+      client_id: config.powerBi.clientId,
+      client_secret: config.powerBi.clientSecret,
       scope: 'https://analysis.windows.net/powerbi/api/.default',
     }),
     { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
@@ -329,9 +299,9 @@ const getPowerBIToken = async () => {
   const accessToken = await _getPowerBIAccessToken();
   return {
     accessToken,
-    workspaceId: process.env.POWERBI_WORKSPACE_ID,
-    reportId: process.env.POWERBI_REPORT_ID,
-    embedUrl: process.env.POWERBI_EMBED_URL,
+    workspaceId: config.powerBi.workspaceId,
+    reportId: config.powerBi.reportId,
+    embedUrl: config.powerBi.embedUrl,
     rls: {
       supported: false,
       note: 'Service-principal token — ADMIN/SUPER_ADMIN only. Per-user RLS available via /powerbi/embed-token.',
@@ -345,9 +315,9 @@ const getPowerBIToken = async () => {
  */
 const getPowerBIEmbedToken = async (requestingUser) => {
   const accessToken = await _getPowerBIAccessToken();
-  const workspaceId = process.env.POWERBI_WORKSPACE_ID;
-  const reportId = process.env.POWERBI_REPORT_ID;
-  const datasetId = process.env.POWERBI_DATASET_ID;
+  const workspaceId = config.powerBi.workspaceId;
+  const reportId = config.powerBi.reportId;
+  const datasetId = config.powerBi.datasetId;
 
   if (!workspaceId || !reportId) {
     throw new ApiError(503, 'POWERBI_WORKSPACE_ID and POWERBI_REPORT_ID must be set.');
@@ -357,11 +327,23 @@ const getPowerBIEmbedToken = async (requestingUser) => {
 
   // Apply RLS identity when dataset supports it
   if (datasetId) {
+    const RLS_ROLE_MAP = {
+      SUPER_ADMIN: 'SuperAdmin',
+      ADMIN: 'OrgAdmin',
+      MANAGER: 'Manager',
+      EMPLOYEE: 'Employee',
+    };
     body.identities = [
       {
         username: requestingUser.email,
-        roles: [requestingUser.role],
+        roles: [RLS_ROLE_MAP[requestingUser.role] || requestingUser.role],
         datasets: [datasetId],
+        // Tenant key for row-level filtering — the report's role definitions
+        // must filter on CUSTOMDATA() (e.g. [OrganizationId] = CUSTOMDATA())
+        // for this to actually isolate orgs; role alone only segments by
+        // tier, not by organization, so two OrgAdmins from different orgs
+        // would otherwise get an identical RLS identity.
+        customData: requestingUser.organizationId,
       },
     ];
   }
@@ -379,7 +361,7 @@ const getPowerBIEmbedToken = async (requestingUser) => {
     reportId,
     workspaceId,
     datasetId: datasetId || null,
-    embedUrl: process.env.POWERBI_EMBED_URL,
+    embedUrl: config.powerBi.embedUrl,
     rlsApplied: !!datasetId,
     userEmail: requestingUser.email,
     userRole: requestingUser.role,
@@ -396,6 +378,7 @@ const _buildDatasetSchema = (orgId) => ({
     {
       name: 'Attendance',
       columns: [
+        { name: 'OrganizationId', dataType: 'string' },
         { name: 'UserId', dataType: 'string' },
         { name: 'Date', dataType: 'dateTime' },
         { name: 'Status', dataType: 'string' },
@@ -408,6 +391,7 @@ const _buildDatasetSchema = (orgId) => ({
     {
       name: 'LeaveRequests',
       columns: [
+        { name: 'OrganizationId', dataType: 'string' },
         { name: 'EmployeeId', dataType: 'string' },
         { name: 'LeaveType', dataType: 'string' },
         { name: 'Status', dataType: 'string' },
@@ -420,6 +404,7 @@ const _buildDatasetSchema = (orgId) => ({
     {
       name: 'Performance',
       columns: [
+        { name: 'OrganizationId', dataType: 'string' },
         { name: 'UserId', dataType: 'string' },
         { name: 'Month', dataType: 'int64' },
         { name: 'Year', dataType: 'int64' },
@@ -435,6 +420,7 @@ const _buildDatasetSchema = (orgId) => ({
     {
       name: 'Employees',
       columns: [
+        { name: 'OrganizationId', dataType: 'string' },
         { name: 'UserId', dataType: 'string' },
         { name: 'FullName', dataType: 'string' },
         { name: 'Email', dataType: 'string' },
@@ -472,7 +458,7 @@ const _ensurePushDataset = async (accessToken, workspaceId, orgId) => {
  */
 const pushDataToPowerBI = async (requestingUser) => {
   const accessToken = await _getPowerBIAccessToken();
-  const workspaceId = process.env.POWERBI_WORKSPACE_ID;
+  const workspaceId = config.powerBi.workspaceId;
   if (!workspaceId) throw new ApiError(503, 'POWERBI_WORKSPACE_ID must be set.');
 
   const orgId = requestingUser.organizationId;
@@ -504,7 +490,8 @@ const pushDataToPowerBI = async (requestingUser) => {
       where: { organizationId: orgId },
       select: {
         id: true, firstName: true, lastName: true, email: true,
-        role: true, isActive: true, createdAt: true,
+        isActive: true, createdAt: true,
+        customRole: { select: { name: true } },
         department: { select: { name: true } },
       },
       take: 1000,
@@ -523,6 +510,7 @@ const pushDataToPowerBI = async (requestingUser) => {
 
   const results = await Promise.all([
     pushTable('Attendance', attendance.map((a) => ({
+      OrganizationId: orgId,
       UserId: a.userId,
       Date: a.date?.toISOString(),
       Status: a.status,
@@ -532,6 +520,7 @@ const pushDataToPowerBI = async (requestingUser) => {
       CheckOut: a.checkOut?.toISOString() || null,
     }))),
     pushTable('LeaveRequests', leaves.map((l) => ({
+      OrganizationId: orgId,
       EmployeeId: l.employeeId,
       LeaveType: l.leaveType,
       Status: l.status,
@@ -541,6 +530,7 @@ const pushDataToPowerBI = async (requestingUser) => {
       Department: l.employee?.department?.name || 'Unassigned',
     }))),
     pushTable('Performance', performance.map((p) => ({
+      OrganizationId: orgId,
       UserId: p.userId,
       Month: p.month,
       Year: p.year,
@@ -553,10 +543,11 @@ const pushDataToPowerBI = async (requestingUser) => {
       Department: p.user?.department?.name || 'Unassigned',
     }))),
     pushTable('Employees', employees.map((u) => ({
+      OrganizationId: orgId,
       UserId: u.id,
       FullName: `${u.firstName} ${u.lastName}`.trim(),
       Email: u.email,
-      Role: u.role,
+      Role: u.customRole.name,
       Department: u.department?.name || 'Unassigned',
       IsActive: u.isActive,
       JoinDate: u.createdAt?.toISOString(),
@@ -595,7 +586,7 @@ const getAuditLogs = async (requestingUser, limit = 50) => {
   return prisma.auditLog.findMany({
     where: getOrganizationScope(requestingUser),
     include: {
-      user: { select: { firstName: true, lastName: true, email: true, role: true } },
+      user: { select: { firstName: true, lastName: true, email: true, customRole: { select: { tier: true, name: true } } } },
     },
     orderBy: { createdAt: 'desc' },
     take: Math.min(Number(limit) || 50, 100),

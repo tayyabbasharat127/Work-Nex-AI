@@ -12,14 +12,16 @@ class Settings:
 
     # Backend connection
     BACKEND_URL: str = os.getenv("BACKEND_URL", "http://localhost:5000/api/v1")
-    BACKEND_TOKEN: str = os.getenv("BACKEND_TOKEN", "")
+    JWT_SECRET: str = os.getenv("JWT_SECRET", "").strip()
 
     # AI Provider: "statistical" | "langchain"
     AI_PROVIDER: str = os.getenv("AI_PROVIDER", "statistical")
 
-    # LLM API keys — priority order: Groq → OpenAI → Gemini → Anthropic → Ollama
+    # LLM API keys — priority order: Groq → OpenAI → OpenRouter → Gemini → Anthropic → Ollama
     GROK_API_KEY: str = os.getenv("GROK_API_KEY", "").strip()   # Groq (fast + free)
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "").strip()
+    OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "").strip()  # OpenAI-compatible gateway
+    OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip()
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "").strip()
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "").strip()
 

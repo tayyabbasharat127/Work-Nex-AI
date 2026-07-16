@@ -17,7 +17,12 @@
       "Bash(Test-Path \"c:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\Work-Nex-AI\\\\frontend\\\\node_modules\")",
       "Bash(Test-Path \"c:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\Work-Nex-AI\\\\worknex-backend\\\\.env\")",
       "Bash(Test-Path \"c:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\Work-Nex-AI\\\\ai-service\\\\.env\")",
-      "Bash(Get-Content \"c:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\Work-Nex-AI\\\\ai-service\\\\run.py\" -TotalCount 10)"
+      "Bash(Get-Content \"c:\\\\Users\\\\TECHXCESS\\\\Desktop\\\\Work-Nex-AI\\\\ai-service\\\\run.py\" -TotalCount 10)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5000/api/v1/health)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000)",
+      "Bash(npx prisma *)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill //F //PID 21568)"
     ]
   }
 }

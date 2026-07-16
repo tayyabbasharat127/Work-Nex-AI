@@ -219,6 +219,13 @@ const login = async (email, password, metadata = {}) => {
   };
 };
 
+const createSessionForUser = async (userId, metadata = {}) => {
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: { customRole: true } });
+  if (!user || !user.isActive) throw new ApiError(401, 'Unable to create session');
+  const tokens = await persistSession(prisma, user, metadata);
+  return { ...tokens, user: userPayload(user) };
+};
+
 const refreshToken = async (token, metadata = {}) => {
   if (!token) throw new ApiError(401, 'Invalid refresh token');
   const decoded = verifyRefreshJwt(token);
@@ -415,7 +422,7 @@ const changePassword = async (userId, oldPassword, newPassword) => {
 };
 
 module.exports = {
-  register, login, refreshToken, logout,
+  register, login, createSessionForUser, refreshToken, logout,
   setup2FA, verify2FA, disable2FA, validate2FA,
   forgotPassword, resetPassword, changePassword,
 };

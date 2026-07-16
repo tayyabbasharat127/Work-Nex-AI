@@ -1,91 +1,85 @@
 'use client';
 
-import { Eye, Edit, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { Eye, Edit, Trash2, Users as UsersIcon } from 'lucide-react';
 import { getRoleName } from '@/lib/helpers';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+
+const ROLE_BADGE_VARIANT = { 1: 'destructive', 2: 'success', 3: 'warning', 4: 'info' };
 
 export default function UsersTable({ loading, paginatedUsers, departments, onView, onEdit, onDelete }) {
-  if (loading) {
-    return (
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="text-center py-12 text-muted-foreground">Loading users...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="bg-muted/50 border-b border-border">
-          <tr>
-            <th className="text-left py-4 px-6 font-semibold">User</th>
-            <th className="text-left py-4 px-6 font-semibold">Role</th>
-            <th className="text-left py-4 px-6 font-semibold">Department</th>
-            <th className="text-center py-4 px-6 font-semibold">Status</th>
-            <th className="text-left py-4 px-6 font-semibold">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {paginatedUsers.map((user) => (
-            <tr key={user.id} className="hover:bg-muted/30 transition">
-              <td className="py-4 px-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold">
-                    {user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?'}
-                  </div>
-                  <div>
-                    <p className="font-medium">{user.name}</p>
-                    <p className="text-muted-foreground text-xs">{user.email}</p>
-                  </div>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="px-6 py-3">User</TableHead>
+          <TableHead className="px-6 py-3">Role</TableHead>
+          <TableHead className="px-6 py-3">Department</TableHead>
+          <TableHead className="px-6 py-3 text-center">Status</TableHead>
+          <TableHead className="px-6 py-3">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {loading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <TableRow key={i}>
+              <TableCell className="px-6 py-4"><Skeleton className="h-10 w-40 rounded-lg" /></TableCell>
+              <TableCell className="px-6 py-4"><Skeleton className="h-6 w-20 rounded-lg" /></TableCell>
+              <TableCell className="px-6 py-4"><Skeleton className="h-4 w-24 rounded-lg" /></TableCell>
+              <TableCell className="px-6 py-4"><Skeleton className="mx-auto h-6 w-16 rounded-lg" /></TableCell>
+              <TableCell className="px-6 py-4"><Skeleton className="h-8 w-20 rounded-lg" /></TableCell>
+            </TableRow>
+          ))
+        ) : paginatedUsers.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={5}>
+              <EmptyState icon={UsersIcon} title="No users found" description="Try adjusting your search or filters." />
+            </TableCell>
+          </TableRow>
+        ) : paginatedUsers.map((user) => (
+          <TableRow key={user.id}>
+            <TableCell className="px-6 py-4">
+              <Link href={`/dashboard/admin/users/${user.id}`} className="flex items-center gap-3 group w-fit">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground">
+                  {user.name?.split(' ').map((n) => n[0]).join('').toUpperCase() || '?'}
                 </div>
-              </td>
-              <td className="py-4 px-6">
-                <span className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
-                  user.role_id === 1 ? 'bg-destructive/20 text-destructive' :
-                  user.role_id === 2 ? 'bg-success/20 text-success' :
-                  user.role_id === 3 ? 'bg-warning/20 text-warning' :
-                  'bg-info/20 text-info'
-                }`}>
-                  {user.roleName || getRoleName(user.role_id)}
-                </span>
-              </td>
-              <td className="py-4 px-6 text-muted-foreground">
-                {departments.find(d => d.id === user.department_id)?.name || 'N/A'}
-              </td>
-              <td className="py-4 px-6 text-center">
-                <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${
-                  user.status === 'Active'
-                    ? 'bg-success/20 text-success'
-                    : 'bg-muted text-muted-foreground'
-                }`}>
-                  {user.status}
-                </span>
-              </td>
-              <td className="py-4 px-6">
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => onView(user)}
-                    className="p-2 hover:bg-primary/10 rounded-lg transition group"
-                  >
-                    <Eye size={16} className="text-muted-foreground group-hover:text-primary" />
-                  </button>
-                  <button
-                    onClick={() => onEdit(user)}
-                    className="p-2 hover:bg-accent/10 rounded-lg transition group"
-                  >
-                    <Edit size={16} className="text-muted-foreground group-hover:text-accent" />
-                  </button>
-                  <button
-                    onClick={() => onDelete(user)}
-                    className="p-2 hover:bg-destructive/10 rounded-lg transition group"
-                  >
-                    <Trash2 size={16} className="text-muted-foreground group-hover:text-destructive" />
-                  </button>
+                <div>
+                  <p className="font-medium text-foreground group-hover:text-primary group-hover:underline">{user.name}</p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
                 </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+              </Link>
+            </TableCell>
+            <TableCell className="px-6 py-4">
+              <Badge variant={ROLE_BADGE_VARIANT[user.role_id] || 'secondary'}>
+                {user.roleName || getRoleName(user.role_id)}
+              </Badge>
+            </TableCell>
+            <TableCell className="px-6 py-4 text-muted-foreground">
+              {departments.find((d) => d.id === user.department_id)?.name || 'N/A'}
+            </TableCell>
+            <TableCell className="px-6 py-4 text-center">
+              <Badge variant={user.status === 'Active' ? 'success' : 'secondary'}>{user.status}</Badge>
+            </TableCell>
+            <TableCell className="px-6 py-4">
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon-sm" onClick={() => onView(user)} className="hover:bg-primary/10 hover:text-primary">
+                  <Eye size={16} />
+                </Button>
+                <Button variant="ghost" size="icon-sm" onClick={() => onEdit(user)} className="hover:bg-accent hover:text-accent-foreground">
+                  <Edit size={16} />
+                </Button>
+                <Button variant="ghost" size="icon-sm" onClick={() => onDelete(user)} className="hover:bg-destructive/10 hover:text-destructive">
+                  <Trash2 size={16} />
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

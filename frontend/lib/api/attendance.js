@@ -37,6 +37,12 @@ export const attendanceAPI = {
     return response.data || response;
   },
 
+  getForUser: async (userId, params) => {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await apiFetch(`/attendance/user/${userId}${queryString ? `?${queryString}` : ''}`);
+    return response.data || response;
+  },
+
   getSummary: async (params) => {
     const queryString = new URLSearchParams(params).toString();
     const response = await apiFetch(`/attendance/summary${queryString ? `?${queryString}` : ''}`);

@@ -24,5 +24,5 @@ export function proxy(request) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*'],
+  matcher: ['/dashboard/:path*', '/onboarding'],
 };

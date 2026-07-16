@@ -161,3 +161,60 @@ After seeding:
 6. Verify manager-employee relationships
 7. Test leave approval workflows
 8. Review analytics and reports
+
+---
+
+## Deterministic Enterprise Demo Tenant
+
+Use `scripts/demo-seeder.js` for the sales, QA, and browser-automation tenant. It is separate from the older random/test datasets and always targets exactly this organization:
+
+- Name: `WorkNex Technologies`
+- Slug: `worknex-technologies-demo`
+- Industry: Software Development
+- Country: Pakistan
+- Timezone: Asia/Karachi
+- Fixed anchor date: `2026-07-16` (override with `DEMO_ANCHOR_DATE`)
+
+From the repository root:
+
+```shell
+npm run demo:seed
+npm run demo:validate
+npm run demo:reset
+npm run demo:rebuild
+```
+
+`demo:seed` is a safe rerun: it removes and recreates only the fixed demo slug, then runs integrity validation. `demo:reset` removes only that tenant. `demo:rebuild` validates the Prisma schema, deploys pending migrations, then recreates the tenant.
+
+Stable non-production accounts:
+
+| Role | Email | Default non-production password |
+|---|---|---|
+| Admin | `admin@demo.worknex.ai` | `WorkNexDemo!2026` |
+| Manager | `manager@demo.worknex.ai` | `WorkNexDemo!2026` |
+| Employee | `employee@demo.worknex.ai` | `WorkNexDemo!2026` |
+
+All seeded accounts have 2FA disabled. Set `DEMO_USER_PASSWORD` to replace the default. The seeder refuses to run when `NODE_ENV=production` unless `ALLOW_DEMO_SEED_IN_PRODUCTION=true`; production also requires an explicit `DEMO_USER_PASSWORD`.
+
+Unsupported schema concepts are not fabricated: currency and employment joining-history records have no dedicated models; `REMOTE_WEB` is stored as the attendance source with `PRESENT` status; weekends have no artificial punches; primary AI conversation and forecast history are not persisted because no compatible tables exist.
+
+## Demo Runtime
+
+The repository-level runtime supervisor makes the seeded tenant client-ready with one command:
+
+```shell
+npm run demo:start
+```
+
+Before starting anything, it verifies installed dependencies, PostgreSQL access, migration status, the deterministic seed, and all three demo credentials. Pending migrations and unavailable PostgreSQL cause an immediate failure. Missing or invalid demo data is safely recreated for the fixed demo slug only.
+
+Backend, AI, multi-agent, and frontend services that are not already running are launched concurrently and must become healthy within 60 seconds. Healthy existing services are reused. Runtime state and service logs are written under `.demo-runtime/`, which is gitignored.
+
+```shell
+npm run demo:status  # Process ownership and endpoint status
+npm run demo:health  # Database, migrations, data, accounts, and endpoints
+npm run demo:stop    # Stop only processes launched by demo:start
+npm run demo:rebuild # Explicitly deploy migrations and recreate demo data
+```
+
+`demo:stop` deliberately leaves reused processes running. `demo:start` is disabled under `NODE_ENV=production` unless an approved isolated environment explicitly sets `ALLOW_DEMO_RUNTIME_IN_PRODUCTION=true`. Set `DEMO_START_TIMEOUT_MS`, `PYTHON_COMMAND`, or the `DEMO_*_HEALTH_URL` variables only when local readiness endpoints differ from the defaults.

@@ -76,6 +76,7 @@ router.get('/:id/decision-explanation', param('id').isUUID(), validate, leaveCon
 // Leave Balances — /me BEFORE /:userId
 router.get('/balances/me',       leaveController.getMyBalances);
 router.get('/balances/:userId', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), param('userId').isUUID(), validate, auditHrAccess('LeaveBalance'), leaveController.getUserBalances);
+router.get('/summary/:userId', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), param('userId').isUUID(), validate, auditHrAccess('LeaveSummary'), leaveController.getUserLeaveSummary);
 
 // Leave Policies — /all and /active BEFORE /:id
 router.get('/policies/all',    leaveController.getPolicies);

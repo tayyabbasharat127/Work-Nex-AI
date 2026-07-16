@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Bell, BellOff, Check, CheckCheck, CalendarCheck, CalendarX, AlertTriangle, Info, Clock } from 'lucide-react';
 import { useNotificationBell } from '@/hooks/useNotificationBell';
 
@@ -24,12 +25,25 @@ function timeAgo(iso) {
 }
 
 export default function NotificationBell({ role }) {
+  const router = useRouter();
   // Only the admin dashboard has a dedicated /notifications page today — for
   // other roles the dropdown itself is the full view, so skip the link
   // rather than point at a page that doesn't exist yet.
   const showViewAllLink = (role || '').toLowerCase() === 'admin';
   const [open, setOpen] = useState(false);
   const { unreadCount, notifications, loading, muted, setMuted, markAsRead, markAllAsRead } = useNotificationBell();
+  const notificationTarget = (notification) => {
+    const target = notification.metadata?.targetRoute || notification.metadata?.deepLink;
+    return typeof target === 'string' && target.startsWith('/dashboard/') ? target : null;
+  };
+  const openNotification = async (notification) => {
+    if (!notification.isRead) await markAsRead(notification.id);
+    const target = notificationTarget(notification);
+    if (target) {
+      setOpen(false);
+      router.push(target);
+    }
+  };
 
   return (
     <div className="relative">
@@ -86,8 +100,18 @@ export default function NotificationBell({ role }) {
               ) : (
                 notifications.map((n) => {
                   const Icon = TYPE_ICON[n.type] || Info;
+                  const target = notificationTarget(n);
                   return (
-                    <div key={n.id} className={`flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition ${n.isRead ? '' : 'bg-primary/5'}`}>
+                    <div
+                      key={n.id}
+                      role={target ? 'button' : undefined}
+                      tabIndex={target ? 0 : undefined}
+                      onClick={() => openNotification(n)}
+                      onKeyDown={(event) => {
+                        if (target && (event.key === 'Enter' || event.key === ' ')) openNotification(n);
+                      }}
+                      className={`flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition ${target ? 'cursor-pointer' : ''} ${n.isRead ? '' : 'bg-primary/5'}`}
+                    >
                       <Icon size={15} className="text-primary shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{n.title}</p>
@@ -96,7 +120,7 @@ export default function NotificationBell({ role }) {
                       </div>
                       {!n.isRead && (
                         <button
-                          onClick={() => markAsRead(n.id)}
+                          onClick={(event) => { event.stopPropagation(); markAsRead(n.id); }}
                           title="Mark as read"
                           className="text-muted-foreground hover:text-foreground p-0.5 transition shrink-0"
                         >

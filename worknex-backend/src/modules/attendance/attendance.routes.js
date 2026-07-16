@@ -30,6 +30,29 @@ router.post('/tms-webhook', webhookLimiter, [
   }),
 ], validate, attendanceController.tmsWebhook);
 
+router.post('/university/punches', webhookLimiter, [
+  query('SN').trim().notEmpty().withMessage('Registered device serial number is required'),
+  body().custom((payload) => {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      throw new Error('Attendance punch must be an object');
+    }
+    const fields = Object.keys(payload).sort();
+    const expected = ['CHECKINTIME', 'TYPE', 'USERID'];
+    if (fields.length !== expected.length || fields.some((field, index) => field !== expected[index])) {
+      throw new Error('Only USERID, CHECKINTIME and TYPE are allowed');
+    }
+    return true;
+  }),
+  body('USERID').custom((value) => {
+    if (!['string', 'number'].includes(typeof value) || String(value).trim().length === 0) {
+      throw new Error('USERID is required');
+    }
+    return true;
+  }),
+  body('CHECKINTIME').isISO8601({ strict: true, strictSeparator: true }).withMessage('CHECKINTIME must be a valid ISO 8601 date and time'),
+  body('TYPE').isString().trim().isLength({ min: 1, max: 50 }).withMessage('TYPE is required'),
+], validate, attendanceController.universityPunch);
+
 router.use(authenticate);
 
 // ── Employee self-service (named routes BEFORE /:id) ──────────────────────────

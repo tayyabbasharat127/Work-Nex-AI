@@ -11,6 +11,9 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    // Accidentally committed Next.js development output. Treat it as generated
+    // code until it is removed from version control in a dedicated cleanup.
+    "dev/**",
     "next-env.d.ts",
     // Archived duplicate route tree with stale API contracts.
     "_archive_src_duplicate/**",

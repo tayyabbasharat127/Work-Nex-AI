@@ -1,10 +1,10 @@
 """Chat controller — routes to LangChain agent (personal + aggregate) or statistical fallback."""
 from fastapi import APIRouter, Depends
-from app.core.auth import AuthenticatedPrincipal, require_user
+from app.core.auth import AuthenticatedPrincipal, require_principal, require_user
 from app.models.schemas import ChatRequest, ChatResponse
 from app.services.chat_service import detect_intent, generate_response, is_langchain_mode
 
-router = APIRouter(prefix="/chat", tags=["Chat"])
+router = APIRouter(prefix="/chat", tags=["Chat"], dependencies=[Depends(require_principal)])
 
 
 @router.post("", response_model=ChatResponse)
@@ -14,6 +14,23 @@ async def chat(req: ChatRequest, principal: AuthenticatedPrincipal = Depends(req
     auth_token = principal.token
     user_name = "User"
     intent     = detect_intent(req.message)
+
+    # Policy answers are retrieval tasks, not open-ended generation. Direct
+    # retrieval keeps answers grounded and preserves citations if an external
+    # provider or its tool-calling path is unavailable.
+    if intent == "policy":
+        from app.services.rag_service import answer as rag_answer
+        rag = await rag_answer(req.message, role=role, user_context={"organizationId": principal.organization_id})
+        return ChatResponse(
+            message=rag["answer"],
+            answer=rag["answer"],
+            intent=intent,
+            data={"mode": "retrieval", "actions": rag.get("actions", [])},
+            sources=rag.get("sources", []),
+            confidence=rag.get("confidence", 0),
+            actions=rag.get("actions", []),
+            fallback=rag.get("fallback", False),
+        )
 
     if is_langchain_mode():
         try:

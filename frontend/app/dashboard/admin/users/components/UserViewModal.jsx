@@ -3,63 +3,63 @@
 import { X, Mail, Phone, Briefcase, IdCard, ClipboardList, UsersRound, ShieldCheck, Calendar } from 'lucide-react';
 import { getRoleName } from '@/lib/helpers';
 import { formatJoiningDate, formatTenure } from '../helpers';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 function DetailField({ icon: Icon, label, value }) {
   if (!value) return null;
   return (
-    <div className="flex items-start gap-3 p-3.5 rounded-xl bg-muted/30 border border-border/60">
-      <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+    <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/30 p-3.5">
+      <div className="shrink-0 rounded-lg bg-primary/10 p-2 text-primary">
         <Icon size={16} />
       </div>
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="font-medium text-sm mt-0.5 truncate">{value}</p>
+        <p className="mt-0.5 truncate text-sm font-medium text-foreground">{value}</p>
       </div>
     </div>
   );
 }
 
 export default function UserViewModal({ open, user, departments, onClose }) {
-  if (!open || !user) return null;
+  if (!user) return null;
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent showCloseButton={false} className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0">
         {/* Header banner — avatar/name live inside the banner itself,
             not overlapping its edge, so there's no fragile negative-margin
             positioning to break. */}
-        <div className="relative bg-gradient-to-br from-primary to-primary/70 px-6 pt-5 pb-6">
+        <div className="relative bg-linear-to-br from-primary to-primary/70 px-6 pb-6 pt-5">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-lg text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 transition"
+            className="absolute right-4 top-4 rounded-lg p-2 text-primary-foreground/80 transition hover:bg-primary-foreground/10 hover:text-primary-foreground"
           >
             <X size={20} />
           </button>
-          <p className="text-primary-foreground/70 text-xs font-semibold uppercase tracking-wide mb-4">User Details</p>
+          <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-primary-foreground/70">User Details</p>
 
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-primary-foreground/15 border border-primary-foreground/25 flex items-center justify-center text-primary-foreground font-bold text-xl shrink-0">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-primary-foreground/25 bg-primary-foreground/15 text-xl font-bold text-primary-foreground">
               {user.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
             </div>
             <div className="min-w-0">
-              <h3 className="text-xl font-bold text-primary-foreground truncate">{user.name}</h3>
-              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-full bg-primary-foreground/15 text-primary-foreground text-xs font-semibold">
+              <h3 className="truncate text-xl font-bold text-primary-foreground">{user.name}</h3>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <Badge className="border-transparent bg-primary-foreground/15 text-primary-foreground">
                   {user.roleName || getRoleName(user.role_id)}
-                </span>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  user.status === 'Active' ? 'bg-success/90 text-success-foreground' : 'bg-primary-foreground/20 text-primary-foreground'
-                }`}>
+                </Badge>
+                <Badge className={`border-transparent ${user.status === 'Active' ? 'bg-success/90 text-success-foreground' : 'bg-primary-foreground/20 text-primary-foreground'}`}>
                   {user.status}
-                </span>
+                </Badge>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="px-6 pt-5 pb-6 overflow-y-auto">
+        <div className="overflow-y-auto px-6 pb-6 pt-5">
           {formatTenure(user.joiningDate) && (
-            <p className="text-xs text-muted-foreground mb-4">{formatTenure(user.joiningDate)}</p>
+            <p className="mb-4 text-xs text-muted-foreground">{formatTenure(user.joiningDate)}</p>
           )}
 
           <div className="grid grid-cols-2 gap-3">
@@ -77,7 +77,7 @@ export default function UserViewModal({ open, user, departments, onClose }) {
             <DetailField icon={Calendar} label="Joining Date" value={formatJoiningDate(user.joiningDate)} />
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

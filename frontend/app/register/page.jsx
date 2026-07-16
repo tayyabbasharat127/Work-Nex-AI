@@ -1,358 +1,299 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Check } from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '@/hooks/useAuth';
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, MailCheck, RefreshCw } from 'lucide-react';
 import { billingAPI } from '@/lib/api';
+import { toast } from 'sonner';
+
+const STEPS = ['Owner Account', 'Email Verification', 'Organization', 'Plan'];
+const COUNTRIES = [
+  { value: 'PK', label: 'Pakistan', timezone: 'Asia/Karachi' },
+  { value: 'AE', label: 'United Arab Emirates', timezone: 'Asia/Dubai' },
+  { value: 'SA', label: 'Saudi Arabia', timezone: 'Asia/Riyadh' },
+  { value: 'GB', label: 'United Kingdom', timezone: 'Europe/London' },
+  { value: 'US', label: 'United States', timezone: 'America/New_York' },
+  { value: 'CA', label: 'Canada', timezone: 'America/Toronto' },
+  { value: 'AU', label: 'Australia', timezone: 'Australia/Sydney' },
+  { value: 'IN', label: 'India', timezone: 'Asia/Kolkata' },
+];
+const TIMEZONES = [...new Set(COUNTRIES.map((country) => country.timezone).concat(['UTC']))];
 
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signup } = useAuth();
-
-  // ?plan= matches a real PlanType (e.g. "growth"), case-insensitive —
-  // resolved against the actual fetched plan list below, not guessed.
-  const planFromUrl = (searchParams.get('plan') || '').toUpperCase();
-
+  const requestedPlan = (searchParams.get('plan') || '').toUpperCase();
+  const [step, setStep] = useState(0);
   const [plans, setPlans] = useState([]);
   const [plansLoading, setPlansLoading] = useState(true);
-
-  const [formData, setFormData] = useState({
-    admin_name: '',
-    admin_email: '',
-    password: '',
-    confirmPassword: '',
-    organization_name: '',
-    subscription_plan: '',
-    industry: '',
-    company_domain: '',
-    city: '',
-    country: ''
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [plansError, setPlansError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [registrationId, setRegistrationId] = useState('');
+  const [completionToken, setCompletionToken] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [developmentCode, setDevelopmentCode] = useState('');
+  const [form, setForm] = useState({
+    firstName: '', lastName: '', email: '', password: '', confirmPassword: '', termsAccepted: false,
+    orgName: '', country: 'PK', timezone: 'Asia/Karachi', industry: '', planType: '',
+  });
+
+  const loadPlans = useCallback(async () => {
+    setPlansLoading(true);
+    setPlansError('');
+
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const rows = await billingAPI.getPlans();
+        const selectable = (Array.isArray(rows) ? rows : []).filter((plan) => ['STARTER', 'GROWTH', 'BUSINESS'].includes(plan.type));
+        if (selectable.length === 0) throw new Error('No selectable plans returned');
+        setPlans(selectable);
+        const selected = selectable.find((plan) => plan.type === requestedPlan) || selectable[0];
+        setForm((current) => ({ ...current, planType: selected?.type || current.planType }));
+        setPlansLoading(false);
+        return;
+      } catch {
+        if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+      }
+    }
+
+    setPlansLoading(false);
+    setPlansError('Subscription plans are temporarily unavailable. Check the backend connection and try again.');
+  }, [requestedPlan]);
 
   useEffect(() => {
-    billingAPI.getPlans()
-      .then((allPlans) => {
-        // Trial isn't something you "pick" — it's the automatic 14-day
-        // starting state every plan below already includes.
-        const selectable = (Array.isArray(allPlans) ? allPlans : []).filter((p) => p.type !== 'TRIAL');
-        setPlans(selectable);
-        const matched = selectable.find((p) => p.type === planFromUrl);
-        setFormData((prev) => ({ ...prev, subscription_plan: (matched || selectable[0])?.type || '' }));
-      })
-      .catch(() => setError('Could not load subscription plans. Please refresh and try again.'))
-      .finally(() => setPlansLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadPlans();
+  }, [loadPlans]);
+
+  useEffect(() => {
+    const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (browserTimezone) setForm((current) => ({ ...current, timezone: browserTimezone }));
   }, []);
 
-  const passwordRequirements = [
-    { label: 'At least 8 characters', met: formData.password.length >= 8 },
-    { label: 'Contains uppercase letter', met: /[A-Z]/.test(formData.password) },
-    { label: 'Contains lowercase letter', met: /[a-z]/.test(formData.password) },
-    { label: 'Contains number', met: /[0-9]/.test(formData.password) }
-  ];
+  const passwordChecks = useMemo(() => [
+    { label: 'At least 12 characters', valid: form.password.length >= 12 },
+    { label: 'Uppercase and lowercase letters', valid: /[A-Z]/.test(form.password) && /[a-z]/.test(form.password) },
+    { label: 'At least one number', valid: /\d/.test(form.password) },
+    { label: 'At least one symbol', valid: /[^A-Za-z0-9]/.test(form.password) },
+  ], [form.password]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  const update = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }));
     setError('');
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
+  const submitOwner = async (event) => {
+    event.preventDefault();
+    if (!form.firstName.trim() || !form.lastName.trim() || !form.email.trim()) return setError('First name, last name and work email are required');
+    if (form.password !== form.confirmPassword) return setError('Passwords do not match');
+    if (!passwordChecks.every((check) => check.valid)) return setError('Password does not meet the security requirements');
+    if (!form.termsAccepted) return setError('Accept the Terms of Service and Privacy Policy to continue');
     try {
-      if (!formData.admin_name || !formData.admin_email || !formData.password || !formData.confirmPassword || !formData.organization_name || !formData.industry || !formData.company_domain || !formData.city || !formData.country) {
-        setError('Please fill in all required fields');
-        return;
-      }
-
-      if (formData.password !== formData.confirmPassword) {
-        setError('Passwords do not match');
-        return;
-      }
-
-      if (!passwordRequirements.every(req => req.met)) {
-        setError('Password does not meet all requirements');
-        return;
-      }
-
-      // Call signup API with correct field names
-      await signup({
-        organization_name: formData.organization_name,
-        admin_name: formData.admin_name,
-        admin_email: formData.admin_email,
-        password: formData.password,
-        subscription_plan: formData.subscription_plan,
-        industry: formData.industry,
-        company_domain: formData.company_domain,
-        city: formData.city,
-        country: formData.country
+      setLoading(true);
+      const result = await billingAPI.startRegistration({
+        ownerFirstName: form.firstName.trim(),
+        ownerLastName: form.lastName.trim(),
+        ownerEmail: form.email.trim(),
+        ownerPassword: form.password,
+        termsAccepted: true,
       });
-
-      // Registration successful - redirect to login
-      toast.success('Registration successful! You can now login with your credentials.');
-      router.push('/login');
+      setRegistrationId(result.registrationId);
+      setDevelopmentCode(result.developmentVerificationCode || '');
+      setStep(1);
+      toast.success('Verification code sent');
     } catch (err) {
-      setError(err.message || 'Registration failed. Please try again.');
+      setError(err.message || 'Could not start registration');
     } finally {
       setLoading(false);
     }
   };
 
+  const verifyEmail = async (event) => {
+    event.preventDefault();
+    if (!/^\d{6}$/.test(verificationCode)) return setError('Enter the complete 6-digit verification code');
+    try {
+      setLoading(true);
+      const result = await billingAPI.verifyRegistrationEmail(registrationId, verificationCode);
+      setCompletionToken(result.completionToken);
+      setStep(2);
+      toast.success('Email verified');
+    } catch (err) {
+      setError(err.message || 'Verification failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const resendCode = async () => {
+    try {
+      setLoading(true);
+      const result = await billingAPI.resendVerification(registrationId);
+      setDevelopmentCode(result.developmentVerificationCode || '');
+      toast.success('A new verification code was sent');
+    } catch (err) {
+      setError(err.message || 'Could not resend code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const continueOrganization = (event) => {
+    event.preventDefault();
+    if (!form.orgName.trim() || !form.country || !form.timezone) return setError('Organization name, country and timezone are required');
+    if (plans.length === 0 && !plansLoading) loadPlans();
+    setStep(3);
+  };
+
+  const createWorkspace = async () => {
+    if (!form.planType) return setError('Select a subscription plan');
+    try {
+      setLoading(true);
+      const result = await billingAPI.completeRegistration({
+        completionToken,
+        orgName: form.orgName.trim(),
+        country: form.country,
+        timezone: form.timezone,
+        industry: form.industry.trim() || undefined,
+        planType: form.planType,
+      });
+      toast.success('Your WorkNex workspace is ready');
+      router.replace(result.onboardingPath || '/onboarding');
+    } catch (err) {
+      setError(err.message || 'Could not create organization workspace');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-card flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">W</span>
-            </div>
-            <span className="text-2xl font-bold">WorkNexAI</span>
-          </div>
-          <h1 className="text-3xl font-bold">Get Started</h1>
-          <p className="text-muted-foreground mt-2">Create your account to begin</p>
+    <main className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 px-4 py-8">
+      <div className="mx-auto w-full max-w-3xl">
+        <div className="mb-8 text-center">
+          <Link href="/" className="inline-flex items-center gap-2 text-2xl font-bold">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">W</span>
+            WorkNexAI
+          </Link>
+          <h1 className="mt-5 text-3xl font-bold">Create your organization</h1>
+          <p className="mt-2 text-muted-foreground">A verified workspace in four short steps. No credit card required.</p>
         </div>
 
-        {/* Registration Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="p-4 rounded-lg bg-destructive/10 border border-destructive text-destructive text-sm">
-              {error}
+        <div className="mb-6 grid grid-cols-4 gap-2">
+          {STEPS.map((label, index) => (
+            <div key={label} className="text-center">
+              <div className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full border text-sm font-bold ${index < step ? 'border-success bg-success text-success-foreground' : index === step ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground'}`}>
+                {index < step ? <Check size={16} /> : index + 1}
+              </div>
+              <p className="mt-2 hidden text-xs text-muted-foreground sm:block">{label}</p>
             </div>
-          )}
+          ))}
+        </div>
 
-          {/* Admin Name */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Full Name</label>
-            <input
-              type="text"
-              name="admin_name"
-              value={formData.admin_name}
-              onChange={handleChange}
-              placeholder="John Doe"
-              className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
-            />
-          </div>
+        <section className="rounded-2xl border border-border bg-card p-6 shadow-xl sm:p-8">
+          {error && <div className="mb-5 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">{error}</div>}
 
-          {/* Admin Email */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Email Address</label>
-            <input
-              type="email"
-              name="admin_email"
-              value={formData.admin_email}
-              onChange={handleChange}
-              placeholder="admin@responder.com"
-              className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
-            />
-          </div>
-
-          {/* Company Name */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Company Name</label>
-            <input
-              type="text"
-              name="organization_name"
-              value={formData.organization_name}
-              onChange={handleChange}
-              placeholder="Your Company"
-              className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
-            />
-          </div>
-
-          {/* Industry */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Industry</label>
-            <input
-              type="text"
-              name="industry"
-              value={formData.industry}
-              onChange={handleChange}
-              placeholder="Technology"
-              className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
-            />
-          </div>
-
-          {/* Company Domain */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Company Domain</label>
-            <input
-              type="text"
-              name="company_domain"
-              value={formData.company_domain}
-              onChange={handleChange}
-              placeholder="company.com"
-              className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
-            />
-          </div>
-
-          {/* City */}
-          <div>
-            <label className="block text-sm font-medium mb-2">City</label>
-            <input
-              type="text"
-              name="city"
-              value={formData.city}
-              onChange={handleChange}
-              placeholder="New York"
-              className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
-            />
-          </div>
-
-          {/* Country */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Country</label>
-            <input
-              type="text"
-              name="country"
-              value={formData.country}
-              onChange={handleChange}
-              placeholder="United States"
-              className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
-            />
-          </div>
-
-          {/* Subscription Plan */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Subscription Plan</label>
-            <select
-              name="subscription_plan"
-              value={formData.subscription_plan}
-              onChange={handleChange}
-              disabled={plansLoading}
-              className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-60"
-            >
-              {plansLoading && <option>Loading plans...</option>}
-              {plans.map((plan) => {
-                const price = plan.pricing?.monthly;
-                const priceLabel = price === 0 ? 'Free' : (price == null ? 'Custom pricing' : `$${price}/month`);
-                const seatsLabel = plan.maxEmployees >= 999999 ? 'unlimited employees' : `up to ${plan.maxEmployees} employees`;
-                return (
-                  <option key={plan.type} value={plan.type}>
-                    {plan.name} — {priceLabel} ({seatsLabel})
-                  </option>
-                );
-              })}
-            </select>
-            <p className="text-xs text-muted-foreground mt-1.5">14-day free trial included. No credit card required.</p>
-          </div>
-
-          {/* Password */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Password</label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="MyPassword123"
-                className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-          </div>
-
-          {/* Confirm Password */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Confirm Password</label>
-            <div className="relative">
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="MyPassword123"
-                className="w-full px-4 py-3 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
-              >
-                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-          </div>
-
-          {/* Password Requirements */}
-          {formData.password && (
-            <div className="p-4 rounded-lg bg-muted/50 border border-border text-sm space-y-2">
-              <p className="font-semibold text-foreground">Password requirements:</p>
-              {passwordRequirements.map((req, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Check size={16} className={req.met ? 'text-success' : 'text-muted-foreground'} />
-                  <span className={req.met ? 'text-success' : 'text-muted-foreground'}>
-                    {req.label}
-                  </span>
+          {step === 0 && (
+            <form onSubmit={submitOwner} className="space-y-5">
+              <StepHeading title="Owner account" description="Use the details of the person who will administer this organization." />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="First name"><input value={form.firstName} onChange={(e) => update('firstName', e.target.value)} autoComplete="given-name" required className="input-field" placeholder="e.g. Tayyab" /></Field>
+                <Field label="Last name"><input value={form.lastName} onChange={(e) => update('lastName', e.target.value)} autoComplete="family-name" required className="input-field" placeholder="e.g. Basharat" /></Field>
+              </div>
+              <Field label="Work email"><input type="email" value={form.email} onChange={(e) => update('email', e.target.value)} autoComplete="email" required className="input-field" placeholder="you@company.com" /></Field>
+              <Field label="Password">
+                <div className="relative">
+                  <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={(e) => update('password', e.target.value)} autoComplete="new-password" required className="input-field pr-12" placeholder="Create a strong password" />
+                  <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button>
                 </div>
-              ))}
-            </div>
+              </Field>
+              <Field label="Confirm password"><input type="password" value={form.confirmPassword} onChange={(e) => update('confirmPassword', e.target.value)} autoComplete="new-password" required className="input-field" placeholder="Re-enter your password" /></Field>
+              <div className="grid gap-2 rounded-xl border border-border bg-muted/20 p-4 sm:grid-cols-2">
+                {passwordChecks.map((check) => <p key={check.label} className={`flex items-center gap-2 text-xs ${check.valid ? 'text-success' : 'text-muted-foreground'}`}><Check size={14} />{check.label}</p>)}
+              </div>
+              <label className="flex items-start gap-3 text-sm text-muted-foreground">
+                <input type="checkbox" checked={form.termsAccepted} onChange={(e) => update('termsAccepted', e.target.checked)} className="mt-1" required />
+                <span>I agree to the <span className="font-medium text-primary">Terms of Service</span> and <span className="font-medium text-primary">Privacy Policy</span>.</span>
+              </label>
+              <PrimaryButton loading={loading}>Send verification code <ArrowRight size={17} /></PrimaryButton>
+            </form>
           )}
 
-          {/* Terms */}
-          <label className="flex items-start gap-3">
-            <input type="checkbox" className="w-4 h-4 rounded border-border bg-input mt-1" />
-            <span className="text-sm text-muted-foreground">
-              I agree to the{' '}
-              <Link href="#" className="text-primary hover:underline">
-                Terms of Service
-              </Link>
-              {' '}and{' '}
-              <Link href="#" className="text-primary hover:underline">
-                Privacy Policy
-              </Link>
-            </span>
-          </label>
+          {step === 1 && (
+            <form onSubmit={verifyEmail} className="space-y-6 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary"><MailCheck size={30} /></div>
+              <StepHeading title="Verify your email" description={`Enter the six-digit code sent to ${form.email}.`} />
+              {developmentCode && <div className="rounded-xl border border-warning/25 bg-warning/10 p-3 text-sm text-warning">Development code: <b>{developmentCode}</b></div>}
+              <input value={verificationCode} onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" className="input-field mx-auto block max-w-xs py-4 text-center text-3xl font-bold tracking-[0.45em]" placeholder="000000" />
+              <PrimaryButton loading={loading}>Verify email <ArrowRight size={17} /></PrimaryButton>
+              <button type="button" onClick={resendCode} disabled={loading} className="text-sm font-medium text-primary hover:underline disabled:opacity-50">Resend code</button>
+            </form>
+          )}
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed mt-6"
-          >
-            {loading ? 'Creating Account...' : 'Create Account'}
-          </button>
-        </form>
+          {step === 2 && (
+            <form onSubmit={continueOrganization} className="space-y-5">
+              <StepHeading title="Organization and timezone" description="These settings control attendance dates, working windows and scheduled jobs." />
+              <Field label="Organization name"><input value={form.orgName} onChange={(e) => update('orgName', e.target.value)} required className="input-field" placeholder="Acme Corporation" /></Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Country">
+                  <select value={form.country} onChange={(e) => { const selected = COUNTRIES.find((country) => country.value === e.target.value); setForm((current) => ({ ...current, country: e.target.value, timezone: selected?.timezone || current.timezone })); }} className="input-field">
+                    {COUNTRIES.map((country) => <option key={country.value} value={country.value}>{country.label}</option>)}
+                  </select>
+                </Field>
+                <Field label="Timezone">
+                  <select value={form.timezone} onChange={(e) => update('timezone', e.target.value)} className="input-field">
+                    {!TIMEZONES.includes(form.timezone) && <option value={form.timezone}>{form.timezone}</option>}
+                    {TIMEZONES.map((timezone) => <option key={timezone} value={timezone}>{timezone}</option>)}
+                  </select>
+                </Field>
+              </div>
+              <Field label="Industry (optional)"><input value={form.industry} onChange={(e) => update('industry', e.target.value)} className="input-field" placeholder="Technology, Healthcare, Retail..." /></Field>
+              <div className="flex gap-3"><SecondaryButton onClick={() => setStep(1)}><ArrowLeft size={17} /> Back</SecondaryButton><PrimaryButton>Continue <ArrowRight size={17} /></PrimaryButton></div>
+            </form>
+          )}
 
-        {/* Login Link */}
-        <p className="text-center text-muted-foreground mt-6">
-          Already have an account?{' '}
-          <Link href="/login" className="text-primary hover:underline font-semibold">
-            Sign in
-          </Link>
-        </p>
+          {step === 3 && (
+            <div className="space-y-6">
+              <StepHeading title="Choose your trial plan" description="Your 14-day trial starts now. No payment information is collected." />
+              {plansLoading ? (
+                <div className="flex min-h-36 items-center justify-center rounded-xl border border-border bg-muted/20 text-sm text-muted-foreground">
+                  <RefreshCw size={18} className="mr-2 animate-spin" /> Loading subscription plans...
+                </div>
+              ) : plansError ? (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-5 text-center">
+                  <p className="text-sm text-destructive">{plansError}</p>
+                  <button type="button" onClick={loadPlans} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-muted">
+                    <RefreshCw size={15} /> Retry loading plans
+                  </button>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {plans.map((plan) => (
+                    <button key={plan.type} type="button" onClick={() => update('planType', plan.type)} className={`rounded-xl border p-4 text-left transition ${form.planType === plan.type ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-border hover:border-primary/40'}`}>
+                      <p className="font-bold">{plan.name}</p>
+                      <p className="mt-1 text-2xl font-bold">${plan.pricing?.monthly}<span className="text-xs font-normal text-muted-foreground">/month</span></p>
+                      <p className="mt-2 text-xs text-muted-foreground">Up to {plan.maxEmployees} employees</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <p className="rounded-xl border border-border bg-muted/20 p-3 text-center text-sm text-muted-foreground">Need Enterprise? Contact sales for custom security, infrastructure and pricing.</p>
+              <div className="flex gap-3"><SecondaryButton onClick={() => setStep(2)}><ArrowLeft size={17} /> Back</SecondaryButton><button type="button" onClick={createWorkspace} disabled={loading || plansLoading || !!plansError || !form.planType} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50">{loading ? 'Creating workspace...' : 'Create workspace'} <ArrowRight size={17} /></button></div>
+            </div>
+          )}
+        </section>
+
+        <p className="mt-6 text-center text-sm text-muted-foreground">Already have an account? <Link href="/login" className="font-semibold text-primary hover:underline">Sign in</Link></p>
       </div>
-    </div>
+    </main>
   );
 }
 
+function StepHeading({ title, description }) { return <div><h2 className="text-2xl font-bold">{title}</h2><p className="mt-1 text-sm text-muted-foreground">{description}</p></div>; }
+function Field({ label, children }) { return <label className="block"><span className="mb-2 block text-sm font-medium">{label}</span>{children}</label>; }
+function PrimaryButton({ loading, children }) { return <button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50">{loading ? 'Please wait...' : children}</button>; }
+function SecondaryButton({ onClick, children }) { return <button type="button" onClick={onClick} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border px-5 py-3 font-semibold hover:bg-muted">{children}</button>; }
+
 export default function RegisterPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div>}>
-      <RegisterForm />
-    </Suspense>
-  );
+  return <Suspense fallback={<div className="min-h-screen bg-background" />}><RegisterForm /></Suspense>;
 }

@@ -2,10 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { ArrowRight, CalendarDays, Check, Clock3, FileText, Inbox, ShieldCheck, UserRound, X } from 'lucide-react';
+import { ArrowRight, CalendarDays, Check, Clock3, FileText, Inbox, ShieldCheck, Sparkles, CheckCircle2, XCircle, AlertTriangle, UserRound, X } from 'lucide-react';
 import { useLeaves } from '@/hooks/useLeaves';
 import { useLeaveTypeLabels, formatLeaveType } from '@/hooks/useLeaveTypeLabels';
 import { toast } from 'sonner';
+
+const AI_RECOMMENDATION_META = {
+  APPROVE: { label: 'Approve', icon: CheckCircle2, className: 'bg-success/15 text-success border-success/25' },
+  REJECT: { label: 'Reject', icon: XCircle, className: 'bg-destructive/15 text-destructive border-destructive/25' },
+  REVIEW: { label: 'Needs review', icon: AlertTriangle, className: 'bg-warning/15 text-warning border-warning/25' },
+};
 
 export default function ManagerLeaves() {
   const { leaves, loading, fetchPendingLeaves, updateLeaveStatus } = useLeaves();
@@ -158,6 +164,35 @@ export default function ManagerLeaves() {
                         </div>
                       </div>
                     )}
+
+                    {leave.aiRecommendation && (() => {
+                      const meta = AI_RECOMMENDATION_META[leave.aiRecommendation] || AI_RECOMMENDATION_META.REVIEW;
+                      const RecIcon = meta.icon;
+                      return (
+                        <div className="mb-5 rounded-xl border border-violet-500/15 bg-violet-500/5 p-4 text-sm">
+                          <div className="mb-2 flex items-center gap-2">
+                            <Sparkles size={16} className="shrink-0 text-violet-400" />
+                            <p className="font-semibold">AI Recommendation</p>
+                            <span className="ml-auto text-[11px] text-muted-foreground">Advisory only</span>
+                          </div>
+                          <div className="mb-2 flex flex-wrap items-center gap-3">
+                            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${meta.className}`}>
+                              <RecIcon size={13} /> {meta.label}
+                            </span>
+                            {Number.isFinite(leave.aiConfidence) && (
+                              <span className="text-xs text-muted-foreground">{leave.aiConfidence}% confidence</span>
+                            )}
+                          </div>
+                          {Array.isArray(leave.aiReasoning) && leave.aiReasoning.length > 0 && (
+                            <ul className="space-y-1 text-muted-foreground">
+                              {leave.aiReasoning.map((reason, i) => (
+                                <li key={i} className="flex gap-2"><span className="text-violet-400">•</span><span>{reason}</span></li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {['PENDING_MANAGER', 'PENDING'].includes(status) && (
                       <div className="grid gap-3 border-t border-border pt-5 sm:grid-cols-2">

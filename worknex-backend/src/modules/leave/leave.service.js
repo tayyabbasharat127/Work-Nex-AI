@@ -11,6 +11,7 @@ const { getHolidaysInRange } = require('../attendance/attendance.processor');
 const leaveSandwich = require('./leave.sandwich');
 const logger = require('../../config/logger');
 const leaveWorkflow = require('./leave.workflow');
+const leaveAiService = require('./leave.ai.service');
 
 const fmtDate = (d) => new Date(d).toISOString().slice(0, 10);
 const { PENDING_LEAVE_STATUSES } = leaveWorkflow;
@@ -32,6 +33,16 @@ const attachDecision = async (leave) => ({
   ...leave,
   decisionExplanation: leave.decisionExplanation || await automation.getDecisionForLeave(leave.id),
 });
+
+// AI Leave Advisor output is for manager/admin eyes only — an employee must
+// never see a recommendation on their own leave request.
+const AI_FIELDS = ['aiRecommendation', 'aiConfidence', 'aiReasoning', 'aiPolicyObservations', 'aiGeneratedAt', 'aiModel'];
+const stripAiFieldsForEmployee = (leave, requestingUser) => {
+  if (!leave || requestingUser.role !== 'EMPLOYEE') return leave;
+  const clean = { ...leave };
+  AI_FIELDS.forEach((field) => delete clean[field]);
+  return clean;
+};
 
 const audit = async (action, entityId, organizationId, userId, values) => {
   await prisma.auditLog.create({
@@ -122,19 +133,30 @@ const deductBalance = async (tx, leave) => {
     where: { organizationId: leave.organizationId, leaveType: balanceLeaveType },
   });
   if (!policy) throw new ApiError(400, `No active ${balanceLeaveType} leave policy exists to fund this request`);
-  // No `remainingDays >= totalDays` guard here on purpose: a balance can be
-  // deducted into negative territory. The automation engine only lets this
-  // path run for AUTO_APPROVED (balance was already sufficient) or for a
-  // request an admin explicitly approved as an emergency advance — by the
-  // time either happens, the "is this OK" decision has already been made.
+
+  // Only the explicit EMERGENCY workflow may borrow into a negative balance.
+  // The conditional update protects normal leave from approval-time races.
+  const balanceGuard = leave.leaveType === 'EMERGENCY'
+    ? {}
+    : { remainingDays: { gte: leave.totalDays } };
   const result = await tx.leaveBalance.updateMany({
-    where: { organizationId: leave.organizationId, userId: leave.employeeId, policyId: policy.id, year },
+    where: {
+      organizationId: leave.organizationId,
+      userId: leave.employeeId,
+      policyId: policy.id,
+      year,
+      ...balanceGuard,
+    },
     data: {
       usedDays: { increment: leave.totalDays },
       remainingDays: { decrement: leave.totalDays },
     },
   });
-  if (result.count !== 1) throw new ApiError(400, `${leave.leaveType} balance record for ${year} not found`);
+  if (result.count !== 1) {
+    throw new ApiError(409, leave.leaveType === 'EMERGENCY'
+      ? `${leave.leaveType} balance record for ${year} not found`
+      : `Insufficient ${balanceLeaveType} leave balance; the balance changed while this request was pending`);
+  }
 };
 
 const restoreBalance = async (tx, leave) => {
@@ -158,6 +180,9 @@ const validateDraftOrThrow = async (user, data) => {
   const end = new Date(data.endDate);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) throw new ApiError(400, 'Invalid date range');
   if (end < start) throw new ApiError(400, 'End date must be after start date');
+  if (end.getFullYear() !== start.getFullYear()) {
+    throw new ApiError(400, 'A leave request cannot span multiple leave-balance years');
+  }
   const otherLeaveName = data.leaveType === 'OTHER' ? String(data.otherLeaveName || '').trim() : null;
   if (data.leaveType === 'OTHER' && (otherLeaveName.length < 2 || otherLeaveName.length > 100)) {
     throw new ApiError(400, 'Other leave name must be between 2 and 100 characters');
@@ -188,11 +213,32 @@ const validateDraftOrThrow = async (user, data) => {
     const label = (await automation.getLeaveTypeLabels(user.organizationId))[data.leaveType] || data.leaveType;
     throw new ApiError(400, `${label} leave is not applicable to ${employee.customRole.name}`);
   }
-  // Insufficient balance no longer blocks submission outright — it's allowed
-  // through as a potential emergency-advance request; the automation engine
-  // (evaluateLeaveRequest) routes it to an admin instead of auto-rejecting or
-  // auto-approving it. The admin's decision, not this draft check, is what
-  // actually permits the balance to go negative.
+  if (data.leaveType !== 'EMERGENCY') {
+    const yearStart = new Date(start.getFullYear(), 0, 1);
+    const yearEnd = new Date(start.getFullYear(), 11, 31, 23, 59, 59, 999);
+    const reserved = await prisma.leaveRequest.aggregate({
+      where: {
+        organizationId: user.organizationId,
+        employeeId: user.id,
+        status: { in: PENDING_LEAVE_STATUSES },
+        startDate: { gte: yearStart, lte: yearEnd },
+        OR: [
+          { balanceLeaveType },
+          { balanceLeaveType: null, leaveType: balanceLeaveType },
+        ],
+      },
+      _sum: { totalDays: true },
+    });
+    const reservedDays = Number(reserved._sum.totalDays || 0);
+    const availableDays = Math.max(0, Number(balance.remainingDays) - reservedDays);
+    if (totalDays > availableDays) {
+      throw new ApiError(400, `Insufficient ${balanceLeaveType} leave balance: ${availableDays} day(s) available after pending requests, ${totalDays} requested`);
+    }
+    if (totalDays > Number(balance.totalDays)) {
+      throw new ApiError(400, `${balanceLeaveType} request exceeds the yearly allocation of ${balance.totalDays} day(s), including carry forward`);
+    }
+  }
+  // Emergency leave is the sole advance workflow and is reviewed by an admin.
 
   const overlap = await prisma.leaveRequest.findFirst({
     where: {
@@ -210,6 +256,43 @@ const validateDraftOrThrow = async (user, data) => {
     ? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
     : null;
   return { start, end, totalDays, employee, otherLeaveName, balanceLeaveType, emergencyRecoveryDate };
+};
+
+// Server-side gate for the admin "Leave automation" toggle
+// (OrganizationSettings.leaveAutomationEnabled) — defaults to true so
+// organizations that never touched the setting keep today's behavior.
+const isLeaveAutomationEnabled = async (organizationId) => {
+  const settings = await prisma.organizationSettings.findUnique({ where: { organizationId } });
+  return settings?.leaveAutomationEnabled ?? true;
+};
+
+// Used when leave automation is disabled — skips the rule engine entirely
+// (no evaluateLeaveRequest call, no LeaveDecisionLog entry) and routes the
+// request through the plain manager-then-admin hierarchy, exactly as if the
+// automation engine did not exist.
+const submitWithoutAutomation = async (leave, employee, actor) => {
+  const status = leaveWorkflow.getManualApprovalStatus({ managerId: employee.managerId });
+  const leaveLabel = await getRequestLeaveLabel(leave);
+
+  const updated = await prisma.leaveRequest.update({
+    where: { id: leave.id },
+    data: {
+      status,
+      approverId: status === 'PENDING_MANAGER' ? employee.managerId : null,
+    },
+    include: leaveInclude,
+  });
+
+  if (status === 'PENDING_MANAGER') {
+    await notificationService.create(employee.managerId, 'LEAVE_APPLIED', 'New Leave Request', `${employee.firstName} ${employee.lastName} applied for ${leaveLabel} leave`);
+  } else {
+    await notifyAdminsForFinalReview(updated, employee);
+  }
+  await audit('CREATE', leave.id, leave.organizationId, actor.id, {
+    decision: status,
+    reasons: ['Leave automation is disabled for this organization — standard approval workflow applied'],
+  });
+  return attachDecision(updated);
 };
 
 const applyAutomation = async (leave, employee, actor) => {
@@ -335,7 +418,12 @@ const applyLeave = async (user, data) => {
     include: leaveInclude,
   });
 
-  return applyAutomation(leave, employee, user);
+  const automationEnabled = await isLeaveAutomationEnabled(user.organizationId);
+  const result = automationEnabled
+    ? await applyAutomation(leave, employee, user)
+    : await submitWithoutAutomation(leave, employee, user);
+
+  return leaveAiService.generateRecommendation(result, { employee, organizationId: user.organizationId });
 };
 
 const approveLeave = async (approver, leaveId, note) => {
@@ -530,7 +618,8 @@ const getLeaves = async (query, user) => {
     prisma.leaveRequest.findMany({ where, skip, take, include: leaveInclude, orderBy: { appliedAt: 'desc' } }),
     prisma.leaveRequest.count({ where }),
   ]);
-  return { leaves: await Promise.all(leaves.map(attachDecision)), meta: paginateMeta(total, page, limit) };
+  const withDecisions = await Promise.all(leaves.map(attachDecision));
+  return { leaves: withDecisions.map((leave) => stripAiFieldsForEmployee(leave, user)), meta: paginateMeta(total, page, limit) };
 };
 
 const getMyLeaves = async (user, query) => getLeaves(query, { ...user, role: 'EMPLOYEE' });
@@ -555,7 +644,7 @@ const getLeaveById = async (id, user) => {
   if (user.role !== 'SUPER_ADMIN' && leave.organizationId !== user.organizationId) throw new ApiError(403, 'Not authorized for this organization');
   if (user.role === 'EMPLOYEE' && leave.employeeId !== user.id) throw new ApiError(403, 'Not authorized to access this leave');
   if (user.role === 'MANAGER' && leave.employee.managerId !== user.id) throw new ApiError(403, 'Not authorized to access this leave');
-  return attachDecision(leave);
+  return stripAiFieldsForEmployee(await attachDecision(leave), user);
 };
 
 const getMyBalances = async (user) => {
@@ -567,6 +656,17 @@ const getUserBalances = async (userId, requestingUser) => {
   await assertCanAccessUser(requestingUser, userId);
   const year = new Date().getFullYear();
   return prisma.leaveBalance.findMany({ where: { userId, ...getOrganizationScope(requestingUser), year }, include: { policy: true } });
+};
+
+const getUserLeaveSummary = async (userId, requestingUser) => {
+  await assertCanAccessUser(requestingUser, userId);
+  const where = { employeeId: userId, ...getOrganizationScope(requestingUser) };
+  return prisma.leaveRequest.groupBy({
+    by: ['status'],
+    where,
+    _count: { status: true },
+    _sum: { totalDays: true },
+  });
 };
 
 const getPolicies = async (requestingUser) => prisma.leavePolicy.findMany({ where: getOrganizationScope(requestingUser) });
@@ -669,6 +769,7 @@ module.exports = {
   getLeaveById,
   getMyBalances,
   getUserBalances,
+  getUserLeaveSummary,
   getPolicies,
   getActivePolicyVersion,
   getLeaveTypeLabels,

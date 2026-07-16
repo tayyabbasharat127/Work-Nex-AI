@@ -1,36 +1,7 @@
 const authService = require('./auth.service');
-const { apiResponse } = require('../../utils/ApiResponse');
 const { config } = require('../../config/env');
-
-const refreshCookieOptions = {
-  httpOnly: true,
-  secure: config.cookies.secure,
-  sameSite: config.cookies.sameSite,
-  path: '/api/v1/auth',
-  maxAge: config.cookies.maxAgeMs,
-  ...(config.cookies.domain ? { domain: config.cookies.domain } : {}),
-};
-
-const setRefreshCookie = (res, refreshToken) => {
-  if (refreshToken) res.cookie(config.cookies.refreshName, refreshToken, refreshCookieOptions);
-};
-
-const clearRefreshCookie = (res) => {
-  const { maxAge, ...clearCookieOptions } = refreshCookieOptions;
-  res.clearCookie(config.cookies.refreshName, clearCookieOptions);
-};
-
-const publicTokens = (result) => {
-  if (!result || !result.refreshToken) return result;
-  // In production the refresh token lives only in the HttpOnly cookie.
-  // In development the cookie is SameSite=Lax which cross-origin fetch won't send,
-  // so we include it in the body so the frontend can store and resend it.
-  if (config.isProduction) {
-    const { refreshToken, ...safeResult } = result;
-    return safeResult;
-  }
-  return result;
-};
+const { apiResponse } = require('../../utils/ApiResponse');
+const { setRefreshCookie, clearRefreshCookie, publicTokens } = require('../../utils/authSessionResponse');
 
 const register = async (req, res) => {
   const user = await authService.register(req.body, req.user);

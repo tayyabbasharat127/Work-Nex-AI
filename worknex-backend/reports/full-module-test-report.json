@@ -1,0 +1,1495 @@
+{
+  "title": "FULL MODULE TEST REPORT",
+  "generatedAt": "2026-07-14T17:28:16.956Z",
+  "backendUrl": "http://localhost:5000",
+  "frontendUrl": "http://localhost:3000",
+  "aiUrl": "http://localhost:8000",
+  "testPrefix": "worknex_e2e_1784050071948",
+  "overall": "PASS",
+  "modules": [
+    {
+      "module": "Health",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "HTTP 200; HTTP 200; HTTP 200"
+    },
+    {
+      "module": "Public Registration",
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "orgId=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a; present; {\"id\":\"3afcab73-d0f5-4f41-9dc5-659d2dfa1eae\",\"email\":\"worknex_e2e_1784050071948.owner.1784050073352@example.com\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"employeeId\":\"OWNER-MRKXCN8W-A2C7B4\",\"organizationId\":\"3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a\",\"role\":\"ADMIN\",\"roleId\":\"60e7a58d-df7f-44a9-9b25-23597b3c1922\",\"roleName\":\"Admin\"}"
+    },
+    {
+      "module": "Auth",
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "HTTP 401; HTTP 200; cookie only"
+    },
+    {
+      "module": "Departments",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "HTTP 201; HTTP 200; HTTP 200"
+    },
+    {
+      "module": "Users",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "HTTP 201; HTTP 201; HTTP 200"
+    },
+    {
+      "module": "RBAC",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "HTTP 200; visible=1; HTTP 403"
+    },
+    {
+      "module": "Tenant",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a; admin=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a manager=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a employee=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a; HTTP 200"
+    },
+    {
+      "module": "Security",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "HTTP 401; HTTP 403; HTTP 422"
+    },
+    {
+      "module": "Attendance",
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "HTTP 200; HTTP 404; HTTP 404"
+    },
+    {
+      "module": "Leave",
+      "passed": 15,
+      "failed": 0,
+      "skipped": 1,
+      "notes": "HTTP 200; HTTP 201; PENDING_MANAGER"
+    },
+    {
+      "module": "Leave Automation",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "upload endpoint exercised; HTTP 200; HTTP 200"
+    },
+    {
+      "module": "Reports",
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "HTTP 200; HTTP 200; HTTP 200"
+    },
+    {
+      "module": "Settings",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "HTTP 200; HTTP 200; HTTP 200"
+    },
+    {
+      "module": "Analytics",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "HTTP 200; HTTP 200; HTTP 200"
+    },
+    {
+      "module": "Employee APIs",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "HTTP 200; HTTP 200; HTTP 200"
+    },
+    {
+      "module": "Notifications",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "HTTP 200; HTTP 200; HTTP 200"
+    },
+    {
+      "module": "Performance",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "HTTP 200; HTTP 200; HTTP 200"
+    },
+    {
+      "module": "AI Backend",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "HTTP 200; {\"answer\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"message\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"sources\":[\"attendance_policy.md\",\"leave_policy.md\"],\"confidence\":0.71,\"actions\":[{\"type\":\"navigate\",\"label\":\"Open attendance\",\"path\":\"/dashboard/employee/attendance\"}],\"fallback\":true,\"intent\":\"attendance\",\"data\":{\"mode\":\"statistical\",\"actions\":[{\"type\":\"navi; HTTP 200"
+    },
+    {
+      "module": "AI Direct",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "HTTP 200; HTTP 200; {\"message\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"answer\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"intent\":\"attendance\",\"data\":{\"mode\":\"statistical\",\"actions\":[{\"type\":\"navigate\",\"label\":\"Open attendance\",\"path\":\"/dashboard/employee/attendance\"}]},\"sources\":[\"attendance_policy.md\",\"leave_policy.md\"],\"confidence\":0.71,\"actions\":[{\"type\":\"navigate\",\"label\":\""
+    },
+    {
+      "module": "Power BI",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "{\"embedToken\":\"[REDACTED]\",\"embedTokenId\":\"21ad7d4b-d605-4f04-b239-91c29e22d9cc\",\"expiration\":\"2026-07-14T18:28:14Z\",\"reportId\":\"313f66f6-a40a-4f25-80f6-ca6f81fce76e\",\"workspaceId\":\"efece712-4e79-4943-80fc-e3cb2f0eb670\",\"datasetId\":null,\"embedUrl\":\"https://app.powerbi.com/reportEmbed?reportId=313f66f6-a40a-4f25-80f6-ca6f81fce76e&groupId=efece712-4e79-4943-80fc-e3cb2f0eb670&w=2&config=eyJjbHVzdGVyVXJsIjoiaHR0cHM6Ly9XQUJJLVNXRURFTi1DRU5UUkFMLVBSSU1BUlktcmVkaXJlY3QuYW5hbHlzaXMud2luZG93cy5uZXQiLCJlb; HTTP 307"
+    },
+    {
+      "module": "Frontend",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "notes": "200 or expected auth redirect; 200 or expected auth redirect; 200 or expected auth redirect"
+    },
+    {
+      "module": "Cleanup",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 1,
+      "notes": "cleanup cancel attempted; HTTP 200 {\"success\":true,\"message\":\"User deactivated\"}; HTTP 200 {\"success\":true,\"message\":\"User deactivated\"}"
+    }
+  ],
+  "failed": [],
+  "rows": [
+    {
+      "module": "Health",
+      "test": "backend /health",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/health",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Health",
+      "test": "frontend /",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:3000",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 200
+    },
+    {
+      "module": "Health",
+      "test": "AI /health",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:8000/health",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Public Registration",
+      "test": "POST /billing/register returns 201",
+      "status": "PASS",
+      "notes": "orgId=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a"
+    },
+    {
+      "module": "Public Registration",
+      "test": "response includes organizationId",
+      "status": "PASS",
+      "notes": "present"
+    },
+    {
+      "module": "Public Registration",
+      "test": "response includes tenant ADMIN owner",
+      "status": "PASS",
+      "notes": "{\"id\":\"3afcab73-d0f5-4f41-9dc5-659d2dfa1eae\",\"email\":\"worknex_e2e_1784050071948.owner.1784050073352@example.com\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"employeeId\":\"OWNER-MRKXCN8W-A2C7B4\",\"organizationId\":\"3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a\",\"role\":\"ADMIN\",\"roleId\":\"60e7a58d-df7f-44a9-9b25-23597b3c1922\",\"roleName\":\"Admin\"}"
+    },
+    {
+      "module": "Public Registration",
+      "test": "public signup does not create SUPER_ADMIN",
+      "status": "PASS",
+      "notes": "{\"id\":\"3afcab73-d0f5-4f41-9dc5-659d2dfa1eae\",\"email\":\"worknex_e2e_1784050071948.owner.1784050073352@example.com\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"employeeId\":\"OWNER-MRKXCN8W-A2C7B4\",\"organizationId\":\"3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a\",\"role\":\"ADMIN\",\"roleId\":\"60e7a58d-df7f-44a9-9b25-23597b3c1922\",\"roleName\":\"Admin\"}"
+    },
+    {
+      "module": "Public Registration",
+      "test": "response includes licenseKey",
+      "status": "PASS",
+      "notes": "present"
+    },
+    {
+      "module": "Public Registration",
+      "test": "new public org owner can log in",
+      "status": "PASS",
+      "notes": "HTTP 200: "
+    },
+    {
+      "module": "Public Registration",
+      "test": "new public org owner login role is ADMIN",
+      "status": "PASS",
+      "notes": "{\"id\":\"3afcab73-d0f5-4f41-9dc5-659d2dfa1eae\",\"email\":\"worknex_e2e_1784050071948.owner.1784050073352@example.com\",\"role\":\"ADMIN\",\"roleId\":\"60e7a58d-df7f-44a9-9b25-23597b3c1922\",\"roleName\":\"Admin\",\"permissions\":[\"users:manage\",\"leave:manage_policy\",\"attendance:manage\",\"settings:manage\",\"notifications:broadcast\",\"performance:manage\"],\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"organizationId\":\"3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a\"}"
+    },
+    {
+      "module": "Public Registration",
+      "test": "POST /billing/register rejects public role field",
+      "status": "PASS",
+      "notes": "HTTP 422: {\"success\":false,\"message\":\"Validation failed\",\"errors\":[\"Role is not allowed for public registration\"]}",
+      "endpoint": "http://localhost:5000/api/v1/billing/register",
+      "expected": "400/422",
+      "actualStatus": 422
+    },
+    {
+      "module": "Auth",
+      "test": "invalid login fails",
+      "status": "PASS",
+      "notes": "HTTP 401",
+      "endpoint": "http://localhost:5000/api/v1/auth/login",
+      "expected": "400/401",
+      "actualStatus": 401
+    },
+    {
+      "module": "Auth",
+      "test": "refresh token works from httpOnly cookie",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/auth/refresh-token",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Auth",
+      "test": "login does not expose refresh token in response body",
+      "status": "PASS",
+      "notes": "cookie only"
+    },
+    {
+      "module": "Auth",
+      "test": "login sets refreshToken cookie",
+      "status": "PASS",
+      "notes": "present"
+    },
+    {
+      "module": "Auth",
+      "test": "logout succeeds with refresh cookie",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/auth/logout",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Auth",
+      "test": "logout clears refreshToken cookie",
+      "status": "PASS",
+      "notes": "refreshToken=; Path=/api/v1/auth; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax"
+    },
+    {
+      "module": "Auth",
+      "test": "admin login",
+      "status": "PASS",
+      "notes": "worknex_e2e_1784050071948.owner.1784050073352@example.com",
+      "endpoint": "http://localhost:5000/api/v1/auth/login",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Auth",
+      "test": "admin re-login after logout succeeds",
+      "status": "PASS",
+      "notes": "worknex_e2e_1784050071948.owner.1784050073352@example.com"
+    },
+    {
+      "module": "Auth",
+      "test": "/users/me works for admin",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/users/me",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Departments",
+      "test": "admin creates department",
+      "status": "PASS",
+      "notes": "HTTP 201",
+      "endpoint": "http://localhost:5000/api/v1/users/departments",
+      "role": "admin",
+      "expected": "201",
+      "actualStatus": 201
+    },
+    {
+      "module": "Users",
+      "test": "admin creates test manager",
+      "status": "PASS",
+      "notes": "HTTP 201",
+      "endpoint": "http://localhost:5000/api/v1/users",
+      "role": "admin",
+      "expected": "201",
+      "actualStatus": 201
+    },
+    {
+      "module": "Users",
+      "test": "admin creates test employee",
+      "status": "PASS",
+      "notes": "HTTP 201",
+      "endpoint": "http://localhost:5000/api/v1/users",
+      "role": "admin",
+      "expected": "201",
+      "actualStatus": 201
+    },
+    {
+      "module": "Auth",
+      "test": "testManager login",
+      "status": "PASS",
+      "notes": "worknex_e2e_1784050071948.manager@example.com",
+      "endpoint": "http://localhost:5000/api/v1/auth/login",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Auth",
+      "test": "testEmployee login",
+      "status": "PASS",
+      "notes": "worknex_e2e_1784050071948.employee@example.com",
+      "endpoint": "http://localhost:5000/api/v1/auth/login",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Users",
+      "test": "admin list includes created employee",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/users?search=worknex_e2e_1784050071948",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Users",
+      "test": "created employee visible to admin",
+      "status": "PASS",
+      "notes": "cad218e4-d0ed-4030-91d7-3d34afa76920"
+    },
+    {
+      "module": "Users",
+      "test": "admin updates test employee",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/users/cad218e4-d0ed-4030-91d7-3d34afa76920",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "RBAC",
+      "test": "manager list users is subordinate-scoped",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/users",
+      "role": "testManager",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "RBAC",
+      "test": "test manager sees only own subordinates",
+      "status": "PASS",
+      "notes": "visible=1"
+    },
+    {
+      "module": "RBAC",
+      "test": "employee cannot list all users",
+      "status": "PASS",
+      "notes": "HTTP 403",
+      "endpoint": "http://localhost:5000/api/v1/users",
+      "role": "testEmployee",
+      "expected": "403",
+      "actualStatus": 403
+    },
+    {
+      "module": "Departments",
+      "test": "admin updates department",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/users/departments/1e396a41-6982-4451-a0da-880d15df503c",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Departments",
+      "test": "list includes test department",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/users/departments/all",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Departments",
+      "test": "created department visible",
+      "status": "PASS",
+      "notes": "1e396a41-6982-4451-a0da-880d15df503c"
+    },
+    {
+      "module": "Departments",
+      "test": "manager cannot update department",
+      "status": "PASS",
+      "notes": "HTTP 403",
+      "endpoint": "http://localhost:5000/api/v1/users/departments/1e396a41-6982-4451-a0da-880d15df503c",
+      "role": "testManager",
+      "expected": "403",
+      "actualStatus": 403
+    },
+    {
+      "module": "Departments",
+      "test": "manager cannot delete department",
+      "status": "PASS",
+      "notes": "HTTP 403",
+      "endpoint": "http://localhost:5000/api/v1/users/departments/1e396a41-6982-4451-a0da-880d15df503c",
+      "role": "testManager",
+      "expected": "403",
+      "actualStatus": 403
+    },
+    {
+      "module": "Tenant",
+      "test": "admin has organizationId",
+      "status": "PASS",
+      "notes": "3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a"
+    },
+    {
+      "module": "Tenant",
+      "test": "created users share admin organizationId",
+      "status": "PASS",
+      "notes": "admin=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a manager=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a employee=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a"
+    },
+    {
+      "module": "Tenant",
+      "test": "users API returns tenant keys",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/users?limit=100",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Tenant",
+      "test": "no returned users with missing organizationId",
+      "status": "PASS",
+      "notes": "all scoped"
+    },
+    {
+      "module": "Security",
+      "test": "public /auth/register is blocked",
+      "status": "PASS",
+      "notes": "HTTP 401",
+      "endpoint": "http://localhost:5000/api/v1/auth/register",
+      "expected": "401",
+      "actualStatus": 401
+    },
+    {
+      "module": "Security",
+      "test": "employee cannot call /auth/register",
+      "status": "PASS",
+      "notes": "HTTP 403",
+      "endpoint": "http://localhost:5000/api/v1/auth/register",
+      "role": "testEmployee",
+      "expected": "403",
+      "actualStatus": 403
+    },
+    {
+      "module": "Security",
+      "test": "admin cannot create SUPER_ADMIN through /auth/register",
+      "status": "PASS",
+      "notes": "HTTP 422",
+      "endpoint": "http://localhost:5000/api/v1/auth/register",
+      "role": "admin",
+      "expected": "400/422",
+      "actualStatus": 422
+    },
+    {
+      "module": "Security",
+      "test": "admin can still create normal user through /auth/register",
+      "status": "PASS",
+      "notes": "HTTP 201",
+      "endpoint": "http://localhost:5000/api/v1/auth/register",
+      "role": "admin",
+      "expected": "201",
+      "actualStatus": 201
+    },
+    {
+      "module": "Security",
+      "test": "cleanup /auth/register normal user",
+      "status": "PASS",
+      "notes": "HTTP 200"
+    },
+    {
+      "module": "Attendance",
+      "test": "employee gets today",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/attendance/today",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Attendance",
+      "test": "browser check-in endpoint removed",
+      "status": "PASS",
+      "notes": "HTTP 404",
+      "endpoint": "http://localhost:5000/api/v1/attendance/check-in",
+      "role": "testEmployee",
+      "expected": "404",
+      "actualStatus": 404
+    },
+    {
+      "module": "Attendance",
+      "test": "browser check-out endpoint removed",
+      "status": "PASS",
+      "notes": "HTTP 404",
+      "endpoint": "http://localhost:5000/api/v1/attendance/check-out",
+      "role": "testEmployee",
+      "expected": "404",
+      "actualStatus": 404
+    },
+    {
+      "module": "Attendance",
+      "test": "browser auto-ping endpoint removed",
+      "status": "PASS",
+      "notes": "HTTP 404",
+      "endpoint": "http://localhost:5000/api/v1/attendance/ping",
+      "role": "testEmployee",
+      "expected": "404",
+      "actualStatus": 404
+    },
+    {
+      "module": "Attendance",
+      "test": "employee gets own attendance history",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/attendance/my",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Attendance",
+      "test": "attendance history has records array",
+      "status": "PASS",
+      "notes": "records=0"
+    },
+    {
+      "module": "Attendance",
+      "test": "manager reads subordinate attendance",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/attendance",
+      "role": "testManager",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Attendance",
+      "test": "manager cannot read non-subordinate attendance",
+      "status": "PASS",
+      "notes": "HTTP 403",
+      "endpoint": "http://localhost:5000/api/v1/attendance/user/3afcab73-d0f5-4f41-9dc5-659d2dfa1eae",
+      "role": "testManager",
+      "expected": "403",
+      "actualStatus": 403
+    },
+    {
+      "module": "Attendance",
+      "test": "admin reads attendance",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/attendance",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Attendance",
+      "test": "admin reads attendance summary",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/attendance/summary",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Attendance",
+      "test": "admin creates safe manual attendance",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/attendance/manual",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Leave",
+      "test": "employee gets balances",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/leave/balances/me",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Leave",
+      "test": "employee applies valid leave",
+      "status": "PASS",
+      "notes": "HTTP 201",
+      "endpoint": "http://localhost:5000/api/v1/leave",
+      "role": "testEmployee",
+      "expected": "201/400",
+      "actualStatus": 201
+    },
+    {
+      "module": "Leave",
+      "test": "leave includes automation decision context",
+      "status": "PASS",
+      "notes": "PENDING_MANAGER"
+    },
+    {
+      "module": "Leave",
+      "test": "decision explanation fetch works",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/leave/1f4f71f4-2e4f-4fca-abef-daf94516b17f/decision-explanation",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Leave",
+      "test": "overlapping leave is blocked",
+      "status": "PASS",
+      "notes": "HTTP 409",
+      "endpoint": "http://localhost:5000/api/v1/leave",
+      "role": "testEmployee",
+      "expected": "400/409",
+      "actualStatus": 409
+    },
+    {
+      "module": "Leave",
+      "test": "manager can evaluate subordinate leave",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/leave/1f4f71f4-2e4f-4fca-abef-daf94516b17f/evaluate",
+      "role": "testManager",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Leave",
+      "test": "admin cannot bypass manager approval",
+      "status": "PASS",
+      "notes": "HTTP 409",
+      "endpoint": "http://localhost:5000/api/v1/leave/1f4f71f4-2e4f-4fca-abef-daf94516b17f/approve",
+      "role": "admin",
+      "expected": "409",
+      "actualStatus": 409
+    },
+    {
+      "module": "Leave",
+      "test": "manager approves and forwards subordinate leave",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/leave/1f4f71f4-2e4f-4fca-abef-daf94516b17f/approve",
+      "role": "testManager",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Leave",
+      "test": "manager approval leaves request pending for admin",
+      "status": "PASS",
+      "notes": "PENDING_ADMIN"
+    },
+    {
+      "module": "Leave",
+      "test": "admin grants final leave approval",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/leave/1f4f71f4-2e4f-4fca-abef-daf94516b17f/approve",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Leave",
+      "test": "excess leave is rejected or blocked",
+      "status": "PASS",
+      "notes": "HTTP 400",
+      "endpoint": "http://localhost:5000/api/v1/leave",
+      "role": "testEmployee",
+      "expected": "400/409",
+      "actualStatus": 400
+    },
+    {
+      "module": "Leave",
+      "test": "manager gets pending leave",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/leave/pending",
+      "role": "testManager",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Leave",
+      "test": "admin gets leave list",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/leave?limit=1",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Leave",
+      "test": "manager cannot approve non-subordinate leave",
+      "status": "SKIPPED",
+      "notes": "no safe non-subordinate leave found"
+    },
+    {
+      "module": "Leave",
+      "test": "admin gets user balances",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/leave/balances/cad218e4-d0ed-4030-91d7-3d34afa76920",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Leave",
+      "test": "admin gets policies",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/leave/policies/all",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Leave Automation",
+      "test": "upload policy document",
+      "status": "PASS",
+      "notes": "upload endpoint exercised",
+      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/upload",
+      "role": "admin",
+      "expected": "201/400/415/500",
+      "actualStatus": 201
+    },
+    {
+      "module": "Leave Automation",
+      "test": "extract policy document",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/77239438-d3de-40e0-b388-a9efcaebf7c6/extract",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Leave Automation",
+      "test": "AI parse policy document",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/77239438-d3de-40e0-b388-a9efcaebf7c6/ai-parse",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Leave Automation",
+      "test": "approve parsed policy rules",
+      "status": "PASS",
+      "notes": "400 is acceptable when deterministic parse produced no approvable rule IDs",
+      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/77239438-d3de-40e0-b388-a9efcaebf7c6/approve-rules",
+      "role": "admin",
+      "expected": "200/400",
+      "actualStatus": 200
+    },
+    {
+      "module": "Reports",
+      "test": "admin reports list",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/reports",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Reports",
+      "test": "admin generate attendance report",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/reports/generate",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Reports",
+      "test": "admin attendance report",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/reports/attendance",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Reports",
+      "test": "admin leave report",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/reports/leave",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Reports",
+      "test": "admin performance report",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/reports/performance",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Reports",
+      "test": "admin department report",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/reports/department",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Reports",
+      "test": "admin CSV export",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/reports/export/csv?type=attendance",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Reports",
+      "test": "manager reports are accessible/team-scoped",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/reports",
+      "role": "testManager",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Reports",
+      "test": "employee reports self-scoped or forbidden by design",
+      "status": "PASS",
+      "notes": "HTTP 403",
+      "endpoint": "http://localhost:5000/api/v1/reports",
+      "role": "testEmployee",
+      "expected": "200/403",
+      "actualStatus": 403
+    },
+    {
+      "module": "Reports",
+      "test": "employee department report forbidden",
+      "status": "PASS",
+      "notes": "HTTP 403",
+      "endpoint": "http://localhost:5000/api/v1/reports/department",
+      "role": "testEmployee",
+      "expected": "403",
+      "actualStatus": 403
+    },
+    {
+      "module": "Settings",
+      "test": "admin gets organization settings",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/settings/organization",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Settings",
+      "test": "admin updates harmless setting value",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/settings/organization",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Settings",
+      "test": "admin verifies settings persistence",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/settings/organization",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Settings",
+      "test": "manager cannot update settings",
+      "status": "PASS",
+      "notes": "HTTP 403",
+      "endpoint": "http://localhost:5000/api/v1/settings/organization",
+      "role": "testManager",
+      "expected": "403",
+      "actualStatus": 403
+    },
+    {
+      "module": "Settings",
+      "test": "employee cannot update settings",
+      "status": "PASS",
+      "notes": "HTTP 403",
+      "endpoint": "http://localhost:5000/api/v1/settings/organization",
+      "role": "testEmployee",
+      "expected": "403",
+      "actualStatus": 403
+    },
+    {
+      "module": "Analytics",
+      "test": "admin GET /analytics/dashboard",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/analytics/dashboard",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Analytics",
+      "test": "admin GET /analytics/attendance/trends",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/analytics/attendance/trends",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Analytics",
+      "test": "admin GET /analytics/attendance/department",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/analytics/attendance/department",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Analytics",
+      "test": "admin GET /analytics/leave/summary",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/analytics/leave/summary",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Analytics",
+      "test": "admin GET /analytics/workforce/headcount",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/analytics/workforce/headcount",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Analytics",
+      "test": "admin GET /analytics/audit/logs",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/analytics/audit/logs",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Analytics",
+      "test": "manager dashboard team-scoped",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/analytics/dashboard",
+      "role": "testManager",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Employee APIs",
+      "test": "employee GET /attendance/today",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/attendance/today",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Employee APIs",
+      "test": "employee GET /leave/my",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/leave/my",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Employee APIs",
+      "test": "employee GET /leave/balances/me",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/leave/balances/me",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Employee APIs",
+      "test": "employee GET /performance/me",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/performance/me",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Employee APIs",
+      "test": "employee GET /notifications",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/notifications",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Notifications",
+      "test": "employee gets notifications",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/notifications",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Notifications",
+      "test": "employee gets unread count",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/notifications/unread-count",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Notifications",
+      "test": "employee marks one notification read",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/notifications/4d99b99d-35ef-4888-bfe0-7d15ac2de334/read",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Notifications",
+      "test": "admin broadcasts test notification",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/notifications/broadcast",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Notifications",
+      "test": "broadcast returns recipient count",
+      "status": "PASS",
+      "notes": "{\"count\":1}"
+    },
+    {
+      "module": "Performance",
+      "test": "employee gets own performance",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/performance/me",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Performance",
+      "test": "manager gets team performance",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/performance/team",
+      "role": "testManager",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Performance",
+      "test": "manager gets leaderboard",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/performance/leaderboard",
+      "role": "testManager",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Performance",
+      "test": "admin gets employee performance",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/performance/user/cad218e4-d0ed-4030-91d7-3d34afa76920",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "AI Backend",
+      "test": "employee asks AI chat",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/ai/chat",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "AI Backend",
+      "test": "chat answer has grounded fields",
+      "status": "PASS",
+      "notes": "{\"answer\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"message\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"sources\":[\"attendance_policy.md\",\"leave_policy.md\"],\"confidence\":0.71,\"actions\":[{\"type\":\"navigate\",\"label\":\"Open attendance\",\"path\":\"/dashboard/employee/attendance\"}],\"fallback\":true,\"intent\":\"attendance\",\"data\":{\"mode\":\"statistical\",\"actions\":[{\"type\":\"navi"
+    },
+    {
+      "module": "AI Backend",
+      "test": "employee predicts performance",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/ai/predict-performance",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "AI Backend",
+      "test": "prediction has score/risk/reasons",
+      "status": "PASS",
+      "notes": "{\"employeeId\":\"cad218e4-d0ed-4030-91d7-3d34afa76920\",\"predictedScore\":77.8,\"riskLevel\":\"LOW\",\"confidence\":0.82,\"reasons\":[\"Prediction is primarily driven by stable attendance and performance history.\",\"Projected score falls in the low risk band.\"],\"featuresUsed\":{\"attendanceRate\":100,\"lateCount\":0,\"absenceCount\":0,\"leaveCount\":1,\"averageWorkingHours\":8,\"previousPerformanceScore\":75,\"departmentAverage\":75,\"overtimeHours\":0,\"halfDayCount\":0},\"modelVersion\":\"performance-rf-v2\",\"fallback\":false,\"adv"
+    },
+    {
+      "module": "AI Direct",
+      "test": "AI health",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:8000/health",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "AI Direct",
+      "test": "direct /chat",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:8000/chat",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "AI Direct",
+      "test": "direct chat has answer",
+      "status": "PASS",
+      "notes": "{\"message\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"answer\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"intent\":\"attendance\",\"data\":{\"mode\":\"statistical\",\"actions\":[{\"type\":\"navigate\",\"label\":\"Open attendance\",\"path\":\"/dashboard/employee/attendance\"}]},\"sources\":[\"attendance_policy.md\",\"leave_policy.md\"],\"confidence\":0.71,\"actions\":[{\"type\":\"navigate\",\"label\":\""
+    },
+    {
+      "module": "AI Direct",
+      "test": "direct /predict/performance",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:8000/predict/performance",
+      "role": "testEmployee",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "AI Direct",
+      "test": "direct prediction has expected fields",
+      "status": "PASS",
+      "notes": "{\"employeeId\":\"cad218e4-d0ed-4030-91d7-3d34afa76920\",\"predictedScore\":80.25,\"riskLevel\":\"LOW\",\"confidence\":0.82,\"reasons\":[\"Prediction is primarily driven by stable attendance and performance history.\",\"Projected score falls in the low risk band.\"],\"featuresUsed\":{\"attendanceRate\":95,\"lateCount\":1,\"absenceCount\":0,\"leaveCount\":1,\"averageWorkingHours\":8,\"previousPerformanceScore\":82,\"departmentAverage\":78,\"overtimeHours\":2,\"halfDayCount\":0},\"modelVersion\":\"performance-rf-v2\",\"fallback\":false,\"adv"
+    },
+    {
+      "module": "Power BI",
+      "test": "token endpoint returns embed config when configured",
+      "status": "PASS",
+      "notes": "{\"embedToken\":\"[REDACTED]\",\"embedTokenId\":\"21ad7d4b-d605-4f04-b239-91c29e22d9cc\",\"expiration\":\"2026-07-14T18:28:14Z\",\"reportId\":\"313f66f6-a40a-4f25-80f6-ca6f81fce76e\",\"workspaceId\":\"efece712-4e79-4943-80fc-e3cb2f0eb670\",\"datasetId\":null,\"embedUrl\":\"https://app.powerbi.com/reportEmbed?reportId=313f66f6-a40a-4f25-80f6-ca6f81fce76e&groupId=efece712-4e79-4943-80fc-e3cb2f0eb670&w=2&config=eyJjbHVzdGVyVXJsIjoiaHR0cHM6Ly9XQUJJLVNXRURFTi1DRU5UUkFMLVBSSU1BUlktcmVkaXJlY3QuYW5hbHlzaXMud2luZG93cy5uZXQiLCJlb",
+      "endpoint": "http://localhost:5000/api/v1/analytics/powerbi/embed-token",
+      "role": "admin",
+      "expected": "200 with token/embed config",
+      "actualStatus": 200
+    },
+    {
+      "module": "Power BI",
+      "test": "frontend Power BI page renders or redirects",
+      "status": "PASS",
+      "notes": "HTTP 307",
+      "endpoint": "http://localhost:3000/dashboard/admin/powerbi",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 307
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 200
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /login",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/login",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 200
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /dashboard/admin",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/dashboard/admin",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 307
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /dashboard/admin/attendance",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/dashboard/admin/attendance",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 307
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /dashboard/admin/leaves",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/dashboard/admin/leaves",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 307
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /dashboard/admin/reports",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/dashboard/admin/reports",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 307
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /dashboard/admin/settings",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/dashboard/admin/settings",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 307
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /dashboard/admin/ai-chat",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/dashboard/admin/ai-chat",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 307
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /dashboard/admin/forecast",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/dashboard/admin/forecast",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 307
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /dashboard/admin/performance",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/dashboard/admin/performance",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 307
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /dashboard/admin/powerbi",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/dashboard/admin/powerbi",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 307
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /dashboard/manager",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/dashboard/manager",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 307
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /dashboard/employee",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/dashboard/employee",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 307
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /dashboard/employee/assistant",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/dashboard/employee/assistant",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 307
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /dashboard/employee/forecast",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/dashboard/employee/forecast",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 307
+    },
+    {
+      "module": "Frontend",
+      "test": "GET /dashboard/employee/performance",
+      "status": "PASS",
+      "notes": "200 or expected auth redirect",
+      "endpoint": "http://localhost:3000/dashboard/employee/performance",
+      "expected": "200/301/302/307/308",
+      "actualStatus": 307
+    },
+    {
+      "module": "Cleanup",
+      "test": "cancel test leave 1f4f71f4-2e4f-4fca-abef-daf94516b17f",
+      "status": "PASS",
+      "notes": "cleanup cancel attempted",
+      "endpoint": "http://localhost:5000/api/v1/leave/1f4f71f4-2e4f-4fca-abef-daf94516b17f/cancel",
+      "role": "testEmployee",
+      "expected": "200/400/403",
+      "actualStatus": 200
+    },
+    {
+      "module": "Cleanup",
+      "test": "deactivate test employee",
+      "status": "PASS",
+      "notes": "HTTP 200 {\"success\":true,\"message\":\"User deactivated\"}"
+    },
+    {
+      "module": "Cleanup",
+      "test": "deactivate test manager",
+      "status": "PASS",
+      "notes": "HTTP 200 {\"success\":true,\"message\":\"User deactivated\"}"
+    },
+    {
+      "module": "Cleanup",
+      "test": "delete test department",
+      "status": "PASS",
+      "notes": "correctly blocked by assigned users"
+    },
+    {
+      "module": "Cleanup",
+      "test": "delete test policy document",
+      "status": "SKIPPED",
+      "notes": "no delete endpoint exposed"
+    },
+    {
+      "module": "Cleanup",
+      "test": "delete billing signup test organization",
+      "status": "PASS",
+      "notes": "3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a"
+    }
+  ],
+  "cleanup": [
+    {
+      "module": "Cleanup",
+      "test": "deactivate test employee",
+      "status": "PASS",
+      "notes": "HTTP 200 {\"success\":true,\"message\":\"User deactivated\"}"
+    },
+    {
+      "module": "Cleanup",
+      "test": "deactivate test manager",
+      "status": "PASS",
+      "notes": "HTTP 200 {\"success\":true,\"message\":\"User deactivated\"}"
+    },
+    {
+      "module": "Cleanup",
+      "test": "delete test department",
+      "status": "PASS",
+      "notes": "correctly blocked by assigned users"
+    },
+    {
+      "module": "Cleanup",
+      "test": "delete test policy document",
+      "status": "SKIPPED",
+      "notes": "no delete endpoint exposed"
+    },
+    {
+      "module": "Cleanup",
+      "test": "delete billing signup test organization",
+      "status": "PASS",
+      "notes": "3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a"
+    }
+  ]
+}

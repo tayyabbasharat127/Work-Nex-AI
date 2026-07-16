@@ -1,8 +1,9 @@
 """Workflow controller — agentic leave auto-approval."""
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from app.core.auth import require_principal
 from app.models.schemas import AutoApproveRequest, AutoApproveResponse
 
-router = APIRouter(prefix="/workflow", tags=["Workflow"])
+router = APIRouter(prefix="/workflow", tags=["Workflow"], dependencies=[Depends(require_principal)])
 
 
 @router.post("/auto-approve", response_model=AutoApproveResponse)

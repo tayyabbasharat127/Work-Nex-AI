@@ -16,10 +16,11 @@ from app.models.schemas import (
 from app.services.anomaly_service import detect_anomalies
 from app.services.attrition_service import calculate_attrition_risk, score_single_employee
 from app.services.forecast_service import generate_leave_forecast
+from app.services.leave_advisor_service import generate_recommendation
 from app.services.leave_policy_service import extract_leave_policy
 from app.services.prediction_service import predict_performance
 
-router = APIRouter(tags=["Predictions"])
+router = APIRouter(tags=["Predictions"], dependencies=[Depends(require_principal)])
 
 
 # ─── Leave forecast ────────────────────────────────────────────────────────────
@@ -99,3 +100,20 @@ class LeavePolicyRequest(BaseModel):
 async def leave_policy(req: LeavePolicyRequest, principal: AuthenticatedPrincipal = Depends(require_principal)):
     """Extract structured leave policy from free-text (HR docs, emails, PDFs)."""
     return await extract_leave_policy(req.text, principal.organization_id)
+
+
+# ─── Leave advisor (recommendation only — never approves/rejects) ─────────────
+
+class LeaveAdvisorRequest(BaseModel):
+    employee: Dict[str, Any]
+    leave: Dict[str, Any]
+    attendance: Dict[str, Any]
+    policies: Dict[str, Any]
+
+
+@router.post("/predict/leave-advisor")
+async def leave_advisor(req: LeaveAdvisorRequest, principal: AuthenticatedPrincipal = Depends(require_principal)):
+    """Advisory-only leave recommendation for a manager/admin — returns
+    {recommendation, confidence, reasoning, policyObservations, model}, or
+    null if no LLM is configured or the call fails. Never raises."""
+    return await generate_recommendation(req.model_dump())

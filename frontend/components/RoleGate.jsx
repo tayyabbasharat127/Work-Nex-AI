@@ -9,10 +9,16 @@ export default function RoleGate({ allow = [], children }) {
   const [user] = useState(getStoredUser);
   const role = user?.role;
   const allowed = role && allow.includes(role);
+  const roleHome = role === 'ADMIN' || role === 'SUPER_ADMIN'
+    ? '/dashboard/admin'
+    : role === 'MANAGER'
+      ? '/dashboard/manager'
+      : '/dashboard/employee';
 
   useEffect(() => {
-    if (!role) router.push('/login');
-  }, [role, router]);
+    if (!role) router.replace('/login');
+    else if (!allowed) router.replace(roleHome);
+  }, [allowed, role, roleHome, router]);
 
   if (!role) {
     return (
@@ -24,11 +30,8 @@ export default function RoleGate({ allow = [], children }) {
 
   if (!allowed) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <div className="max-w-md rounded-lg border border-border bg-card p-6 text-center">
-          <p className="text-lg font-semibold">Access restricted</p>
-          <p className="text-sm text-muted-foreground mt-2">Your current role cannot open this dashboard page.</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground">
+        Redirecting to your dashboard...
       </div>
     );
   }

@@ -16,6 +16,8 @@ const settingsRules = [
   body('address').optional({ nullable: true }).isString().isLength({ max: 1000 }),
   body('logoUrl').optional({ nullable: true }).isURL({ protocols: ['http', 'https'], require_protocol: true }),
   body('timezone').optional().isString().isLength({ min: 1, max: 100 }),
+  body('onboardingCompleted').optional().isBoolean(),
+  body('onboardingStep').optional().isIn(['HR_CONFIGURATION', 'INVITE_EMPLOYEES', 'COMPLETED']),
   body('workingHoursStart').optional().matches(time),
   body('workingHoursEnd').optional().matches(time),
   body('workingHours.start').optional().matches(time),
@@ -24,6 +26,7 @@ const settingsRules = [
   body('wifiVerificationEnabled').optional().isBoolean(),
   body('leaveAutomationEnabled').optional().isBoolean(),
   body('sandwichLeaveEnabled').optional().isBoolean(),
+  body('aiLeaveAdvisorEnabled').optional().isBoolean(),
   body('attendancePolicyJson').optional().isObject(),
   body('attendancePolicy').optional().isObject(),
   body('officeIpRanges').optional().custom((value) => {

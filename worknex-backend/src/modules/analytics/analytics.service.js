@@ -20,23 +20,35 @@ const getDashboardKPIs = async (requestingUser) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const userScope = await getUserScope(requestingUser, 'id');
-  const attendanceScope = await getUserScope(requestingUser);
   const leaveScope = await getUserScope(requestingUser, 'employeeId');
 
+  // The headcount denominator and attendance numerator must describe the
+  // exact same population. Admins/managers may have their own attendance
+  // records, but the workforce KPI is intentionally employee-only.
+  const employees = await prisma.user.findMany({
+    where: { ...userScope, isActive: true, customRole: { tier: 'EMPLOYEE' } },
+    select: { id: true },
+  });
+  const employeeIds = employees.map((employee) => employee.id);
+  const attendanceWhere = {
+    ...getOrganizationScope(requestingUser),
+    userId: { in: employeeIds },
+    date: today,
+  };
+
   const [
-    totalEmployees,
     activeToday,
     pendingLeaves,
     absentToday,
   ] = await Promise.all([
-    prisma.user.count({ where: { ...userScope, isActive: true, customRole: { tier: 'EMPLOYEE' } } }),
-    prisma.attendance.count({ where: { ...attendanceScope, date: today, status: { in: ['PRESENT', 'LATE'] } } }),
+    prisma.attendance.count({ where: { ...attendanceWhere, status: { in: ['PRESENT', 'LATE'] } } }),
     prisma.leaveRequest.count({ where: { ...leaveScope, status: { in: ['PENDING', 'PENDING_MANAGER', 'PENDING_ADMIN'] } } }),
-    prisma.attendance.count({ where: { ...attendanceScope, date: today, status: 'ABSENT' } }),
+    prisma.attendance.count({ where: { ...attendanceWhere, status: 'ABSENT' } }),
   ]);
 
+  const totalEmployees = employeeIds.length;
   const attendanceRate = totalEmployees > 0
-    ? parseFloat(((activeToday / totalEmployees) * 100).toFixed(1))
+    ? parseFloat((Math.min(activeToday / totalEmployees, 1) * 100).toFixed(1))
     : 0;
 
   return { totalEmployees, activeToday, pendingLeaves, absentToday, attendanceRate };
@@ -82,101 +94,48 @@ const getAttendanceHeatmap = async (userId, year, requestingUser) => {
   });
 };
 
-const _countWorkingDays = (start, end) => {
-  let count = 0;
-  const cur = new Date(start);
-  while (cur <= end) {
-    const d = cur.getDay();
-    if (d !== 0 && d !== 6) count++;
-    cur.setDate(cur.getDate() + 1);
-  }
-  return Math.max(count, 1);
-};
-
 const getDepartmentAttendance = async (month, year, requestingUser) => {
   const { start, end } = getMonthRange(parseInt(year), parseInt(month));
-  const workingDays = _countWorkingDays(start, end);
-
-  if (!isPlatformAdmin(requestingUser)) {
-    const orgScope = getOrganizationScope(requestingUser);
-
-    // Employee count per department (used as denominator)
-    const employees = await prisma.user.findMany({
-      where: { ...orgScope, isActive: true },
-      select: { department: { select: { name: true } } },
-    });
-    const empByDept = {};
-    employees.forEach((e) => {
-      const dept = e.department?.name || 'Unassigned';
-      empByDept[dept] = (empByDept[dept] || 0) + 1;
-    });
-
-    const where = await addAccessibleUserScope({
-      ...orgScope,
-      date: { gte: start, lte: end },
-    }, requestingUser);
-    const records = await prisma.attendance.findMany({
-      where,
-      select: {
-        id: true,
-        status: true,
-        user: { select: { department: { select: { name: true } } } },
-      },
-    });
-
-    const departments = {};
-    // Seed all departments that have employees
-    Object.keys(empByDept).forEach((dept) => {
-      departments[dept] = { department: dept, present: 0, absent: 0, total: 0 };
-    });
-    records.forEach((record) => {
-      const department = record.user?.department?.name || 'Unassigned';
-      if (!departments[department]) {
-        departments[department] = { department, present: 0, absent: 0, total: 0 };
-      }
-      if (['PRESENT', 'LATE'].includes(record.status)) departments[department].present += 1;
-      if (record.status === 'ABSENT') departments[department].absent += 1;
-      departments[department].total += 1;
-    });
-
-    return Object.values(departments)
-      .sort((a, b) => a.department.localeCompare(b.department))
-      .map((item) => {
-        const empCount = empByDept[item.department] || 1;
-        const expected = empCount * workingDays;
-        return {
-          ...item,
-          rate: parseFloat(Math.min((item.present / expected) * 100, 100).toFixed(1)),
-        };
-      });
-  }
-
-  const result = await prisma.$queryRaw`
-    SELECT d.name as department,
-           COUNT(CASE WHEN a.status IN ('PRESENT','LATE') THEN 1 END) as present,
-           COUNT(CASE WHEN a.status = 'ABSENT' THEN 1 END) as absent,
-           COUNT(a.id) as total,
-           COUNT(DISTINCT u.id) as emp_count
-    FROM "Attendance" a
-    JOIN "User" u ON a."userId" = u.id
-    JOIN "Department" d ON u."departmentId" = d.id
-    WHERE a.date >= ${start} AND a.date <= ${end}
-    GROUP BY d.name
-    ORDER BY d.name
-  `;
-
-  return result.map(r => {
-    const present = Number(r.present);
-    const empCount = Number(r.emp_count) || 1;
-    const expected = empCount * workingDays;
-    return {
-      department: r.department,
-      present,
-      absent: Number(r.absent),
-      total: Number(r.total),
-      rate: parseFloat(Math.min((present / expected) * 100, 100).toFixed(1)),
-    };
+  const userScope = await getUserScope(requestingUser, 'id');
+  const employees = await prisma.user.findMany({
+    where: {
+      ...userScope,
+      isActive: true,
+      customRole: { tier: 'EMPLOYEE' },
+      departmentId: { not: null },
+    },
+    select: { id: true },
   });
+  if (!employees.length) return [];
+
+  const records = await prisma.attendance.findMany({
+    where: {
+      ...getOrganizationScope(requestingUser),
+      userId: { in: employees.map((employee) => employee.id) },
+      date: { gte: start, lte: end },
+    },
+    select: {
+      status: true,
+      user: { select: { department: { select: { name: true } } } },
+    },
+  });
+
+  const departments = {};
+  records.forEach((record) => {
+    const department = record.user?.department?.name;
+    if (!department) return;
+    if (!departments[department]) departments[department] = { department, present: 0, absent: 0, total: 0 };
+    if (['PRESENT', 'LATE'].includes(record.status)) departments[department].present += 1;
+    if (record.status === 'ABSENT') departments[department].absent += 1;
+    departments[department].total += 1;
+  });
+
+  return Object.values(departments)
+    .sort((a, b) => a.department.localeCompare(b.department))
+    .map((item) => ({
+      ...item,
+      rate: parseFloat(((item.present / item.total) * 100).toFixed(1)),
+    }));
 };
 
 const getLeaveSummary = async (year, requestingUser) => {

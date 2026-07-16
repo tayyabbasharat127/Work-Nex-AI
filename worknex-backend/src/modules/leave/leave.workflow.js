@@ -25,6 +25,13 @@ const getApprovalAction = ({ actorRole, status, managerId }) => {
   return null;
 };
 
+// Used only when organization-level leave automation is disabled: routes a
+// freshly-submitted request straight into the standard hierarchy (manager
+// first if one is assigned, otherwise admin) with no rule evaluation at all —
+// unlike getInitialApprovalStage, this never special-cases ADMIN/SUPER_ADMIN
+// requesters into a rule-engine decision, since there is no rule engine here.
+const getManualApprovalStatus = ({ managerId }) => (managerId ? 'PENDING_MANAGER' : 'PENDING_ADMIN');
+
 module.exports = {
   PENDING_LEAVE_STATUSES,
   getInitialApprovalStage,
@@ -32,4 +39,5 @@ module.exports = {
   appliesStandardPolicyThresholds,
   getEffectivePendingStage,
   getApprovalAction,
+  getManualApprovalStatus,
 };

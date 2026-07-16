@@ -1,9 +1,15 @@
 'use client';
 
-import { Check, ShieldAlert, X } from 'lucide-react';
+import { Check, ShieldAlert, X, Sparkles, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { formatLeaveType } from '@/hooks/useLeaveTypeLabels';
 import { STATUS_CONFIG, TYPE_COLORS } from '../constants';
 import { getInitials, formatDate } from '../helpers';
+
+const AI_RECOMMENDATION_META = {
+  APPROVE: { label: 'Approve', icon: CheckCircle2, className: 'bg-success/15 text-success border-success/25' },
+  REJECT: { label: 'Reject', icon: XCircle, className: 'bg-destructive/15 text-destructive border-destructive/25' },
+  REVIEW: { label: 'Needs review', icon: AlertTriangle, className: 'bg-warning/15 text-warning border-warning/25' },
+};
 
 export default function LeaveDetailModal({ leave, typeLabels, onClose, onApprove, onReject }) {
   if (!leave) return null;
@@ -114,6 +120,49 @@ export default function LeaveDetailModal({ leave, typeLabels, onClose, onApprove
               </p>
             </div>
           )}
+
+          {leave.aiRecommendation && (() => {
+            const meta = AI_RECOMMENDATION_META[leave.aiRecommendation] || AI_RECOMMENDATION_META.REVIEW;
+            const RecIcon = meta.icon;
+            return (
+              <div className="p-4 rounded-xl border border-violet-500/25 bg-violet-500/5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles size={16} className="text-violet-400" />
+                  <p className="text-sm font-semibold text-violet-300">AI Recommendation</p>
+                  <span className="ml-auto text-[11px] text-muted-foreground">Advisory only — read-only</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 mb-3">
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${meta.className}`}>
+                    <RecIcon size={14} /> {meta.label}
+                  </span>
+                  {Number.isFinite(leave.aiConfidence) && (
+                    <span className="text-xs text-muted-foreground">{leave.aiConfidence}% confidence</span>
+                  )}
+                </div>
+                {Array.isArray(leave.aiReasoning) && leave.aiReasoning.length > 0 && (
+                  <ul className="mb-3 space-y-1 text-sm">
+                    {leave.aiReasoning.map((reason, i) => (
+                      <li key={i} className="flex gap-2"><span className="text-violet-400">•</span><span>{reason}</span></li>
+                    ))}
+                  </ul>
+                )}
+                {Array.isArray(leave.aiPolicyObservations) && leave.aiPolicyObservations.length > 0 && (
+                  <div className="border-t border-violet-500/15 pt-2">
+                    <p className="mb-1 text-xs font-medium text-muted-foreground">Policy Notes</p>
+                    <ul className="space-y-1 text-sm">
+                      {leave.aiPolicyObservations.map((note, i) => (
+                        <li key={i} className="flex gap-2"><span className="text-violet-400">•</span><span>{note}</span></li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground/70">
+                  {leave.aiGeneratedAt && <span>Generated {new Date(leave.aiGeneratedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>}
+                  {leave.aiModel && <span>Model: {leave.aiModel}</span>}
+                </div>
+              </div>
+            );
+          })()}
 
           {canAdminAct && (
             <div className="flex gap-3 pt-1">

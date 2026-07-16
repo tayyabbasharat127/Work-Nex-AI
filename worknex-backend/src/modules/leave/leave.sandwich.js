@@ -108,4 +108,5 @@ const detectSandwichForNewLeave = async (leave, organizationId) => {
 module.exports = {
   detectSandwichForAbsence,
   detectSandwichForNewLeave,
+  isSandwichEnabled,
 };

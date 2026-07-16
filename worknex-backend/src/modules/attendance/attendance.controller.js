@@ -1,4 +1,5 @@
 const attendanceService = require('./attendance.service');
+const universityAttendanceService = require('./university-attendance.service');
 const webhookProvider = require('./providers/webhook.provider');
 const { apiResponse } = require('../../utils/ApiResponse');
 
@@ -19,6 +20,18 @@ const tmsWebhook = async (req, res) => {
     records: rawRecords,
   });
   apiResponse(res, 200, 'Push received', result);
+};
+
+const universityPunch = async (req, res) => {
+  const record = await universityAttendanceService.ingestPunch({
+    serialNumber: req.query.SN,
+    signature: req.headers['x-worknex-signature'],
+    timestamp: req.headers['x-worknex-timestamp'],
+    nonce: req.headers['x-worknex-nonce'],
+    rawBody: req.rawBody,
+    punch: req.body,
+  });
+  apiResponse(res, 201, 'University attendance punch recorded', record);
 };
 
 const checkIn = async (req, res) => {
@@ -115,7 +128,7 @@ const generateAbsences = async (req, res) => {
 };
 
 module.exports = {
-  tmsWebhook,
+  tmsWebhook, universityPunch,
   checkIn, checkOut, autoPing, getTodayAttendance, getMyAttendance,
   getAllAttendance, getUserAttendance, getAttendanceSummary, getWeeklyHoursShortfall,
   manualEntry, updateAttendance, syncFromTMS,

@@ -51,6 +51,11 @@ const getUserBalances = async (req, res) => {
   apiResponse(res, 200, 'Leave balances fetched', balances);
 };
 
+const getUserLeaveSummary = async (req, res) => {
+  const summary = await leaveService.getUserLeaveSummary(req.params.userId, req.user);
+  apiResponse(res, 200, 'Leave summary fetched', summary);
+};
+
 const getPolicies = async (req, res) => {
   const policies = await leaveService.getPolicies(req.user);
   apiResponse(res, 200, 'Policies fetched', policies);
@@ -120,7 +125,7 @@ const getDecisionExplanation = async (req, res) => {
 module.exports = {
   applyLeave, approveLeave, rejectLeave, cancelLeave,
   getLeaves, getMyLeaves, getPendingLeaves, getLeaveById,
-  getMyBalances, getUserBalances, getPolicies, getActivePolicyVersion, getLeaveTypeLabels, getDailyLeaveCounts, createPolicy, updatePolicy,
+  getMyBalances, getUserBalances, getUserLeaveSummary, getPolicies, getActivePolicyVersion, getLeaveTypeLabels, getDailyLeaveCounts, createPolicy, updatePolicy,
   uploadPolicyDocument, extractPolicyDocument, aiParsePolicyDocument,
   approvePolicyRules, saveManualPolicyRules, evaluateLeave, getDecisionExplanation,
 };

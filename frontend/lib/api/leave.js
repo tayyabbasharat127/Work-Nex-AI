@@ -55,6 +55,11 @@ export const leaveAPI = {
     return response.data || response;
   },
 
+  getSummaryForUser: async (userId) => {
+    const response = await apiFetch(`/leave/summary/${userId}`);
+    return response.data || response;
+  },
+
   getPolicies: async () => {
     const response = await apiFetch('/leave/policies/all');
     return response.data || response;

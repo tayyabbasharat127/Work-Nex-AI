@@ -5,6 +5,7 @@ const {
   appliesStandardPolicyThresholds,
   getEffectivePendingStage,
   getApprovalAction,
+  getManualApprovalStatus,
 } = require('../modules/leave/leave.workflow');
 
 describe('leave approval hierarchy', () => {
@@ -51,5 +52,16 @@ describe('leave approval hierarchy', () => {
 
   test('all staged pending states are recognized by overlap and cancellation rules', () => {
     expect(PENDING_LEAVE_STATUSES).toEqual(['PENDING', 'PENDING_MANAGER', 'PENDING_ADMIN']);
+  });
+});
+
+describe('getManualApprovalStatus (leave automation disabled)', () => {
+  test('routes to manager review when the employee has a manager', () => {
+    expect(getManualApprovalStatus({ managerId: 'manager-1' })).toBe('PENDING_MANAGER');
+  });
+
+  test('routes straight to admin review when there is no manager', () => {
+    expect(getManualApprovalStatus({ managerId: null })).toBe('PENDING_ADMIN');
+    expect(getManualApprovalStatus({ managerId: undefined })).toBe('PENDING_ADMIN');
   });
 });

@@ -11,7 +11,10 @@ const defaults = {
   wifiVerificationEnabled: false,
   leaveAutomationEnabled: true,
   sandwichLeaveEnabled: false,
+  aiLeaveAdvisorEnabled: false,
   attendancePolicyJson: { halfDayHours: 4 },
+  onboardingCompleted: false,
+  onboardingStep: 'HR_CONFIGURATION',
 };
 
 const resolveOrganizationId = (user, requestedId = null) => {
@@ -80,6 +83,9 @@ const serializeSettings = (org, settings) => {
     attendancePolicy: settings.attendancePolicyJson || defaults.attendancePolicyJson,
     leaveAutomationEnabled: settings.leaveAutomationEnabled,
     sandwichLeaveEnabled: settings.sandwichLeaveEnabled,
+    aiLeaveAdvisorEnabled: settings.aiLeaveAdvisorEnabled,
+    onboardingCompleted: settings.onboardingCompleted,
+    onboardingStep: settings.onboardingStep,
     storage: 'database',
     updatedAt: settings.updatedAt,
   };
@@ -109,7 +115,10 @@ const updateOrganizationSettings = async (user, data) => {
     wifiVerificationEnabled: data.wifiVerificationEnabled,
     leaveAutomationEnabled: data.leaveAutomationEnabled,
     sandwichLeaveEnabled: data.sandwichLeaveEnabled,
+    aiLeaveAdvisorEnabled: data.aiLeaveAdvisorEnabled,
     attendancePolicyJson: data.attendancePolicy || data.attendancePolicyJson,
+    onboardingCompleted: data.onboardingCompleted,
+    onboardingStep: data.onboardingStep,
   };
   const cleanSettingsData = Object.fromEntries(Object.entries(settingsData).filter(([, value]) => value !== undefined));
 

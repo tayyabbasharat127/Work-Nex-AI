@@ -188,6 +188,46 @@
   }
 }
 
+@layer components {
+  /* Shared form control used by the multi-step registration flow. Keep the
+     surface distinct from cards so empty fields remain visible in light mode. */
+  .input-field {
+    width: 100%;
+    min-height: 3.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background-color: var(--input);
+    color: var(--foreground);
+    padding: 0.75rem 1rem;
+    box-shadow: 0 1px 2px color-mix(in oklch, var(--foreground) 7%, transparent);
+    transition: border-color 160ms ease, background-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .input-field::placeholder {
+    color: var(--muted-foreground);
+    opacity: 0.85;
+  }
+
+  .input-field:hover:not(:disabled) {
+    border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  }
+
+  .input-field:focus,
+  .input-field:focus-visible {
+    border-color: var(--ring);
+    background-color: var(--card);
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 22%, transparent);
+  }
+
+  .input-field:disabled {
+    background-color: var(--disabled);
+    color: var(--disabled-foreground);
+    opacity: 0.75;
+  }
+}
+
 /* Dashboard-wide layout safeguards. The notification/alert controls occupy the
    top-right corner, so sticky page headers keep a small action-safe gutter and
    wrap their own controls before labels can collide. */

@@ -363,11 +363,11 @@ const deleteDepartment = async (id, requestingUser) => {
   const department = await prisma.department.findFirst({ where: { id, ...getOrganizationScope(requestingUser) } });
   if (!department) throw new ApiError(404, 'Department not found');
   assertOrganizationAccess(requestingUser, department.organizationId);
-  const activeUsers = await prisma.user.count({
-    where: { organizationId: department.organizationId, departmentId: id, isActive: true },
+  const assignedUsers = await prisma.user.count({
+    where: { organizationId: department.organizationId, departmentId: id },
   });
-  if (activeUsers > 0) {
-    throw new ApiError(409, 'Cannot delete department with active users. Reassign or deactivate users first.');
+  if (assignedUsers > 0) {
+    throw new ApiError(409, `Cannot delete department while ${assignedUsers} user(s) are assigned. Reassign them before deleting the department.`);
   }
   await prisma.department.delete({ where: { id } });
   return { id };

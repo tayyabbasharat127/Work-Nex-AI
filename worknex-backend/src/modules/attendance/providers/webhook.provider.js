@@ -130,4 +130,4 @@ const receivePush = async ({ serialNumber, signature, timestamp, nonce, rawBody,
   return { processed, errors, total: records.length };
 };
 
-module.exports = { receivePush };
+module.exports = { receivePush, identifyDevice, verifySignature };

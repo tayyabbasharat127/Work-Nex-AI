@@ -74,6 +74,7 @@ const sendVerificationCode = async (signup, code) => {
     await sendEmail(signup.email, email.subject, email.html);
   } catch (error) {
     if (config.isProduction) throw new ApiError(503, 'Verification email could not be sent. Please try again.');
+    console.warn(`[dev] SMTP not configured — verification code for ${signup.email}: ${code}`);
   }
 };
 
@@ -132,7 +133,6 @@ const startOrganizationRegistration = async (data) => {
     registrationId: signup.id,
     email: signup.email.replace(/(^.).*(@.*$)/, '$1***$2'),
     verificationExpiresAt: signup.verificationExpiresAt,
-    ...(config.isProduction ? {} : { developmentVerificationCode: code }),
   };
 };
 
@@ -164,7 +164,6 @@ const resendOrganizationVerification = async (registrationId) => {
   return {
     registrationId: updated.id,
     verificationExpiresAt: updated.verificationExpiresAt,
-    ...(config.isProduction ? {} : { developmentVerificationCode: code }),
   };
 };
 

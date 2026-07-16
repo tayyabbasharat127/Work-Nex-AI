@@ -34,7 +34,6 @@ function RegisterForm() {
   const [registrationId, setRegistrationId] = useState('');
   const [completionToken, setCompletionToken] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
-  const [developmentCode, setDevelopmentCode] = useState('');
   const [form, setForm] = useState({
     firstName: '', lastName: '', email: '', password: '', confirmPassword: '', termsAccepted: false,
     orgName: '', country: 'PK', timezone: 'Asia/Karachi', industry: '', planType: '',
@@ -100,7 +99,6 @@ function RegisterForm() {
         termsAccepted: true,
       });
       setRegistrationId(result.registrationId);
-      setDevelopmentCode(result.developmentVerificationCode || '');
       setStep(1);
       toast.success('Verification code sent');
     } catch (err) {
@@ -129,8 +127,7 @@ function RegisterForm() {
   const resendCode = async () => {
     try {
       setLoading(true);
-      const result = await billingAPI.resendVerification(registrationId);
-      setDevelopmentCode(result.developmentVerificationCode || '');
+      await billingAPI.resendVerification(registrationId);
       toast.success('A new verification code was sent');
     } catch (err) {
       setError(err.message || 'Could not resend code');
@@ -223,7 +220,6 @@ function RegisterForm() {
             <form onSubmit={verifyEmail} className="space-y-6 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary"><MailCheck size={30} /></div>
               <StepHeading title="Verify your email" description={`Enter the six-digit code sent to ${form.email}.`} />
-              {developmentCode && <div className="rounded-xl border border-warning/25 bg-warning/10 p-3 text-sm text-warning">Development code: <b>{developmentCode}</b></div>}
               <input value={verificationCode} onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" className="input-field mx-auto block max-w-xs py-4 text-center text-3xl font-bold tracking-[0.45em]" placeholder="000000" />
               <PrimaryButton loading={loading}>Verify email <ArrowRight size={17} /></PrimaryButton>
               <button type="button" onClick={resendCode} disabled={loading} className="text-sm font-medium text-primary hover:underline disabled:opacity-50">Resend code</button>

@@ -22,6 +22,9 @@
     "demo:stop": "node scripts/demo-runtime.js stop",
     "demo:status": "node scripts/demo-runtime.js status",
     "demo:health": "node scripts/demo-runtime.js health",
+    "playwright:install": "npm --prefix frontend exec playwright install chromium",
+    "test:e2e": "npm --prefix frontend run test:e2e",
+    "test:e2e:headed": "npm --prefix frontend run test:e2e:headed",
     "db:preflight": "cd worknex-backend && npm.cmd run db:preflight",
     "lint": "cd frontend && npm.cmd run lint",
     "build": "cd frontend && npm.cmd run build"

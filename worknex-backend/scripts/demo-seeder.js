@@ -548,22 +548,22 @@ async function createDemo() {
   const latestYear = anchor.getUTCFullYear();
   const latestMonth = anchor.getUTCMonth() + 1;
   const attritionRows = userDefs.map((user, index) => {
-    let riskScore = 0.12 + (index % 5) * 0.025;
+    let riskScore = 12 + (index % 5) * 2.5;
     let riskLabel = 'LOW';
     let factors = ['Stable attendance', 'Consistent performance trend', 'Established tenure'];
     if (index >= 19) {
-      riskScore = 0.73 + (index - 19) * 0.045;
+      riskScore = 73 + (index - 19) * 4.5;
       riskLabel = 'HIGH';
       factors = ['Sustained decline across recent performance periods', 'Repeated late arrivals', 'Lower average working hours'];
     } else if (index >= 13) {
-      riskScore = 0.42 + (index - 13) * 0.04;
+      riskScore = 42 + (index - 13) * 4;
       riskLabel = 'MEDIUM';
       factors = ['Recent performance volatility', 'Higher absence frequency than team baseline', 'Reduced punctuality trend'];
     }
     return {
       id: id(`attrition:${user.key}:${latestYear}:${latestMonth}`), organizationId, userId: user.id,
       month: latestMonth, year: latestYear, riskScore: Number(riskScore.toFixed(3)), riskLabel,
-      willLeaveProb: Number(clamp(riskScore - 0.04, 0.05, 0.9).toFixed(3)), factors,
+      willLeaveProb: Number(clamp((riskScore / 100) - 0.04, 0.05, 0.9).toFixed(3)), factors,
       modelVersion: 'demo-derived-v1', source: 'DEMO_DERIVED',
       performanceRecordId: performanceIds.get(`${user.id}:${latestYear}:${latestMonth}`),
     };
@@ -795,9 +795,19 @@ async function validateDemo({ throwOnFailure = false } = {}) {
   for (const riskLabel of ['LOW', 'MEDIUM', 'HIGH']) if (!riskLabels.has(riskLabel)) errors.push(`Attrition does not include ${riskLabel} risk.`);
   const etlStatuses = new Set((await prisma.etlSyncLog.findMany({ where: { organizationId }, select: { status: true } })).map((row) => row.status));
   for (const status of ['SUCCESS', 'PARTIAL', 'FAILED']) if (!etlStatuses.has(status)) errors.push(`ETL does not include ${status} runs.`);
-  const notificationCategories = new Set((await prisma.notification.findMany({ where: { organizationId }, select: { metadata: true } })).map((row) => row.metadata?.category));
+  const notificationMetadata = (await prisma.notification.findMany({ where: { organizationId }, select: { metadata: true } })).map((row) => row.metadata || {});
+  const notificationCategories = new Set(notificationMetadata.map((metadata) => metadata.category));
   for (const category of ['success', 'warning', 'approval', 'attendance', 'leave', 'performance', 'AI']) {
     if (!notificationCategories.has(category)) errors.push(`Notifications do not include ${category}.`);
+  }
+  if (notificationMetadata.some((metadata) => (
+    metadata.action !== 'VIEW'
+    || typeof metadata.targetRoute !== 'string'
+    || metadata.targetRoute !== metadata.deepLink
+    || !metadata.targetRoute.startsWith('/dashboard/')
+    || metadata.targetRoute.startsWith('//')
+  ))) {
+    errors.push('Every notification must include a safe internal dashboard deep link.');
   }
 
   const expectedExact = {

@@ -18,6 +18,13 @@ JSON_INDEX = ROOT / "vector_store" / "knowledge_index.json"
 
 COLLECTION_NAME = "worknex_knowledge"
 
+RETRIEVAL_STOP_WORDS = {
+    "about", "answer", "completely", "could", "does", "have", "policy",
+    "please", "related", "rule", "should", "tell", "that", "their",
+    "there", "these", "this", "unrelated", "what", "when", "where",
+    "which", "with", "would", "your",
+}
+
 
 # ---------------------------------------------------------------------------
 # ChromaDB semantic search (primary)
@@ -124,11 +131,19 @@ def _bm25_score(query: str, chunk: str) -> float:
     return overlap / math.sqrt(sum(q.values()) * sum(c.values()))
 
 
+def _has_lexical_anchor(query: str, chunk: str) -> bool:
+    query_terms = {
+        token for token in _tokens(query)
+        if len(token) >= 4 and token not in RETRIEVAL_STOP_WORDS
+    }
+    return bool(query_terms.intersection(_tokens(chunk)))
+
+
 def _bm25_retrieve(query: str, limit: int = 3) -> list[dict[str, Any]]:
     ranked = []
     for chunk in _load_json_chunks():
         score = _bm25_score(query, chunk["text"])
-        if score > 0:
+        if score > 0 and _has_lexical_anchor(query, chunk["text"]):
             ranked.append({**chunk, "score": score})
     return sorted(ranked, key=lambda x: x["score"], reverse=True)[:limit]
 
@@ -138,7 +153,13 @@ def _bm25_retrieve(query: str, limit: int = 3) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 def retrieve(query: str, limit: int = 4) -> list[dict[str, Any]]:
-    results = _chroma_retrieve(query, limit)
+    # Require at least one lexical anchor in addition to semantic proximity.
+    # This prevents a vector store from returning an unrelated nearest
+    # neighbour merely because every query must have a nearest vector.
+    results = [
+        chunk for chunk in _chroma_retrieve(query, limit)
+        if _has_lexical_anchor(query, chunk["text"])
+    ]
     if results:
         return results
     logger.debug("ChromaDB returned no results; falling back to BM25")

@@ -8,7 +8,7 @@ const defaultTargetRoute = (type, role) => {
     : role === 'MANAGER'
       ? '/dashboard/manager'
       : '/dashboard/employee';
-  if (type.startsWith('LEAVE_')) return `${base}/${role === 'EMPLOYEE' ? 'leaves' : 'leaves'}`;
+  if (type.startsWith('LEAVE_')) return `${base}/leaves`;
   if (type === 'ATTENDANCE_ALERT') return `${base}/attendance`;
   return base;
 };

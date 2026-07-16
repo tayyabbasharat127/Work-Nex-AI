@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
-import { assertThreadOwner, createOwnedThreadId, verifyBackendJwt } from "../security/auth.js";
+import { assertThreadOwner, authenticate, createOwnedThreadId, verifyBackendJwt } from "../security/auth.js";
 
 process.env.JWT_SECRET = "test-secret";
 
@@ -23,4 +23,19 @@ test("thread identifiers are bound to both user and organization", () => {
   assert.equal(assertThreadOwner(threadId, owner), true);
   assert.equal(assertThreadOwner(threadId, { userId: "u2", organizationId: "o1" }), false);
   assert.equal(assertThreadOwner(threadId, { userId: "u1", organizationId: "o2" }), false);
+});
+
+test("authentication middleware returns 401 and never calls next without a token", () => {
+  let nextCalled = false;
+  let statusCode = null;
+  let payload = null;
+  const res = {
+    status(code) { statusCode = code; return this; },
+    json(value) { payload = value; return this; },
+  };
+  authenticate({ headers: {} }, res, () => { nextCalled = true; });
+  assert.equal(statusCode, 401);
+  assert.equal(nextCalled, false);
+  assert.equal(payload.success, false);
+  assert.match(payload.message, /bearer access token required/i);
 });

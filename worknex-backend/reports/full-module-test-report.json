@@ -1,10 +1,10 @@
 {
   "title": "FULL MODULE TEST REPORT",
-  "generatedAt": "2026-07-14T17:28:16.956Z",
+  "generatedAt": "2026-07-16T06:48:31.665Z",
   "backendUrl": "http://localhost:5000",
   "frontendUrl": "http://localhost:3000",
   "aiUrl": "http://localhost:8000",
-  "testPrefix": "worknex_e2e_1784050071948",
+  "testPrefix": "worknex_e2e_1784184495700",
   "overall": "PASS",
   "modules": [
     {
@@ -19,7 +19,7 @@
       "passed": 8,
       "failed": 0,
       "skipped": 0,
-      "notes": "orgId=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a; present; {\"id\":\"3afcab73-d0f5-4f41-9dc5-659d2dfa1eae\",\"email\":\"worknex_e2e_1784050071948.owner.1784050073352@example.com\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"employeeId\":\"OWNER-MRKXCN8W-A2C7B4\",\"organizationId\":\"3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a\",\"role\":\"ADMIN\",\"roleId\":\"60e7a58d-df7f-44a9-9b25-23597b3c1922\",\"roleName\":\"Admin\"}"
+      "notes": "orgId=ada21295-29de-4ac4-8148-a2f4887782e2; present; {\"id\":\"a710c406-cd11-42ea-af49-c73577fd1a95\",\"email\":\"worknex_e2e_1784184495700.owner.1784184495908@example.com\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"employeeId\":\"OWNER-MRN5DS3V-F9FEF9\",\"organizationId\":\"ada21295-29de-4ac4-8148-a2f4887782e2\",\"role\":\"ADMIN\",\"roleId\":\"79e2f540-fe2c-4190-a2ba-f336448b935b\",\"roleName\":\"Admin\"}"
     },
     {
       "module": "Auth",
@@ -54,7 +54,7 @@
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "notes": "3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a; admin=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a manager=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a employee=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a; HTTP 200"
+      "notes": "ada21295-29de-4ac4-8148-a2f4887782e2; admin=ada21295-29de-4ac4-8148-a2f4887782e2 manager=ada21295-29de-4ac4-8148-a2f4887782e2 employee=ada21295-29de-4ac4-8148-a2f4887782e2; HTTP 200"
     },
     {
       "module": "Security",
@@ -65,10 +65,10 @@
     },
     {
       "module": "Attendance",
-      "passed": 11,
+      "passed": 12,
       "failed": 0,
       "skipped": 0,
-      "notes": "HTTP 200; HTTP 404; HTTP 404"
+      "notes": "HTTP 200; 409 is acceptable if prior run already checked in today; HTTP 409"
     },
     {
       "module": "Leave",
@@ -93,7 +93,7 @@
     },
     {
       "module": "Settings",
-      "passed": 5,
+      "passed": 7,
       "failed": 0,
       "skipped": 0,
       "notes": "HTTP 200; HTTP 200; HTTP 200"
@@ -131,21 +131,21 @@
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "notes": "HTTP 200; {\"answer\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"message\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"sources\":[\"attendance_policy.md\",\"leave_policy.md\"],\"confidence\":0.71,\"actions\":[{\"type\":\"navigate\",\"label\":\"Open attendance\",\"path\":\"/dashboard/employee/attendance\"}],\"fallback\":true,\"intent\":\"attendance\",\"data\":{\"mode\":\"statistical\",\"actions\":[{\"type\":\"navi; HTTP 200"
+      "notes": "HTTP 200; {\"answer\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"message\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"sources\":[\"attendance_policy.md\"],\"confidence\":0.71,\"actions\":[{\"type\":\"navigate\",\"label\":\"Open attendance\",\"path\":\"/dashboard/employee/attendance\"}],\"fallback\":true,\"intent\":\"attendance\",\"data\":{\"mode\":\"statistical\",\"actions\":[{\"type\":\"navigate\",\"label\":\"Ope; HTTP 200"
     },
     {
       "module": "AI Direct",
       "passed": 5,
       "failed": 0,
       "skipped": 0,
-      "notes": "HTTP 200; HTTP 200; {\"message\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"answer\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"intent\":\"attendance\",\"data\":{\"mode\":\"statistical\",\"actions\":[{\"type\":\"navigate\",\"label\":\"Open attendance\",\"path\":\"/dashboard/employee/attendance\"}]},\"sources\":[\"attendance_policy.md\",\"leave_policy.md\"],\"confidence\":0.71,\"actions\":[{\"type\":\"navigate\",\"label\":\""
+      "notes": "HTTP 200; HTTP 200; {\"message\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"answer\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"intent\":\"attendance\",\"data\":{\"mode\":\"statistical\",\"actions\":[{\"type\":\"navigate\",\"label\":\"Open attendance\",\"path\":\"/dashboard/employee/attendance\"}]},\"sources\":[\"attendance_policy.md\"],\"confidence\":0.71,\"actions\":[{\"type\":\"navigate\",\"label\":\"Open attendance\",\""
     },
     {
       "module": "Power BI",
       "passed": 2,
       "failed": 0,
       "skipped": 0,
-      "notes": "{\"embedToken\":\"[REDACTED]\",\"embedTokenId\":\"21ad7d4b-d605-4f04-b239-91c29e22d9cc\",\"expiration\":\"2026-07-14T18:28:14Z\",\"reportId\":\"313f66f6-a40a-4f25-80f6-ca6f81fce76e\",\"workspaceId\":\"efece712-4e79-4943-80fc-e3cb2f0eb670\",\"datasetId\":null,\"embedUrl\":\"https://app.powerbi.com/reportEmbed?reportId=313f66f6-a40a-4f25-80f6-ca6f81fce76e&groupId=efece712-4e79-4943-80fc-e3cb2f0eb670&w=2&config=eyJjbHVzdGVyVXJsIjoiaHR0cHM6Ly9XQUJJLVNXRURFTi1DRU5UUkFMLVBSSU1BUlktcmVkaXJlY3QuYW5hbHlzaXMud2luZG93cy5uZXQiLCJlb; HTTP 307"
+      "notes": "{\"embedToken\":\"H4sIAAAAAAAEACWTx66DVgBE_-VtiUQ1JVIWNAO-hkszbUfvvRmi_HtelP1s5pyZv3_M-OrGOPv584cRb-aMZnX3bMxzPJl84CKaJgeYmQz4DIzi5Cm4MhNrVJF5TiaoufFAtyna7okgfCM3LLQkWKkTWu_aXomCUmv8uJ7hx26zwGtqbxDgXZfGnBAkjxDkcYWIPd_iDKoRtmTglFYaaJ6bh5hZrPIuTAxHkDZ7P77saXGSltB5ffTnI6YXYr6aqOFmGU13gxMJIUCu0eDKFi1eIXj3obk880017HGh1QnNYHI3Dz0XoSet0jpmGJn698xhb5A-VyVQ8kKh6PXpqmm4PtXeNdv-AvxMph9leb0-DKGXoyeBm60nSt5Ml6t6hJ3t3kLT9_f2bSHcCHkS1yuERBqGELxr2m1y690tSsDtMwmeSGgZk9YLsAd9PdaK9pWTFk_6dEu5pNbHuMOC3Z9mFgOPfjkMmhbE-; HTTP 307"
     },
     {
       "module": "Frontend",
@@ -195,7 +195,7 @@
       "module": "Public Registration",
       "test": "POST /billing/register returns 201",
       "status": "PASS",
-      "notes": "orgId=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a"
+      "notes": "orgId=ada21295-29de-4ac4-8148-a2f4887782e2"
     },
     {
       "module": "Public Registration",
@@ -207,13 +207,13 @@
       "module": "Public Registration",
       "test": "response includes tenant ADMIN owner",
       "status": "PASS",
-      "notes": "{\"id\":\"3afcab73-d0f5-4f41-9dc5-659d2dfa1eae\",\"email\":\"worknex_e2e_1784050071948.owner.1784050073352@example.com\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"employeeId\":\"OWNER-MRKXCN8W-A2C7B4\",\"organizationId\":\"3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a\",\"role\":\"ADMIN\",\"roleId\":\"60e7a58d-df7f-44a9-9b25-23597b3c1922\",\"roleName\":\"Admin\"}"
+      "notes": "{\"id\":\"a710c406-cd11-42ea-af49-c73577fd1a95\",\"email\":\"worknex_e2e_1784184495700.owner.1784184495908@example.com\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"employeeId\":\"OWNER-MRN5DS3V-F9FEF9\",\"organizationId\":\"ada21295-29de-4ac4-8148-a2f4887782e2\",\"role\":\"ADMIN\",\"roleId\":\"79e2f540-fe2c-4190-a2ba-f336448b935b\",\"roleName\":\"Admin\"}"
     },
     {
       "module": "Public Registration",
       "test": "public signup does not create SUPER_ADMIN",
       "status": "PASS",
-      "notes": "{\"id\":\"3afcab73-d0f5-4f41-9dc5-659d2dfa1eae\",\"email\":\"worknex_e2e_1784050071948.owner.1784050073352@example.com\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"employeeId\":\"OWNER-MRKXCN8W-A2C7B4\",\"organizationId\":\"3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a\",\"role\":\"ADMIN\",\"roleId\":\"60e7a58d-df7f-44a9-9b25-23597b3c1922\",\"roleName\":\"Admin\"}"
+      "notes": "{\"id\":\"a710c406-cd11-42ea-af49-c73577fd1a95\",\"email\":\"worknex_e2e_1784184495700.owner.1784184495908@example.com\",\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"employeeId\":\"OWNER-MRN5DS3V-F9FEF9\",\"organizationId\":\"ada21295-29de-4ac4-8148-a2f4887782e2\",\"role\":\"ADMIN\",\"roleId\":\"79e2f540-fe2c-4190-a2ba-f336448b935b\",\"roleName\":\"Admin\"}"
     },
     {
       "module": "Public Registration",
@@ -231,7 +231,7 @@
       "module": "Public Registration",
       "test": "new public org owner login role is ADMIN",
       "status": "PASS",
-      "notes": "{\"id\":\"3afcab73-d0f5-4f41-9dc5-659d2dfa1eae\",\"email\":\"worknex_e2e_1784050071948.owner.1784050073352@example.com\",\"role\":\"ADMIN\",\"roleId\":\"60e7a58d-df7f-44a9-9b25-23597b3c1922\",\"roleName\":\"Admin\",\"permissions\":[\"users:manage\",\"leave:manage_policy\",\"attendance:manage\",\"settings:manage\",\"notifications:broadcast\",\"performance:manage\"],\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"organizationId\":\"3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a\"}"
+      "notes": "{\"id\":\"a710c406-cd11-42ea-af49-c73577fd1a95\",\"email\":\"worknex_e2e_1784184495700.owner.1784184495908@example.com\",\"role\":\"ADMIN\",\"roleId\":\"79e2f540-fe2c-4190-a2ba-f336448b935b\",\"roleName\":\"Admin\",\"permissions\":[\"users:manage\",\"leave:manage_policy\",\"attendance:manage\",\"settings:manage\",\"notifications:broadcast\",\"performance:manage\"],\"firstName\":\"E2E\",\"lastName\":\"Owner\",\"organizationId\":\"ada21295-29de-4ac4-8148-a2f4887782e2\"}"
     },
     {
       "module": "Public Registration",
@@ -293,7 +293,7 @@
       "module": "Auth",
       "test": "admin login",
       "status": "PASS",
-      "notes": "worknex_e2e_1784050071948.owner.1784050073352@example.com",
+      "notes": "worknex_e2e_1784184495700.owner.1784184495908@example.com",
       "endpoint": "http://localhost:5000/api/v1/auth/login",
       "expected": "200",
       "actualStatus": 200
@@ -302,7 +302,7 @@
       "module": "Auth",
       "test": "admin re-login after logout succeeds",
       "status": "PASS",
-      "notes": "worknex_e2e_1784050071948.owner.1784050073352@example.com"
+      "notes": "worknex_e2e_1784184495700.owner.1784184495908@example.com"
     },
     {
       "module": "Auth",
@@ -348,7 +348,7 @@
       "module": "Auth",
       "test": "testManager login",
       "status": "PASS",
-      "notes": "worknex_e2e_1784050071948.manager@example.com",
+      "notes": "worknex_e2e_1784184495700.manager@example.com",
       "endpoint": "http://localhost:5000/api/v1/auth/login",
       "expected": "200",
       "actualStatus": 200
@@ -357,7 +357,7 @@
       "module": "Auth",
       "test": "testEmployee login",
       "status": "PASS",
-      "notes": "worknex_e2e_1784050071948.employee@example.com",
+      "notes": "worknex_e2e_1784184495700.employee@example.com",
       "endpoint": "http://localhost:5000/api/v1/auth/login",
       "expected": "200",
       "actualStatus": 200
@@ -367,7 +367,7 @@
       "test": "admin list includes created employee",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/users?search=worknex_e2e_1784050071948",
+      "endpoint": "http://localhost:5000/api/v1/users?search=worknex_e2e_1784184495700",
       "role": "admin",
       "expected": "200",
       "actualStatus": 200
@@ -376,14 +376,14 @@
       "module": "Users",
       "test": "created employee visible to admin",
       "status": "PASS",
-      "notes": "cad218e4-d0ed-4030-91d7-3d34afa76920"
+      "notes": "c96fd4ec-78a3-4f62-a6cc-27e81d1c635a"
     },
     {
       "module": "Users",
       "test": "admin updates test employee",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/users/cad218e4-d0ed-4030-91d7-3d34afa76920",
+      "endpoint": "http://localhost:5000/api/v1/users/c96fd4ec-78a3-4f62-a6cc-27e81d1c635a",
       "role": "admin",
       "expected": "200",
       "actualStatus": 200
@@ -419,7 +419,7 @@
       "test": "admin updates department",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/users/departments/1e396a41-6982-4451-a0da-880d15df503c",
+      "endpoint": "http://localhost:5000/api/v1/users/departments/bbe0daa9-1302-4a0f-a649-d838d274ce49",
       "role": "admin",
       "expected": "200",
       "actualStatus": 200
@@ -438,14 +438,14 @@
       "module": "Departments",
       "test": "created department visible",
       "status": "PASS",
-      "notes": "1e396a41-6982-4451-a0da-880d15df503c"
+      "notes": "bbe0daa9-1302-4a0f-a649-d838d274ce49"
     },
     {
       "module": "Departments",
       "test": "manager cannot update department",
       "status": "PASS",
       "notes": "HTTP 403",
-      "endpoint": "http://localhost:5000/api/v1/users/departments/1e396a41-6982-4451-a0da-880d15df503c",
+      "endpoint": "http://localhost:5000/api/v1/users/departments/bbe0daa9-1302-4a0f-a649-d838d274ce49",
       "role": "testManager",
       "expected": "403",
       "actualStatus": 403
@@ -455,7 +455,7 @@
       "test": "manager cannot delete department",
       "status": "PASS",
       "notes": "HTTP 403",
-      "endpoint": "http://localhost:5000/api/v1/users/departments/1e396a41-6982-4451-a0da-880d15df503c",
+      "endpoint": "http://localhost:5000/api/v1/users/departments/bbe0daa9-1302-4a0f-a649-d838d274ce49",
       "role": "testManager",
       "expected": "403",
       "actualStatus": 403
@@ -464,13 +464,13 @@
       "module": "Tenant",
       "test": "admin has organizationId",
       "status": "PASS",
-      "notes": "3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a"
+      "notes": "ada21295-29de-4ac4-8148-a2f4887782e2"
     },
     {
       "module": "Tenant",
       "test": "created users share admin organizationId",
       "status": "PASS",
-      "notes": "admin=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a manager=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a employee=3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a"
+      "notes": "admin=ada21295-29de-4ac4-8148-a2f4887782e2 manager=ada21295-29de-4ac4-8148-a2f4887782e2 employee=ada21295-29de-4ac4-8148-a2f4887782e2"
     },
     {
       "module": "Tenant",
@@ -545,33 +545,33 @@
     },
     {
       "module": "Attendance",
-      "test": "browser check-in endpoint removed",
+      "test": "employee check-in",
       "status": "PASS",
-      "notes": "HTTP 404",
+      "notes": "409 is acceptable if prior run already checked in today",
       "endpoint": "http://localhost:5000/api/v1/attendance/check-in",
       "role": "testEmployee",
-      "expected": "404",
-      "actualStatus": 404
+      "expected": "200/409",
+      "actualStatus": 200
     },
     {
       "module": "Attendance",
-      "test": "browser check-out endpoint removed",
+      "test": "duplicate check-in blocked",
       "status": "PASS",
-      "notes": "HTTP 404",
+      "notes": "HTTP 409",
+      "endpoint": "http://localhost:5000/api/v1/attendance/check-in",
+      "role": "testEmployee",
+      "expected": "409",
+      "actualStatus": 409
+    },
+    {
+      "module": "Attendance",
+      "test": "employee check-out",
+      "status": "PASS",
+      "notes": "checkout after created check-in",
       "endpoint": "http://localhost:5000/api/v1/attendance/check-out",
       "role": "testEmployee",
-      "expected": "404",
-      "actualStatus": 404
-    },
-    {
-      "module": "Attendance",
-      "test": "browser auto-ping endpoint removed",
-      "status": "PASS",
-      "notes": "HTTP 404",
-      "endpoint": "http://localhost:5000/api/v1/attendance/ping",
-      "role": "testEmployee",
-      "expected": "404",
-      "actualStatus": 404
+      "expected": "200/409/400",
+      "actualStatus": 200
     },
     {
       "module": "Attendance",
@@ -587,7 +587,7 @@
       "module": "Attendance",
       "test": "attendance history has records array",
       "status": "PASS",
-      "notes": "records=0"
+      "notes": "records=1"
     },
     {
       "module": "Attendance",
@@ -604,7 +604,7 @@
       "test": "manager cannot read non-subordinate attendance",
       "status": "PASS",
       "notes": "HTTP 403",
-      "endpoint": "http://localhost:5000/api/v1/attendance/user/3afcab73-d0f5-4f41-9dc5-659d2dfa1eae",
+      "endpoint": "http://localhost:5000/api/v1/attendance/user/a710c406-cd11-42ea-af49-c73577fd1a95",
       "role": "testManager",
       "expected": "403",
       "actualStatus": 403
@@ -670,7 +670,7 @@
       "test": "decision explanation fetch works",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/leave/1f4f71f4-2e4f-4fca-abef-daf94516b17f/decision-explanation",
+      "endpoint": "http://localhost:5000/api/v1/leave/70c626e4-50ad-44cc-9c90-a662a444fcec/decision-explanation",
       "role": "testEmployee",
       "expected": "200",
       "actualStatus": 200
@@ -690,7 +690,7 @@
       "test": "manager can evaluate subordinate leave",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/leave/1f4f71f4-2e4f-4fca-abef-daf94516b17f/evaluate",
+      "endpoint": "http://localhost:5000/api/v1/leave/70c626e4-50ad-44cc-9c90-a662a444fcec/evaluate",
       "role": "testManager",
       "expected": "200",
       "actualStatus": 200
@@ -700,7 +700,7 @@
       "test": "admin cannot bypass manager approval",
       "status": "PASS",
       "notes": "HTTP 409",
-      "endpoint": "http://localhost:5000/api/v1/leave/1f4f71f4-2e4f-4fca-abef-daf94516b17f/approve",
+      "endpoint": "http://localhost:5000/api/v1/leave/70c626e4-50ad-44cc-9c90-a662a444fcec/approve",
       "role": "admin",
       "expected": "409",
       "actualStatus": 409
@@ -710,7 +710,7 @@
       "test": "manager approves and forwards subordinate leave",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/leave/1f4f71f4-2e4f-4fca-abef-daf94516b17f/approve",
+      "endpoint": "http://localhost:5000/api/v1/leave/70c626e4-50ad-44cc-9c90-a662a444fcec/approve",
       "role": "testManager",
       "expected": "200",
       "actualStatus": 200
@@ -726,7 +726,7 @@
       "test": "admin grants final leave approval",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/leave/1f4f71f4-2e4f-4fca-abef-daf94516b17f/approve",
+      "endpoint": "http://localhost:5000/api/v1/leave/70c626e4-50ad-44cc-9c90-a662a444fcec/approve",
       "role": "admin",
       "expected": "200",
       "actualStatus": 200
@@ -772,7 +772,7 @@
       "test": "admin gets user balances",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/leave/balances/cad218e4-d0ed-4030-91d7-3d34afa76920",
+      "endpoint": "http://localhost:5000/api/v1/leave/balances/c96fd4ec-78a3-4f62-a6cc-27e81d1c635a",
       "role": "admin",
       "expected": "200",
       "actualStatus": 200
@@ -802,7 +802,7 @@
       "test": "extract policy document",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/77239438-d3de-40e0-b388-a9efcaebf7c6/extract",
+      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/855e3151-2375-4fde-9888-bd5b0d8c8426/extract",
       "role": "admin",
       "expected": "200",
       "actualStatus": 200
@@ -812,7 +812,7 @@
       "test": "AI parse policy document",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/77239438-d3de-40e0-b388-a9efcaebf7c6/ai-parse",
+      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/855e3151-2375-4fde-9888-bd5b0d8c8426/ai-parse",
       "role": "admin",
       "expected": "200",
       "actualStatus": 200
@@ -822,7 +822,7 @@
       "test": "approve parsed policy rules",
       "status": "PASS",
       "notes": "400 is acceptable when deterministic parse produced no approvable rule IDs",
-      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/77239438-d3de-40e0-b388-a9efcaebf7c6/approve-rules",
+      "endpoint": "http://localhost:5000/api/v1/leave/policy-documents/855e3151-2375-4fde-9888-bd5b0d8c8426/approve-rules",
       "role": "admin",
       "expected": "200/400",
       "actualStatus": 200
@@ -950,6 +950,36 @@
     {
       "module": "Settings",
       "test": "admin verifies settings persistence",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/settings/organization",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Settings",
+      "test": "admin enables GPS attendance policy",
+      "status": "PASS",
+      "notes": "HTTP 200",
+      "endpoint": "http://localhost:5000/api/v1/settings/organization",
+      "role": "admin",
+      "expected": "200",
+      "actualStatus": 200
+    },
+    {
+      "module": "Attendance",
+      "test": "GPS check-in requires coordinates when policy enabled",
+      "status": "PASS",
+      "notes": "HTTP 400",
+      "endpoint": "http://localhost:5000/api/v1/attendance/check-in",
+      "role": "testEmployee",
+      "expected": "400",
+      "actualStatus": 400
+    },
+    {
+      "module": "Settings",
+      "test": "admin restores attendance policy after GPS test",
       "status": "PASS",
       "notes": "HTTP 200",
       "endpoint": "http://localhost:5000/api/v1/settings/organization",
@@ -1122,7 +1152,7 @@
       "test": "employee marks one notification read",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/notifications/4d99b99d-35ef-4888-bfe0-7d15ac2de334/read",
+      "endpoint": "http://localhost:5000/api/v1/notifications/d0e34f78-5cd9-4fb9-8cbd-d8e4d8d1f7bc/read",
       "role": "testEmployee",
       "expected": "200",
       "actualStatus": 200
@@ -1178,7 +1208,7 @@
       "test": "admin gets employee performance",
       "status": "PASS",
       "notes": "HTTP 200",
-      "endpoint": "http://localhost:5000/api/v1/performance/user/cad218e4-d0ed-4030-91d7-3d34afa76920",
+      "endpoint": "http://localhost:5000/api/v1/performance/user/c96fd4ec-78a3-4f62-a6cc-27e81d1c635a",
       "role": "admin",
       "expected": "200",
       "actualStatus": 200
@@ -1197,7 +1227,7 @@
       "module": "AI Backend",
       "test": "chat answer has grounded fields",
       "status": "PASS",
-      "notes": "{\"answer\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"message\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"sources\":[\"attendance_policy.md\",\"leave_policy.md\"],\"confidence\":0.71,\"actions\":[{\"type\":\"navigate\",\"label\":\"Open attendance\",\"path\":\"/dashboard/employee/attendance\"}],\"fallback\":true,\"intent\":\"attendance\",\"data\":{\"mode\":\"statistical\",\"actions\":[{\"type\":\"navi"
+      "notes": "{\"answer\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"message\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"sources\":[\"attendance_policy.md\"],\"confidence\":0.71,\"actions\":[{\"type\":\"navigate\",\"label\":\"Open attendance\",\"path\":\"/dashboard/employee/attendance\"}],\"fallback\":true,\"intent\":\"attendance\",\"data\":{\"mode\":\"statistical\",\"actions\":[{\"type\":\"navigate\",\"label\":\"Ope"
     },
     {
       "module": "AI Backend",
@@ -1213,7 +1243,7 @@
       "module": "AI Backend",
       "test": "prediction has score/risk/reasons",
       "status": "PASS",
-      "notes": "{\"employeeId\":\"cad218e4-d0ed-4030-91d7-3d34afa76920\",\"predictedScore\":77.8,\"riskLevel\":\"LOW\",\"confidence\":0.82,\"reasons\":[\"Prediction is primarily driven by stable attendance and performance history.\",\"Projected score falls in the low risk band.\"],\"featuresUsed\":{\"attendanceRate\":100,\"lateCount\":0,\"absenceCount\":0,\"leaveCount\":1,\"averageWorkingHours\":8,\"previousPerformanceScore\":75,\"departmentAverage\":75,\"overtimeHours\":0,\"halfDayCount\":0},\"modelVersion\":\"performance-rf-v2\",\"fallback\":false,\"adv"
+      "notes": "{\"employeeId\":\"c96fd4ec-78a3-4f62-a6cc-27e81d1c635a\",\"predictedScore\":77.58,\"riskLevel\":\"LOW\",\"confidence\":0.82,\"reasons\":[\"Prediction is primarily driven by stable attendance and performance history.\",\"Projected score falls in the low risk band.\"],\"featuresUsed\":{\"attendanceRate\":100,\"lateCount\":0,\"absenceCount\":0,\"leaveCount\":1,\"averageWorkingHours\":8,\"previousPerformanceScore\":75,\"departmentAverage\":75,\"overtimeHours\":0,\"halfDayCount\":1},\"modelVersion\":\"performance-rf-v2\",\"fallback\":false,\"ad"
     },
     {
       "module": "AI Direct",
@@ -1238,7 +1268,7 @@
       "module": "AI Direct",
       "test": "direct chat has answer",
       "status": "PASS",
-      "notes": "{\"message\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"answer\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"intent\":\"attendance\",\"data\":{\"mode\":\"statistical\",\"actions\":[{\"type\":\"navigate\",\"label\":\"Open attendance\",\"path\":\"/dashboard/employee/attendance\"}]},\"sources\":[\"attendance_policy.md\",\"leave_policy.md\"],\"confidence\":0.71,\"actions\":[{\"type\":\"navigate\",\"label\":\""
+      "notes": "{\"message\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"answer\":\"Your attendance history is on the **Attendance** page — check-in times, working hours, and monthly records.\",\"intent\":\"attendance\",\"data\":{\"mode\":\"statistical\",\"actions\":[{\"type\":\"navigate\",\"label\":\"Open attendance\",\"path\":\"/dashboard/employee/attendance\"}]},\"sources\":[\"attendance_policy.md\"],\"confidence\":0.71,\"actions\":[{\"type\":\"navigate\",\"label\":\"Open attendance\",\""
     },
     {
       "module": "AI Direct",
@@ -1254,13 +1284,13 @@
       "module": "AI Direct",
       "test": "direct prediction has expected fields",
       "status": "PASS",
-      "notes": "{\"employeeId\":\"cad218e4-d0ed-4030-91d7-3d34afa76920\",\"predictedScore\":80.25,\"riskLevel\":\"LOW\",\"confidence\":0.82,\"reasons\":[\"Prediction is primarily driven by stable attendance and performance history.\",\"Projected score falls in the low risk band.\"],\"featuresUsed\":{\"attendanceRate\":95,\"lateCount\":1,\"absenceCount\":0,\"leaveCount\":1,\"averageWorkingHours\":8,\"previousPerformanceScore\":82,\"departmentAverage\":78,\"overtimeHours\":2,\"halfDayCount\":0},\"modelVersion\":\"performance-rf-v2\",\"fallback\":false,\"adv"
+      "notes": "{\"employeeId\":\"c96fd4ec-78a3-4f62-a6cc-27e81d1c635a\",\"predictedScore\":80.25,\"riskLevel\":\"LOW\",\"confidence\":0.82,\"reasons\":[\"Prediction is primarily driven by stable attendance and performance history.\",\"Projected score falls in the low risk band.\"],\"featuresUsed\":{\"attendanceRate\":95,\"lateCount\":1,\"absenceCount\":0,\"leaveCount\":1,\"averageWorkingHours\":8,\"previousPerformanceScore\":82,\"departmentAverage\":78,\"overtimeHours\":2,\"halfDayCount\":0},\"modelVersion\":\"performance-rf-v2\",\"fallback\":false,\"adv"
     },
     {
       "module": "Power BI",
       "test": "token endpoint returns embed config when configured",
       "status": "PASS",
-      "notes": "{\"embedToken\":\"[REDACTED]\",\"embedTokenId\":\"21ad7d4b-d605-4f04-b239-91c29e22d9cc\",\"expiration\":\"2026-07-14T18:28:14Z\",\"reportId\":\"313f66f6-a40a-4f25-80f6-ca6f81fce76e\",\"workspaceId\":\"efece712-4e79-4943-80fc-e3cb2f0eb670\",\"datasetId\":null,\"embedUrl\":\"https://app.powerbi.com/reportEmbed?reportId=313f66f6-a40a-4f25-80f6-ca6f81fce76e&groupId=efece712-4e79-4943-80fc-e3cb2f0eb670&w=2&config=eyJjbHVzdGVyVXJsIjoiaHR0cHM6Ly9XQUJJLVNXRURFTi1DRU5UUkFMLVBSSU1BUlktcmVkaXJlY3QuYW5hbHlzaXMud2luZG93cy5uZXQiLCJlb",
+      "notes": "{\"embedToken\":\"H4sIAAAAAAAEACWTx66DVgBE_-VtiUQ1JVIWNAO-hkszbUfvvRmi_HtelP1s5pyZv3_M-OrGOPv584cRb-aMZnX3bMxzPJl84CKaJgeYmQz4DIzi5Cm4MhNrVJF5TiaoufFAtyna7okgfCM3LLQkWKkTWu_aXomCUmv8uJ7hx26zwGtqbxDgXZfGnBAkjxDkcYWIPd_iDKoRtmTglFYaaJ6bh5hZrPIuTAxHkDZ7P77saXGSltB5ffTnI6YXYr6aqOFmGU13gxMJIUCu0eDKFi1eIXj3obk880017HGh1QnNYHI3Dz0XoSet0jpmGJn698xhb5A-VyVQ8kKh6PXpqmm4PtXeNdv-AvxMph9leb0-DKGXoyeBm60nSt5Ml6t6hJ3t3kLT9_f2bSHcCHkS1yuERBqGELxr2m1y690tSsDtMwmeSGgZk9YLsAd9PdaK9pWTFk_6dEu5pNbHuMOC3Z9mFgOPfjkMmhbE-",
       "endpoint": "http://localhost:5000/api/v1/analytics/powerbi/embed-token",
       "role": "admin",
       "expected": "200 with token/embed config",
@@ -1421,10 +1451,10 @@
     },
     {
       "module": "Cleanup",
-      "test": "cancel test leave 1f4f71f4-2e4f-4fca-abef-daf94516b17f",
+      "test": "cancel test leave 70c626e4-50ad-44cc-9c90-a662a444fcec",
       "status": "PASS",
       "notes": "cleanup cancel attempted",
-      "endpoint": "http://localhost:5000/api/v1/leave/1f4f71f4-2e4f-4fca-abef-daf94516b17f/cancel",
+      "endpoint": "http://localhost:5000/api/v1/leave/70c626e4-50ad-44cc-9c90-a662a444fcec/cancel",
       "role": "testEmployee",
       "expected": "200/400/403",
       "actualStatus": 200
@@ -1457,7 +1487,7 @@
       "module": "Cleanup",
       "test": "delete billing signup test organization",
       "status": "PASS",
-      "notes": "3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a"
+      "notes": "ada21295-29de-4ac4-8148-a2f4887782e2"
     }
   ],
   "cleanup": [
@@ -1489,7 +1519,7 @@
       "module": "Cleanup",
       "test": "delete billing signup test organization",
       "status": "PASS",
-      "notes": "3c1921da-e3e3-41e0-b9e2-bfffd44e2f8a"
+      "notes": "ada21295-29de-4ac4-8148-a2f4887782e2"
     }
   ]
 }

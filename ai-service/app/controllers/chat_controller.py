@@ -75,9 +75,16 @@ async def chat(req: ChatRequest, principal: AuthenticatedPrincipal = Depends(req
 
 @router.get("/status", tags=["Chat"])
 async def chat_status():
-    from app.services.langchain_agent import is_langchain_ready
     from app.core.config import settings
-    lc_ready = is_langchain_mode() and is_langchain_ready()
+    lc_ready = False
+    if is_langchain_mode():
+        try:
+            from app.services.langchain_agent import is_langchain_ready
+            lc_ready = is_langchain_ready()
+        except (ImportError, ModuleNotFoundError):
+            # LangChain is an optional provider. Status must remain available
+            # when the statistical demo runtime intentionally omits it.
+            lc_ready = False
     provider = (
         "groq"      if settings.GROK_API_KEY       else
         "openai"    if settings.OPENAI_API_KEY      else

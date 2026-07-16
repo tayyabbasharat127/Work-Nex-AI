@@ -61,6 +61,16 @@ function deterministicRisk(perf) {
   );
 }
 
+function historicalTrendRisk(records) {
+  if (!Array.isArray(records) || records.length < 3) return 0;
+  const latest = records[0];
+  const baseline = records[records.length - 1];
+  const decline = Math.max(0, (baseline.overallScore ?? 75) - (latest.overallScore ?? 75));
+  const declineRisk = Math.max(0, Math.min(70, (decline - 7) * 5));
+  const punctualityRisk = Math.max(0, Math.min(70, (latest.lateDays ?? 0) * 5));
+  return parseFloat(Math.max(declineRisk, punctualityRisk).toFixed(2));
+}
+
 class AttritionETL {
   constructor() {
     this.logger = new ETLLogger('ATTRITION_ETL');
@@ -102,9 +112,28 @@ class AttritionETL {
   async _processUser(user, month, year) {
     const orgId = user.organizationId;
 
-    const perf = await prisma.performanceRecord.findUnique({
-      where: { userId_month_year: { userId: user.id, month, year } },
+    const history = await prisma.performanceRecord.findMany({
+      where: {
+        userId: user.id,
+        organizationId: orgId,
+        OR: [
+          { year: { lt: year } },
+          { year, month: { lte: month } },
+        ],
+      },
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
+      take: 6,
     });
+    const perf = history.find((record) => record.year === year && record.month === month);
+    const existingRisk = await prisma.attritionRecord.findUnique({
+      where: { userId_month_year: { userId: user.id, month, year } },
+      select: { riskScore: true, factors: true, source: true },
+    });
+    const now = new Date();
+    const currentMonthIsPartial = year === now.getFullYear() && month === now.getMonth() + 1;
+    const trendHistory = currentMonthIsPartial
+      ? history.filter((record) => record.year !== year || record.month !== month)
+      : history;
 
     let riskScore, willLeaveProb, factors, modelVersion, source;
 
@@ -113,7 +142,13 @@ class AttritionETL {
       try {
         const resp = await axios.post(
           `${AI_SERVICE_URL}/predict/attrition`,
-          { employeeId: user.employeeId, performanceRecord: perf },
+          {
+            employeeId: user.employeeId,
+            performanceRecord: {
+              ...perf,
+              prevScore: history[history.length - 1]?.overallScore ?? perf.overallScore,
+            },
+          },
           { headers: aiServiceHeaders(orgId), timeout: AI_TIMEOUT_MS },
         );
         const d = resp.data;
@@ -122,11 +157,25 @@ class AttritionETL {
         factors      = d.factors ?? [];
         modelVersion = d.modelVersion ?? 'unknown';
         source       = 'ML';
+
+        // Point-in-time inference can understate a sustained decline. The
+        // real six-period trend provides an evidence floor for the model.
+        const trendRisk = historicalTrendRisk(trendHistory);
+        if (trendRisk > riskScore) {
+          riskScore = trendRisk;
+          willLeaveProb = Math.max(willLeaveProb, parseFloat((riskScore / 100 * 0.7).toFixed(4)));
+          factors = [...new Set([...factors, 'SUSTAINED_PERFORMANCE_DECLINE'])];
+          modelVersion = `${modelVersion}+history-v1`;
+          source = 'ML+HISTORY';
+        }
       } catch {
         // AI service down — deterministic fallback
-        riskScore     = deterministicRisk(perf);
+        riskScore     = Math.max(deterministicRisk(perf), historicalTrendRisk(trendHistory));
         willLeaveProb = parseFloat((riskScore / 100 * 0.7).toFixed(4));
         factors       = this._deterministicFactors(perf);
+        if (historicalTrendRisk(trendHistory) > deterministicRisk(perf)) {
+          factors.push('SUSTAINED_PERFORMANCE_DECLINE');
+        }
         modelVersion  = 'deterministic-v1';
         source        = 'DETERMINISTIC';
       }
@@ -137,6 +186,22 @@ class AttritionETL {
       factors       = [];
       modelVersion  = 'no-data';
       source        = 'DETERMINISTIC';
+    }
+
+    // A deterministic demo baseline is part of the seeded historical evidence,
+    // not a forecast response. Fresh inference may increase that risk, but a
+    // routine demo ETL refresh must not erase the curated risk cohorts.
+    if (existingRisk?.source?.includes('DEMO')) {
+      const baselineScore = existingRisk.riskScore <= 1
+        ? existingRisk.riskScore * 100
+        : existingRisk.riskScore;
+      if (baselineScore > riskScore) {
+        riskScore = parseFloat(baselineScore.toFixed(2));
+        willLeaveProb = Math.max(willLeaveProb, parseFloat((riskScore / 100 * 0.7).toFixed(4)));
+        factors = [...new Set([...(existingRisk.factors || []), ...factors])];
+        modelVersion = `${modelVersion}+demo-baseline-v1`;
+        source = 'ML+DEMO_BASELINE';
+      }
     }
 
     const label = riskLabel(riskScore);

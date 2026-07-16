@@ -26,11 +26,29 @@ function loadEnvironment() {
 }
 loadEnvironment();
 
+function resolvePythonCommand() {
+  if (process.env.PYTHON_COMMAND) return process.env.PYTHON_COMMAND;
+  const virtualEnvPython = process.platform === 'win32'
+    ? path.join(AI, '.venv', 'Scripts', 'python.exe')
+    : path.join(AI, '.venv', 'bin', 'python');
+  return fs.existsSync(virtualEnvPython) ? virtualEnvPython : 'python';
+}
+const PYTHON_COMMAND = resolvePythonCommand();
+
+function readServiceEnvironment(filePath) {
+  if (!fs.existsSync(filePath)) return {};
+  const dotenvPath = path.join(BACKEND, 'node_modules', 'dotenv');
+  // eslint-disable-next-line global-require, import/no-dynamic-require
+  const dotenv = require(dotenvPath);
+  return dotenv.parse(fs.readFileSync(filePath));
+}
+const AI_ENVIRONMENT = readServiceEnvironment(path.join(AI, '.env'));
+
 const services = {
-  backend: { label: 'Backend', cwd: BACKEND, command: process.execPath, args: ['src/app.js'], url: process.env.DEMO_BACKEND_HEALTH_URL || 'http://localhost:5000/health/ready', port: 5000 },
-  ai: { label: 'AI service', cwd: AI, command: process.env.PYTHON_COMMAND || 'python', args: ['run.py'], url: process.env.DEMO_AI_HEALTH_URL || 'http://localhost:8000/health/live', port: 8000 },
-  multiAgent: { label: 'Multi-agent service', cwd: MULTI_AGENT, command: process.execPath, args: ['server.js'], url: process.env.DEMO_MULTI_AGENT_HEALTH_URL || 'http://localhost:8010/health', port: 8010 },
-  frontend: { label: 'Frontend', cwd: FRONTEND, command: process.execPath, args: [path.join(FRONTEND, 'node_modules', 'next', 'dist', 'bin', 'next'), 'dev'], url: process.env.DEMO_FRONTEND_HEALTH_URL || 'http://localhost:3000', port: 3000 },
+  backend: { label: 'Backend', cwd: BACKEND, command: process.execPath, args: ['src/app.js'], env: { PORT: '5000' }, url: process.env.DEMO_BACKEND_HEALTH_URL || 'http://localhost:5000/health', port: 5000 },
+  ai: { label: 'AI service', cwd: AI, command: PYTHON_COMMAND, args: ['run.py'], env: { ...AI_ENVIRONMENT, PORT: '8000' }, url: process.env.DEMO_AI_HEALTH_URL || 'http://localhost:8000/health/live', port: 8000 },
+  multiAgent: { label: 'Multi-agent service', cwd: MULTI_AGENT, command: process.execPath, args: ['server.js'], env: { PORT: '8010' }, url: process.env.DEMO_MULTI_AGENT_HEALTH_URL || 'http://localhost:8010/health', port: 8010 },
+  frontend: { label: 'Frontend', cwd: FRONTEND, command: process.execPath, args: [path.join(FRONTEND, 'node_modules', 'next', 'dist', 'bin', 'next'), 'dev'], env: { PORT: '3000' }, url: process.env.DEMO_FRONTEND_HEALTH_URL || 'http://localhost:3000', port: 3000, healthTimeoutMs: 30000 },
 };
 
 function ensureRuntimeDirectory() { fs.mkdirSync(LOG_DIR, { recursive: true }); }
@@ -86,7 +104,7 @@ function verifyDependencies() {
   ];
   const missing = required.filter(([target]) => !fs.existsSync(target)).map(([, label]) => label);
   if (missing.length) throw new Error(`Required dependencies are missing: ${missing.join(', ')}.`);
-  const python = run(process.env.PYTHON_COMMAND || 'python', ['-c', 'import fastapi, uvicorn'], { cwd: AI, timeout: 15000 });
+  const python = run(PYTHON_COMMAND, ['-c', 'import fastapi, uvicorn'], { cwd: AI, timeout: 15000 });
   if (!python.ok) throw new Error('AI Python dependencies are unavailable. Run: python -m pip install -r ai-service/requirements.txt');
 }
 function assertRuntimeEnvironment() {
@@ -171,7 +189,7 @@ function startManagedProcess(key, definition) {
   const descriptor = fs.openSync(logPath, 'a');
   fs.writeSync(descriptor, `\n[${new Date().toISOString()}] Starting ${definition.label}\n`);
   const child = spawn(definition.command, definition.args, {
-    cwd: definition.cwd, env: { ...process.env }, detached: true, windowsHide: true, stdio: ['ignore', descriptor, descriptor],
+    cwd: definition.cwd, env: { ...process.env, ...(definition.env || {}) }, detached: true, windowsHide: true, stdio: ['ignore', descriptor, descriptor],
   });
   child.once('error', (error) => {
     fs.appendFileSync(logPath, `[${new Date().toISOString()}] Process launch failed: ${error.message}\n`);
@@ -185,7 +203,7 @@ async function waitForService(key, definition, pid) {
   while (Date.now() < deadline) {
     if (pid && !isProcessAlive(pid)) return { ok: false, detail: `${definition.label} exited; inspect .demo-runtime/logs/${key}.log` };
     // eslint-disable-next-line no-await-in-loop
-    last = await requestHealth(definition.url, 2500);
+    last = await requestHealth(definition.url, definition.healthTimeoutMs || 2500);
     if (last.ok) return last;
     // eslint-disable-next-line no-await-in-loop
     await new Promise((resolve) => setTimeout(resolve, 750));
@@ -205,7 +223,7 @@ async function collectServiceHealth() {
   const checks = {};
   for (const [key, definition] of Object.entries(services)) {
     // eslint-disable-next-line no-await-in-loop
-    checks[key] = await requestHealth(definition.url);
+    checks[key] = await requestHealth(definition.url, definition.healthTimeoutMs || 5000);
   }
   return checks;
 }
@@ -239,7 +257,7 @@ async function startDemo() {
     const readinessChecks = [];
     for (const [key, definition] of Object.entries(services)) {
       // eslint-disable-next-line no-await-in-loop
-      const current = await requestHealth(definition.url, 2000);
+      const current = await requestHealth(definition.url, definition.healthTimeoutMs || 2000);
       if (current.ok) {
         const old = previous.services?.[key];
         const managed = old?.ownership === 'managed' && isProcessAlive(old.pid);

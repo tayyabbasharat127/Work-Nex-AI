@@ -28,7 +28,7 @@ export function verifyBackendJwt(authorization) {
 
 export function authenticate(req, res, next) {
   try { req.principal = verifyBackendJwt(req.headers.authorization); next(); }
-  catch (error) { res.status(error.statusCode || 401).json({ success: false, message: error.message }); }
+  catch (error) { return res.status(error.statusCode || 401).json({ success: false, message: error.message }); }
 }
 
 export function createOwnedThreadId(principal) {

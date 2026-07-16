@@ -16,6 +16,14 @@ await initializeMemory();
 const app = express();
 const PORT = Number(process.env.PORT || 8010);
 
+function sendServiceError(res, error, publicMessage) {
+  const status = [401, 403].includes(error?.statusCode) ? error.statusCode : 500;
+  return res.status(status).json({
+    success: false,
+    message: status === 500 ? publicMessage : error.message,
+  });
+}
+
 app.use(express.json({ limit: "1mb" }));
 app.use(cors({
   origin(origin, callback) {
@@ -137,11 +145,7 @@ app.post("/api/chat", async (req, res) => {
     });
   } catch (error) {
     console.error("Multi-agent chat error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Multi-agent service failed to process the request",
-      error: error.message,
-    });
+    return sendServiceError(res, error, "Multi-agent service failed to process the request");
   }
 });
 
@@ -189,11 +193,7 @@ app.get("/api/threads/:threadId", async (req, res) => {
       memory: getMemoryStatus(),
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to read thread history",
-      error: error.message,
-    });
+    return sendServiceError(res, error, "Failed to read thread history");
   }
 });
 

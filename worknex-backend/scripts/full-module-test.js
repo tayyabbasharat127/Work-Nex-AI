@@ -308,7 +308,7 @@ async function cleanupStaleTestData() {
       // Skip departments from the current run
       if (deptName.startsWith('worknex_e2e_') && !deptName.startsWith(TEST_PREFIX)) {
         const res = await request('DELETE', `${API}/users/departments/${dept.id}`, { role: 'admin' });
-        const ok = res.status === 200 || (res.status === 409 && /active users/i.test(res.text || JSON.stringify(res.data)));
+        const ok = res.status === 200 || (res.status === 409 && /assigned users|users assigned|user\(s\).*assigned|active users/i.test(res.text || JSON.stringify(res.data)));
         add('Preflight Cleanup', `delete stale department ${deptName}`, ok ? 'PASS' : 'FAIL', `HTTP ${res.status} ${snippet(res.data || res.text)}`);
       }
     }
@@ -785,10 +785,12 @@ async function aiBackendTests() {
 async function aiDirectTests() {
   await checkJson('AI Direct', 'AI health', 'GET', `${AI_URL}/health`, 200);
   const chat = await checkJson('AI Direct', 'direct /chat', 'POST', `${AI_URL}/chat`, 200, {
-    body: { userId: state.created.employeeId || 'e2e', userContext: { role: 'EMPLOYEE' }, message: 'What is the attendance policy?' },
+    role: 'testEmployee',
+    body: { message: 'What is the attendance policy?' },
   });
   add('AI Direct', 'direct chat has answer', chat.status === 200 && (chat.data?.answer || chat.data?.message) ? 'PASS' : 'FAIL', snippet(chat.data));
   const pred = await checkJson('AI Direct', 'direct /predict/performance', 'POST', `${AI_URL}/predict/performance`, 200, {
+    role: 'testEmployee',
     body: {
       employeeId: state.created.employeeId || 'e2e',
       features: {
@@ -810,11 +812,11 @@ async function aiDirectTests() {
 // ─── Phase 18: Power BI ───────────────────────────────────────────────────────
 
 async function powerBiTests() {
-  const res = await request('GET', `${API}/analytics/powerbi/token`, { role: 'admin' });
+  const res = await request('GET', `${API}/analytics/powerbi/embed-token`, { role: 'admin' });
   if (res.status === 200) {
     const payload = dataOf(res);
     add('Power BI', 'token endpoint returns embed config when configured', payload?.accessToken || payload?.embedUrl ? 'PASS' : 'FAIL', snippet(payload), {
-      endpoint: `${API}/analytics/powerbi/token`,
+      endpoint: `${API}/analytics/powerbi/embed-token`,
       role: 'admin',
       expected: '200 with token/embed config',
       actualStatus: res.status,
@@ -823,7 +825,7 @@ async function powerBiTests() {
     add('Power BI', 'missing credentials reported honestly', 'PASS', snippet(res.data));
   } else {
     add('Power BI', 'token endpoint behavior', 'FAIL', snippet(res.data || res.text), {
-      endpoint: `${API}/analytics/powerbi/token`,
+      endpoint: `${API}/analytics/powerbi/embed-token`,
       role: 'admin',
       expected: '200 configured or 503 honest setup message',
       actualStatus: res.status,
@@ -882,7 +884,7 @@ async function cleanup() {
   if (state.created.departmentId && state.tokens.admin) {
     const res = await request('DELETE', `${API}/users/departments/${state.created.departmentId}`, { role: 'admin' });
     if (res.status === 200) addCleanup('delete test department', 'PASS', 'deleted');
-    else if (res.status === 409 && /active users/i.test(res.text || JSON.stringify(res.data))) addCleanup('delete test department', 'PASS', 'correctly blocked by active users');
+    else if (res.status === 409 && /assigned users|users assigned|user\(s\).*assigned|active users/i.test(res.text || JSON.stringify(res.data))) addCleanup('delete test department', 'PASS', 'correctly blocked by assigned users');
     else addCleanup('delete test department', 'FAIL', `HTTP ${res.status} ${snippet(res.data || res.text)}`);
   }
   if (state.created.policyDocumentId) {
@@ -899,8 +901,8 @@ async function cleanupRegisteredOrganization() {
   const cleanupName = 'delete billing signup test organization';
   let PrismaClient;
   try {
-    require('../worknex-backend/node_modules/dotenv').config({ path: path.join(process.cwd(), 'worknex-backend/.env') });
-    ({ PrismaClient } = require('../worknex-backend/node_modules/@prisma/client'));
+    require('dotenv').config({ path: path.join(__dirname, '../.env') });
+    ({ PrismaClient } = require('@prisma/client'));
   } catch (err) {
     addCleanup(cleanupName, 'FAIL', `Prisma cleanup unavailable: ${err.message}`);
     return;

@@ -6,7 +6,7 @@ import { organizationSettingsAPI } from '@/lib/api';
 import { toast } from 'sonner';
 
 export default function LeaveAutomationSettings() {
-  const [settings, setSettings] = useState({ leaveAutomationEnabled: true, sandwichLeaveEnabled: false });
+  const [settings, setSettings] = useState({ leaveAutomationEnabled: true, sandwichLeaveEnabled: false, aiLeaveAdvisorEnabled: false });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -18,6 +18,7 @@ export default function LeaveAutomationSettings() {
           setSettings({
             leaveAutomationEnabled: Boolean(data?.leaveAutomationEnabled),
             sandwichLeaveEnabled: Boolean(data?.sandwichLeaveEnabled),
+            aiLeaveAdvisorEnabled: Boolean(data?.aiLeaveAdvisorEnabled),
           });
         }
       })
@@ -35,6 +36,7 @@ export default function LeaveAutomationSettings() {
       setSettings({
         leaveAutomationEnabled: Boolean(saved?.leaveAutomationEnabled),
         sandwichLeaveEnabled: Boolean(saved?.sandwichLeaveEnabled),
+        aiLeaveAdvisorEnabled: Boolean(saved?.aiLeaveAdvisorEnabled),
       });
       toast.success('Leave rules saved');
     } catch (error) {
@@ -75,6 +77,16 @@ export default function LeaveAutomationSettings() {
             </span>
             <span className={`relative h-6 w-11 shrink-0 rounded-full transition ${settings.sandwichLeaveEnabled ? 'bg-primary' : 'bg-muted'}`}>
               <span className={`absolute top-1 h-4 w-4 rounded-full bg-elevated transition ${settings.sandwichLeaveEnabled ? 'left-6' : 'left-1'}`} />
+            </span>
+          </button>
+
+          <button type="button" onClick={() => toggle('aiLeaveAdvisorEnabled')} className="flex w-full items-center justify-between gap-4 rounded-xl border border-border bg-background/40 px-3.5 py-3 text-left hover:border-primary/50">
+            <span>
+              <span className="block text-sm font-medium">AI leave advisor</span>
+              <span className="block text-xs text-muted-foreground">Show an AI-generated approve/reject suggestion on new requests.</span>
+            </span>
+            <span className={`relative h-6 w-11 shrink-0 rounded-full transition ${settings.aiLeaveAdvisorEnabled ? 'bg-primary' : 'bg-muted'}`}>
+              <span className={`absolute top-1 h-4 w-4 rounded-full bg-elevated transition ${settings.aiLeaveAdvisorEnabled ? 'left-6' : 'left-1'}`} />
             </span>
           </button>
 

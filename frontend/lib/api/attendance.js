@@ -43,6 +43,12 @@ export const attendanceAPI = {
     return response.data || response;
   },
 
+  getPunchesForUser: async (userId, date) => {
+    const queryString = date ? `?date=${encodeURIComponent(date)}` : '';
+    const response = await apiFetch(`/attendance/user/${userId}/punches${queryString}`);
+    return response.data || response;
+  },
+
   getSummary: async (params) => {
     const queryString = new URLSearchParams(params).toString();
     const response = await apiFetch(`/attendance/summary${queryString ? `?${queryString}` : ''}`);

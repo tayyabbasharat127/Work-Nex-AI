@@ -71,6 +71,11 @@ const getUserAttendance = async (req, res) => {
   apiResponse(res, 200, 'User attendance fetched', result.records, result.meta);
 };
 
+const getUserPunches = async (req, res) => {
+  const punches = await attendanceService.getUserPunches(req.params.userId, req.query.date, req.user);
+  apiResponse(res, 200, 'Punches fetched', punches);
+};
+
 const getAttendanceSummary = async (req, res) => {
   const summary = await attendanceService.getAttendanceSummary(req.query, req.user);
   apiResponse(res, 200, 'Summary fetched', summary);
@@ -130,7 +135,7 @@ const generateAbsences = async (req, res) => {
 module.exports = {
   tmsWebhook, universityPunch,
   checkIn, checkOut, autoPing, getTodayAttendance, getMyAttendance,
-  getAllAttendance, getUserAttendance, getAttendanceSummary, getWeeklyHoursShortfall,
+  getAllAttendance, getUserAttendance, getUserPunches, getAttendanceSummary, getWeeklyHoursShortfall,
   manualEntry, updateAttendance, syncFromTMS,
   getHolidays, createHoliday, updateHoliday, deleteHoliday, generateAbsences,
 };

@@ -14,7 +14,7 @@ import { userAPI, attendanceAPI, leaveAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Mail, Phone, Briefcase, IdCard, ClipboardList, UsersRound, ShieldCheck, Calendar,
-  UserCheck, UserX, AlertTriangle, TrendingUp, CheckCircle2, XCircle, Clock3, UserX2,
+  UserCheck, UserX, AlertTriangle, TrendingUp, CheckCircle2, XCircle, Clock3, UserX2, LogIn, LogOut,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
@@ -89,6 +89,9 @@ export default function EmployeeDetailPage() {
   const [leaveSummary, setLeaveSummary] = useState([]);
   const [leaveBalances, setLeaveBalances] = useState([]);
   const [recentLeaves, setRecentLeaves] = useState([]);
+  const [punchDate, setPunchDate] = useState(() => localDateInputValue(new Date()));
+  const [punches, setPunches] = useState([]);
+  const [punchesLoading, setPunchesLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -127,6 +130,16 @@ export default function EmployeeDetailPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    let active = true;
+    setPunchesLoading(true);
+    attendanceAPI.getPunchesForUser(id, punchDate)
+      .then((result) => { if (active) setPunches(Array.isArray(result) ? result : []); })
+      .catch(() => { if (active) setPunches([]); })
+      .finally(() => { if (active) setPunchesLoading(false); });
+    return () => { active = false; };
+  }, [id, punchDate]);
 
   // Attendance stats (last 30 days)
   const presentCount = attendanceRecords.filter((r) => ['PRESENT', 'LATE'].includes(r.status)).length;
@@ -302,6 +315,39 @@ export default function EmployeeDetailPage() {
                   </>
                 ) : <EmptyChart loading={loading} label="No status data for this period" />}
               </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-xl p-6 mt-6">
+              <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+                <h4 className="text-sm font-semibold text-muted-foreground">Punch Log</h4>
+                <input
+                  type="date"
+                  value={punchDate}
+                  onChange={(e) => setPunchDate(e.target.value)}
+                  className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+                />
+              </div>
+              {punchesLoading ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>
+              ) : punches.length === 0 ? (
+                <EmptyChart loading={false} label="No punches recorded for this day" />
+              ) : (
+                <div className="space-y-2">
+                  {punches.map((punch) => (
+                    <div key={punch.id} className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5 text-sm">
+                      {punch.type === 'IN' ? (
+                        <LogIn size={16} className="text-success" />
+                      ) : (
+                        <LogOut size={16} className="text-warning" />
+                      )}
+                      <span className="font-medium">{punch.type === 'IN' ? 'Check-in' : 'Check-out'}</span>
+                      <span className="ml-auto text-muted-foreground">
+                        {new Date(punch.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

@@ -146,12 +146,19 @@ export async function apiFetch(endpoint, options = {}) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || data.error || 'Something went wrong');
+      const apiError = new Error(data.message || data.error || 'Something went wrong');
+      apiError.status = response.status;
+      throw apiError;
     }
 
     return data;
   } catch (error) {
-    console.error('API Error:', error);
+    // Only log unexpected failures (network/parsing errors). Handled API error
+    // responses (4xx/5xx with a status) are already surfaced by callers via
+    // toasts or silent retries and shouldn't spam the console / dev overlay.
+    if (!error.status) {
+      console.error('API Error:', error);
+    }
     throw error;
   }
 }

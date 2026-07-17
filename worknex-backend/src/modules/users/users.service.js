@@ -7,7 +7,6 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { sendEmail } = require('../../config/email');
 const logger = require('../../config/logger');
-const authService = require('../auth/auth.service');
 const { getSystemRoleId } = require('../../utils/systemRoles');
 const { getActivePolicyVersion } = require('../leave/leave.automation');
 
@@ -220,13 +219,18 @@ const createUser = async (data, requestingUser) => {
     });
   }
 
-  // Send onboarding messages without transmitting a password.
+  // Send onboarding email. When a temp password was auto-generated, include it
+  // directly so the user can log in; they can change it via /auth/change-password.
   try {
     await sendEmail(data.email, 'Welcome to WorkNex AI — Your Account is Ready', `
       <h2>Welcome to WorkNex AI!</h2>
-      <p>Your account has been created. A separate secure link will let you set your password.</p>
+      <p>Your account has been created.</p>
+      ${tempPassword ? `
+        <p>Your login credentials:</p>
+        <p>Email: ${data.email}<br/>Temporary password: <strong>${tempPassword}</strong></p>
+        <p>Please log in and change your password from your account settings.</p>
+      ` : '<p>You can log in with the password your administrator set for you.</p>'}
     `);
-    if (tempPassword) await authService.forgotPassword(data.email);
   } catch (error) {
     logger.error('User onboarding email failed', { error: error.message, userId: user.id, organizationId });
   }

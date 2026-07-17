@@ -96,6 +96,7 @@ router.post('/generate-absences', requirePermission('attendance:manage'), body('
 router.get('/summary',  authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), auditHrAccess('AttendanceSummary'), attendanceController.getAttendanceSummary);
 router.get('/hours-shortfall', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), auditHrAccess('AttendanceHoursShortfall'), attendanceController.getWeeklyHoursShortfall);
 router.get('/user/:userId', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), auditHrAccess('Attendance'), attendanceController.getUserAttendance);
+router.get('/user/:userId/punches', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), query('date').optional().isISO8601(), validate, auditHrAccess('Attendance'), attendanceController.getUserPunches);
 router.get('/',         authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), auditHrAccess('Attendance'), attendanceController.getAllAttendance);
 
 // ── Manual entry & update (parameterized last) ────────────────────────────────

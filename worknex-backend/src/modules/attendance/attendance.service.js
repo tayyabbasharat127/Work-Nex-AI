@@ -7,6 +7,7 @@ const processor = require('./attendance.processor');
 const { tenantRepository } = require('../../utils/tenantPrisma');
 const webProvider = require('./providers/web.provider');
 const tmsProvider = require('./providers/tms.provider');
+const universityAttendanceService = require('./university-attendance.service');
 
 const {
   toAttendanceDate,
@@ -128,6 +129,19 @@ const getAllAttendance = async (query, requestingUser) => {
   ]);
 
   return { records, meta: paginateMeta(total, page, limit) };
+};
+
+// Raw in/out punch log for one day — same access rule as getUserAttendance,
+// but returns every individual punch (e.g. lunch-break in/out pairs) instead
+// of the single aggregated Attendance row.
+const getUserPunches = async (userId, dateStr, requestingUser) => {
+  await assertCanAccessUser(requestingUser, userId);
+  const organizationId = requestingUser.role === 'SUPER_ADMIN'
+    ? (await prisma.user.findUnique({ where: { id: userId }, select: { organizationId: true } }))?.organizationId
+    : requestingUser.organizationId;
+  if (!organizationId) throw new ApiError(404, 'User not found');
+  const date = toAttendanceDate(dateStr || new Date());
+  return universityAttendanceService.getPunchesForDay(userId, organizationId, date);
 };
 
 const getUserAttendance = async (userId, query, requestingUser) => {
@@ -370,6 +384,7 @@ module.exports = {
   getMyAttendance,
   getAllAttendance,
   getUserAttendance,
+  getUserPunches,
   getAttendanceSummary,
   getWeeklyHoursShortfall,
   manualEntry,

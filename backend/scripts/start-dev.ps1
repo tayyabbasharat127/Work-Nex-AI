@@ -31,7 +31,7 @@ function Start-ServiceCommand {
   }
 }
 
-$backendDir = Join-Path $Root "worknex-backend"
+$backendDir = Join-Path $Root "backend"
 $frontendDir = Join-Path $Root "frontend"
 $aiDir = Join-Path $Root "ai-service"
 

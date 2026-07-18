@@ -8,7 +8,7 @@ services:
       POSTGRES_DB: worknex_prod
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./worknex-backend/scripts/postgres/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh:ro
+      - ./backend/scripts/postgres/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh:ro
     ports:
       - "5432:5432"
     healthcheck:
@@ -19,7 +19,7 @@ services:
 
   backend:
     build:
-      context: ./worknex-backend
+      context: ./backend
       dockerfile: Dockerfile
     container_name: worknex-backend
     depends_on:

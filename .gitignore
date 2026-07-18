@@ -30,7 +30,7 @@ build/
 frontend/dev/
 frontend/playwright-results/
 frontend/playwright-report/
-worknex-backend/reports/
+backend/reports/
 
 # Log files
 *.log
@@ -40,8 +40,8 @@ logs/
 reports/*.log
 
 # Runtime/customer data
-worknex-backend/storage/
-worknex-backend/uploads/
+backend/storage/
+backend/uploads/
 ai-service/vector_store/chroma/
 ai-service/vector_store/knowledge_index.json
 

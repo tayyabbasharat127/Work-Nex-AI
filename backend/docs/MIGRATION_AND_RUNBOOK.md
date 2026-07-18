@@ -24,7 +24,7 @@ Every new or empty database must have migrations applied before the backend will
 ### For local / dev (new or existing empty database)
 
 ```powershell
-cd worknex-backend
+cd backend
 npm.cmd run db:setup
 npm.cmd run db:seed
 npm.cmd run dev
@@ -35,7 +35,7 @@ npm.cmd run dev
 ### For production
 
 ```powershell
-cd worknex-backend
+cd backend
 npm.cmd run db:deploy
 npm.cmd start
 ```
@@ -45,7 +45,7 @@ npm.cmd start
 ### For a fully disposable local database (destructive reset)
 
 ```powershell
-cd worknex-backend
+cd backend
 npm.cmd run db:reset
 ```
 
@@ -54,7 +54,7 @@ npm.cmd run db:reset
 ### Preflight check (verify a database is ready without starting the app)
 
 ```powershell
-cd worknex-backend
+cd backend
 node scripts/db-preflight.js
 ```
 
@@ -68,7 +68,7 @@ If required tables are missing, the script exits with a non-zero code and prints
 
 ```
 [db-preflight] FAIL — Database is not migrated.
-[db-preflight] Run: cd worknex-backend && npm run db:setup
+[db-preflight] Run: cd backend && npm run db:setup
 ```
 
 ### Root shortcuts

@@ -11,15 +11,15 @@ services:
 
   backend:
     build:
-      context: ./worknex-backend
+      context: ./backend
       dockerfile: Dockerfile
       target: development
     command: sh -c "npx prisma migrate deploy && node src/app.js"
     environment:
       NODE_ENV: development
     volumes:
-      - ./worknex-backend/src:/app/src
-      - ./worknex-backend/prisma:/app/prisma
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
 
   ai-service:
     build:

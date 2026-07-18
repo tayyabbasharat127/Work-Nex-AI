@@ -141,7 +141,7 @@ RELATED(User[email]) = USERPRINCIPALNAME()
 
 ## Environment Variables Required (Azure AD)
 
-Add to `worknex-backend/.env`:
+Add to `backend/.env`:
 ```
 POWERBI_CLIENT_ID=<Azure App Registration Client ID>
 POWERBI_CLIENT_SECRET=<Client Secret>

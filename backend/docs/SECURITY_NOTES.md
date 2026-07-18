@@ -4,7 +4,7 @@
 
 Priority 6 adds backend ownership checks for manager-accessible routes. Frontend button hiding is not treated as a security boundary.
 
-Rules enforced by `worknex-backend/src/utils/rbac.js` and the tenant scope helpers:
+Rules enforced by `backend/src/utils/rbac.js` and the tenant scope helpers:
 
 - `SUPER_ADMIN` is the platform-level exception and can access platform-wide data only on routes that explicitly allow `SUPER_ADMIN`.
 - `ADMIN` can access organization-wide data only where `organizationId === req.user.organizationId`.

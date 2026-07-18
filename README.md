@@ -213,7 +213,7 @@
 ```
 Work-Nex-AI/
 ├── 🖥️  frontend/                 # Next.js 16 App Router
-├── ⚙️  worknex-backend/          # Express + Prisma API
+├── ⚙️  backend/                  # Express + Prisma API
 │   ├── src/modules/             # Feature modules
 │   ├── prisma/                  # Schema & migrations
 │   ├── scripts/                 # Seed, test, health check
@@ -245,7 +245,7 @@ cp .env.example .env
 
 ### 2. Backend
 ```bash
-cd worknex-backend
+cd backend
 npm install
 npx prisma migrate deploy
 npx prisma db seed

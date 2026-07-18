@@ -1,5 +1,5 @@
 {
-  "name": "worknex-backend",
+  "name": "backend",
   "version": "1.0.0",
   "description": "WorkNex AI - Workforce Management Backend",
   "main": "src/app.js",

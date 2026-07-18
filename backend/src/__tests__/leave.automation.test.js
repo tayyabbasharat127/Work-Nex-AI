@@ -1,6 +1,6 @@
 /**
  * Leave Automation Engine — unit tests
- * Run: cd worknex-backend && npm test
+ * Run: cd backend && npm test
  */
 
 'use strict';

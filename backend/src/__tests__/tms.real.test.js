@@ -1,6 +1,6 @@
 /**
  * TMS normalisation — unit tests (no network calls)
- * Run: cd worknex-backend && npm test
+ * Run: cd backend && npm test
  */
 
 'use strict';

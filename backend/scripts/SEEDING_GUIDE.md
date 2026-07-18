@@ -19,7 +19,7 @@ The seeding script creates:
 
 ### Step 1: Navigate to Backend Directory
 ```bash
-cd worknex-backend
+cd backend
 ```
 
 ### Step 2: Run the Seed Script

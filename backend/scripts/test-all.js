@@ -560,7 +560,7 @@ async function printSummary() {
 
   if (results.find(r => r.name === 'Backend health' && r.status === 'FAIL')) {
     console.log('\n  \x1b[31mBackend not running. Start it first:\x1b[0m');
-    console.log('    cd worknex-backend && npm run dev\n');
+    console.log('    cd backend && npm run dev\n');
     process.exit(1);
   }
 

@@ -115,27 +115,27 @@ $npmOk = Test-CommandAvailable "npm.cmd"
 if (-not $npmOk) { $npmOk = Test-CommandAvailable "npm" }
 $pythonOk = Test-CommandAvailable "python"
 
-Test-EnvFile "Environment" "backend env file" @("worknex-backend/.env")
+Test-EnvFile "Environment" "backend env file" @("backend/.env")
 Test-EnvFile "Environment" "frontend env file" @("frontend/.env.local", "frontend/.env")
 Test-EnvFile "Environment" "ai env file" @("ai-service/.env") -Optional
 
-$backendEnv = Join-Path $Root "worknex-backend/.env"
+$backendEnv = Join-Path $Root "backend/.env"
 if (Test-Path $backendEnv) {
   $databaseLine = Select-String -Path $backendEnv -Pattern "^\s*DATABASE_URL\s*=" -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($databaseLine) {
-    Add-Result "Environment" "DATABASE_URL configured" "PASS" "Found in worknex-backend/.env"
+    Add-Result "Environment" "DATABASE_URL configured" "PASS" "Found in backend/.env"
   } else {
-    Add-Result "Environment" "DATABASE_URL configured" "WARN" "DATABASE_URL not found in worknex-backend/.env"
+    Add-Result "Environment" "DATABASE_URL configured" "WARN" "DATABASE_URL not found in backend/.env"
   }
 } else {
   Add-Result "Environment" "DATABASE_URL configured" "WARN" "Cannot inspect missing backend .env"
 }
 
-$backendDir = Join-Path $Root "worknex-backend"
+$backendDir = Join-Path $Root "backend"
 if (Test-Path (Join-Path $backendDir "node_modules")) {
   Add-Result "Backend" "node_modules" "PASS" "Dependencies folder exists"
 } else {
-  Add-Result "Backend" "node_modules" "WARN" "Run: cd worknex-backend; npm install"
+  Add-Result "Backend" "node_modules" "WARN" "Run: cd backend; npm install"
 }
 
 if ($nodeOk -and $npmOk) {

@@ -57,7 +57,7 @@ async function main() {
     console.error('');
     console.error('[db-preflight] FAIL — Database is not migrated.');
     console.error('[db-preflight] Missing tables: ' + missing.join(', '));
-    console.error('[db-preflight] Run: cd worknex-backend && npm run db:setup');
+    console.error('[db-preflight] Run: cd backend && npm run db:setup');
     process.exit(1);
   }
 

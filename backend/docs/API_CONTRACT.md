@@ -2,7 +2,7 @@
 
 Generated during Priority 3 discovery. Active frontend scan excludes `frontend/_archive_src_duplicate/**`.
 
-Base backend mount: `/api/v1` from `worknex-backend/src/app.js`.
+Base backend mount: `/api/v1` from `backend/src/app.js`.
 
 Backend response wrapper: `{ success: boolean, message: string, data?: any, meta?: any }`.
 

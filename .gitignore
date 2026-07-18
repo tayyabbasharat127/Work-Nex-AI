@@ -55,4 +55,5 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+.claude/
 backend/node_modules/

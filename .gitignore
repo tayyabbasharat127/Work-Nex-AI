@@ -27,6 +27,10 @@ yarn-error.log*
 dist/
 build/
 .next/
+frontend/dev/
+frontend/playwright-results/
+frontend/playwright-report/
+worknex-backend/reports/
 
 # Log files
 *.log

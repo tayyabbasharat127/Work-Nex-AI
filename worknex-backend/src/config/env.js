@@ -79,10 +79,18 @@ const jwtSecret = read('JWT_SECRET');
 const jwtRefreshSecret = read('JWT_REFRESH_SECRET');
 const frontendUrl = url('FRONTEND_URL', { requiredValue: isProduction });
 const aiServiceUrl = url('AI_SERVICE_URL', { requiredValue: isProduction });
+const emailProvider = read('EMAIL_PROVIDER', 'smtp').toLowerCase();
+if (!['smtp', 'brevo', 'gmail_api'].includes(emailProvider)) {
+  throw new Error('EMAIL_PROVIDER must be one of: smtp, brevo, gmail_api');
+}
 const smtpHost = read('SMTP_HOST');
 const smtpPort = integer('SMTP_PORT', undefined, { min: 1, max: 65535 });
 const smtpUser = read('SMTP_USER');
 const smtpPass = read('SMTP_PASS');
+const brevoApiKey = read('BREVO_API_KEY');
+const gmailOAuthClientId = read('GMAIL_OAUTH_CLIENT_ID');
+const gmailOAuthClientSecret = read('GMAIL_OAUTH_CLIENT_SECRET');
+const gmailOAuthRefreshToken = read('GMAIL_OAUTH_REFRESH_TOKEN');
 const emailFrom = read('EMAIL_FROM');
 const cookieSameSite = read('COOKIE_SAME_SITE', 'lax').toLowerCase();
 if (!['strict', 'lax', 'none'].includes(cookieSameSite)) {
@@ -94,10 +102,18 @@ if (isProduction) {
   required('JWT_SECRET');
   required('JWT_REFRESH_SECRET');
   required('ENCRYPTION_KEY');
-  required('SMTP_HOST');
-  required('SMTP_PORT');
-  required('SMTP_USER');
-  required('SMTP_PASS');
+  if (emailProvider === 'brevo') {
+    required('BREVO_API_KEY');
+  } else if (emailProvider === 'gmail_api') {
+    required('GMAIL_OAUTH_CLIENT_ID');
+    required('GMAIL_OAUTH_CLIENT_SECRET');
+    required('GMAIL_OAUTH_REFRESH_TOKEN');
+  } else {
+    required('SMTP_HOST');
+    required('SMTP_PORT');
+    required('SMTP_USER');
+    required('SMTP_PASS');
+  }
   required('EMAIL_FROM');
   if (jwtSecret.length < 32) throw new Error('JWT_SECRET must be at least 32 characters in production');
   if (jwtRefreshSecret.length < 32) throw new Error('JWT_REFRESH_SECRET must be at least 32 characters in production');
@@ -172,11 +188,16 @@ const config = Object.freeze({
   metricsEnabled: boolean('METRICS_ENABLED', isProduction),
   shutdownTimeoutMs: integer('SHUTDOWN_TIMEOUT_MS', 30_000, { min: 1000, max: 120_000 }),
   email: Object.freeze({
+    provider: emailProvider,
     host: smtpHost,
     port: smtpPort,
     secure: boolean('SMTP_SECURE', smtpPort === 465),
     user: smtpUser,
     password: smtpPass,
+    brevoApiKey,
+    gmailOAuthClientId,
+    gmailOAuthClientSecret,
+    gmailOAuthRefreshToken,
     from: emailFrom,
   }),
   twoFactorAppName: read('TWO_FA_APP_NAME', 'WorkNex AI'),

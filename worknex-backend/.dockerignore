@@ -4,7 +4,7 @@ npm-debug.log
 .env.*
 !.env.example
 logs/*
-storage/*
+/storage/*
 prisma/seed*.js
 .git
 *.md

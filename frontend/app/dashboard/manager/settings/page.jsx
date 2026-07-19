@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Sidebar from '@/components/Sidebar';
 import TwoFactorSettings from '@/components/TwoFactorSettings';
-import { Save, Lock, User, Mail, Phone, Briefcase, Calendar } from 'lucide-react';
+import { Save, Lock, User, Mail, Phone, Briefcase, Calendar, Check } from 'lucide-react';
 import { userAPI, authAPI } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -61,6 +61,13 @@ export default function ManagerSettings() {
     }
   };
 
+  const passwordChecks = useMemo(() => [
+    { label: 'At least 12 characters', valid: passwordData.newPassword.length >= 12 },
+    { label: 'Uppercase and lowercase letters', valid: /[A-Z]/.test(passwordData.newPassword) && /[a-z]/.test(passwordData.newPassword) },
+    { label: 'At least one number', valid: /\d/.test(passwordData.newPassword) },
+    { label: 'At least one symbol', valid: /[^A-Za-z0-9]/.test(passwordData.newPassword) },
+  ], [passwordData.newPassword]);
+
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     
@@ -69,11 +76,11 @@ export default function ManagerSettings() {
       return;
     }
     
-    if (passwordData.newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters');
+    if (!passwordChecks.every((check) => check.valid)) {
+      toast.error('Password does not meet the security requirements');
       return;
     }
-    
+
     try {
       setLoading(true);
       await authAPI.changePassword(passwordData.oldPassword, passwordData.newPassword);
@@ -290,6 +297,15 @@ export default function ManagerSettings() {
                     className="w-full px-4 py-3 rounded-xl border border-border bg-input text-foreground focus:outline-none focus:border-primary"
                     placeholder="Enter new password"
                   />
+                  {passwordData.newPassword && (
+                    <div className="mt-2 grid gap-1.5 rounded-xl border border-border bg-muted/20 p-3 sm:grid-cols-2">
+                      {passwordChecks.map((check) => (
+                        <p key={check.label} className={`flex items-center gap-2 text-xs ${check.valid ? 'text-success' : 'text-muted-foreground'}`}>
+                          <Check size={14} />{check.label}
+                        </p>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Confirm New Password</label>

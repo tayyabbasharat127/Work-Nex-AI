@@ -25,7 +25,6 @@ let inMemoryAccessToken = typeof window !== 'undefined'
 export const getAuthToken = () => {
   return inMemoryAccessToken;
 };
-
 // A same-origin, non-httpOnly marker cookie — NOT the real access token,
 // just a presence flag so middleware.js (which runs server-side and can't
 // see localStorage, nor the backend's cross-origin httpOnly refresh cookie)
@@ -42,7 +41,6 @@ const clearSessionMarker = () => {
   if (typeof document === 'undefined') return;
   document.cookie = `${SESSION_MARKER}=; path=/; max-age=0; SameSite=Lax`;
 };
-
 // Existing sessions (from before this marker existed, or a fresh page load
 // with a still-valid localStorage token) need the marker set retroactively —
 // otherwise middleware.js would bounce an already-logged-in user to /login.
@@ -87,7 +85,6 @@ export const clearTokens = () => {
     clearSessionMarker();
   }
 };
-
 // Base fetch wrapper with auth-header injection, silent 401 refresh+retry,
 // and consistent JSON parsing/error throwing — every API module calls this.
 export async function apiFetch(endpoint, options = {}) {
@@ -146,8 +143,15 @@ export async function apiFetch(endpoint, options = {}) {
     const data = await response.json();
 
     if (!response.ok) {
-      const apiError = new Error(data.message || data.error || 'Something went wrong');
+      // Field-level validation messages (e.g. "Password must be at least 12
+      // characters...") live in data.errors — data.message is just the
+      // generic "Validation failed" wrapper. Prefer the specific message(s).
+      const detail = Array.isArray(data.errors) && data.errors.length > 0
+        ? data.errors.join(' ')
+        : (data.message || data.error);
+      const apiError = new Error(detail || 'Something went wrong');
       apiError.status = response.status;
+      apiError.errors = data.errors;
       throw apiError;
     }
 

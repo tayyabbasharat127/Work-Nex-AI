@@ -15,7 +15,7 @@ router.put('/me', [
   body('firstName').optional().trim().isLength({ min: 1, max: 100 }),
   body('lastName').optional().trim().isLength({ min: 1, max: 100 }),
   body('phone').optional({ nullable: true }).isString().isLength({ max: 50 }),
-  body('profilePicture').optional({ nullable: true }).isURL({ protocols: ['http', 'https'], require_protocol: true }),
+  body('profilePicture').optional({ nullable: true, checkFalsy: true }).isURL({ protocols: ['http', 'https'], require_protocol: true }),
 ], validate, usersController.updateMe);
 router.get('/departments/all',    usersController.getDepartments);
 router.post('/departments', requirePermission('users:manage'), [

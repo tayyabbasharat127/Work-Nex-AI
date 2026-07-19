@@ -41,6 +41,10 @@ const canAccessUser = async (requestingUser, targetUserId) => {
   }
 
   if (requestingUser.role === 'MANAGER') {
+    if (requestingUser.id === targetUserId) {
+      return true;
+    }
+
     const targetUser = await prisma.user.findUnique({
       where: { id: targetUserId },
       select: {

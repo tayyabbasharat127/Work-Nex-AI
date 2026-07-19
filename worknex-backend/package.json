@@ -30,6 +30,7 @@
     "worker:absences": "node src/workers/scheduled.worker.js generate-absences",
     "worker:etl-nightly": "node src/workers/scheduled.worker.js etl-nightly",
     "worker:etl-monthly": "node src/workers/scheduled.worker.js etl-monthly",
+    "worker:powerbi-sync": "node src/workers/scheduled.worker.js powerbi-sync",
     "worker:alerts": "node src/workers/scheduled.worker.js scan-alerts",
     "worker:auth-cleanup": "node src/workers/scheduled.worker.js cleanup-auth-tokens",
     "leave:backfill-defaults": "node scripts/backfill-default-leave-policies.js",

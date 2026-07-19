@@ -39,10 +39,8 @@ router.get('/performance/team', authorize('ADMIN', 'MANAGER', 'SUPER_ADMIN'), ye
 router.get('/powerbi/token', authorize('SUPER_ADMIN'), analyticsController.getPowerBIToken);
 // Power BI — per-user embed token with RLS identity
 router.get('/powerbi/embed-token', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), analyticsController.getPowerBIEmbedToken);
-// Power BI — refresh the shared push dataset with every org's current data.
-// Platform-wide (Push API can't selectively replace one org's rows), so
-// SUPER_ADMIN only.
-router.post('/powerbi/push-data', authorize('SUPER_ADMIN'), analyticsController.pushDataToPowerBI);
+// Power BI — push WorkNex data rows into the push dataset
+router.post('/powerbi/push-data', authorize('SUPER_ADMIN', 'ADMIN'), analyticsController.pushDataToPowerBI);
 
 // ETL
 router.post('/etl/run', authorize('SUPER_ADMIN', 'ADMIN'), body('year').isInt({ min: 2000, max: 2200 }), body('month').isInt({ min: 1, max: 12 }), validate, analyticsController.runETL);

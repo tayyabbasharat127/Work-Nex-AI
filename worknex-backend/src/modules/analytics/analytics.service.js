@@ -368,18 +368,11 @@ const getPowerBIEmbedToken = async (requestingUser) => {
   };
 };
 
-const SHARED_DATASET_NAME = 'WorkNex_Platform';
-
 /**
- * Build the WorkNex Push Dataset schema definition. One shared dataset holds
- * every organization's rows (each row tagged with OrganizationId) so the
- * single embedded report + RLS identity (see getPowerBIEmbedToken) can filter
- * per-viewer via CUSTOMDATA(). Per-org datasets were tried previously but the
- * embedded report can only ever point at one dataset, so per-org datasets
- * were invisible to it — see incident where new orgs saw stale/demo data.
+ * Build the WorkNex Push Dataset schema definition.
  */
-const _buildDatasetSchema = () => ({
-  name: SHARED_DATASET_NAME,
+const _buildDatasetSchema = (orgId) => ({
+  name: `WorkNex_${orgId || 'default'}`,
   defaultMode: 'Push',
   tables: [
     {
@@ -441,84 +434,71 @@ const _buildDatasetSchema = () => ({
 });
 
 /**
- * Resolve the single shared push dataset — reuses POWERBI_DATASET_ID when
- * configured (required so it matches the dataset the embedded report + RLS
- * identities in getPowerBIEmbedToken are bound to); otherwise finds/creates
- * the shared dataset by name. When newly created, the caller must configure
- * RLS roles on it in Power BI Service and set POWERBI_DATASET_ID — a fresh
- * push dataset has no RLS roles until that's done by hand.
+ * Create or reuse a Push Dataset in Power BI workspace for the organization.
  */
-const _ensurePushDataset = async (accessToken, workspaceId) => {
-  if (config.powerBi.datasetId) return config.powerBi.datasetId;
-
+const _ensurePushDataset = async (accessToken, workspaceId, orgId) => {
   const listRes = await axios.get(
     `${POWERBI_BASE}/groups/${workspaceId}/datasets`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
-  const existing = listRes.data.value?.find((d) => d.name === SHARED_DATASET_NAME);
+  const datasetName = `WorkNex_${orgId || 'default'}`;
+  const existing = listRes.data.value?.find((d) => d.name === datasetName);
   if (existing) return existing.id;
 
   const createRes = await axios.post(
     `${POWERBI_BASE}/groups/${workspaceId}/datasets`,
-    _buildDatasetSchema(),
+    _buildDatasetSchema(orgId),
     { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
   );
   return createRes.data.id;
 };
 
-const TABLE_NAMES = ['Attendance', 'LeaveRequests', 'Performance', 'Employees'];
-
 /**
- * Refresh the shared Power BI dataset with every organization's current
- * data. The Push API can only delete ALL rows in a table (no per-org
- * filter), so a full replace — not an incremental per-org push — is the
- * only way to keep the shared dataset accurate without duplicate rows
- * piling up across syncs. RLS at view time (CUSTOMDATA() = OrganizationId)
- * is what actually isolates each org's viewers.
+ * Push WorkNex organization data rows into the Power BI dataset tables.
  */
-const pushAllOrganizationsToPowerBI = async () => {
+const pushDataToPowerBI = async (requestingUser) => {
   const accessToken = await _getPowerBIAccessToken();
   const workspaceId = config.powerBi.workspaceId;
   if (!workspaceId) throw new ApiError(503, 'POWERBI_WORKSPACE_ID must be set.');
 
-  const datasetId = await _ensurePushDataset(accessToken, workspaceId);
+  const orgId = requestingUser.organizationId;
+  const datasetId = await _ensurePushDataset(accessToken, workspaceId, orgId);
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(now.getDate() - 30);
 
+  // Fetch data to push — last 30 days for attendance + leaves + perf records
   const [attendance, leaves, performance, employees] = await Promise.all([
     prisma.attendance.findMany({
-      where: { date: { gte: thirtyDaysAgo } },
+      where: { organizationId: orgId, date: { gte: thirtyDaysAgo } },
       include: { user: { select: { department: { select: { name: true } } } } },
-      take: 20000,
+      take: 2000,
     }),
     prisma.leaveRequest.findMany({
-      where: { startDate: { gte: thirtyDaysAgo } },
+      where: { organizationId: orgId, startDate: { gte: thirtyDaysAgo } },
       include: { employee: { select: { department: { select: { name: true } } } } },
-      take: 10000,
+      take: 1000,
     }),
     prisma.performanceRecord.findMany({
+      where: { organizationId: orgId },
       include: { user: { select: { department: { select: { name: true } } } } },
-      take: 20000,
+      take: 2000,
       orderBy: [{ year: 'desc' }, { month: 'desc' }],
     }),
     prisma.user.findMany({
+      where: { organizationId: orgId },
       select: {
         id: true, firstName: true, lastName: true, email: true,
-        isActive: true, createdAt: true, organizationId: true,
+        isActive: true, createdAt: true,
         customRole: { select: { name: true } },
         department: { select: { name: true } },
       },
-      take: 10000,
+      take: 1000,
     }),
   ]);
 
-  const replaceTable = async (tableName, rows) => {
-    await axios.delete(
-      `${POWERBI_BASE}/groups/${workspaceId}/datasets/${datasetId}/tables/${tableName}/rows`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
+  const pushTable = async (tableName, rows) => {
     if (!rows.length) return { table: tableName, pushed: 0 };
     await axios.post(
       `${POWERBI_BASE}/groups/${workspaceId}/datasets/${datasetId}/tables/${tableName}/rows`,
@@ -529,8 +509,8 @@ const pushAllOrganizationsToPowerBI = async () => {
   };
 
   const results = await Promise.all([
-    replaceTable('Attendance', attendance.map((a) => ({
-      OrganizationId: a.organizationId,
+    pushTable('Attendance', attendance.map((a) => ({
+      OrganizationId: orgId,
       UserId: a.userId,
       Date: a.date?.toISOString(),
       Status: a.status,
@@ -539,8 +519,8 @@ const pushAllOrganizationsToPowerBI = async () => {
       CheckIn: a.checkIn?.toISOString() || null,
       CheckOut: a.checkOut?.toISOString() || null,
     }))),
-    replaceTable('LeaveRequests', leaves.map((l) => ({
-      OrganizationId: l.organizationId,
+    pushTable('LeaveRequests', leaves.map((l) => ({
+      OrganizationId: orgId,
       EmployeeId: l.employeeId,
       LeaveType: l.leaveType,
       Status: l.status,
@@ -549,8 +529,8 @@ const pushAllOrganizationsToPowerBI = async () => {
       TotalDays: l.totalDays ? Number(l.totalDays) : 0,
       Department: l.employee?.department?.name || 'Unassigned',
     }))),
-    replaceTable('Performance', performance.map((p) => ({
-      OrganizationId: p.organizationId,
+    pushTable('Performance', performance.map((p) => ({
+      OrganizationId: orgId,
       UserId: p.userId,
       Month: p.month,
       Year: p.year,
@@ -562,8 +542,8 @@ const pushAllOrganizationsToPowerBI = async () => {
       AbsentDays: p.absentDays || 0,
       Department: p.user?.department?.name || 'Unassigned',
     }))),
-    replaceTable('Employees', employees.map((u) => ({
-      OrganizationId: u.organizationId,
+    pushTable('Employees', employees.map((u) => ({
+      OrganizationId: orgId,
       UserId: u.id,
       FullName: `${u.firstName} ${u.lastName}`.trim(),
       Email: u.email,
@@ -577,20 +557,12 @@ const pushAllOrganizationsToPowerBI = async () => {
   return {
     datasetId,
     workspaceId,
-    datasetName: SHARED_DATASET_NAME,
+    datasetName: `WorkNex_${orgId || 'default'}`,
     tables: results,
     totalRowsPushed: results.reduce((s, r) => s + r.pushed, 0),
     pushedAt: now.toISOString(),
   };
 };
-
-/**
- * Manual "refresh now" trigger — pushes every org's current data into the
- * shared dataset. Platform-wide (not scoped to requestingUser's org) since
- * the Push API can't selectively replace one org's rows; gated to
- * SUPER_ADMIN at the route level for that reason.
- */
-const pushDataToPowerBI = async () => pushAllOrganizationsToPowerBI();
 
 /**
  * ETL: Run full ETL pipeline using orchestrator
@@ -709,7 +681,7 @@ module.exports = {
   getDashboardKPIs, getAttendanceTrends, getAttendanceHeatmap,
   getDepartmentAttendance, getLeaveSummary, getLeaveTrends, getLeaveByType,
   getHeadcount, getTurnoverRate,
-  getPowerBIToken, getPowerBIEmbedToken, pushDataToPowerBI, pushAllOrganizationsToPowerBI,
+  getPowerBIToken, getPowerBIEmbedToken, pushDataToPowerBI,
   runETL, getEtlLogs, getAuditLogs,
   getAttritionAnalytics,
   getPerformanceLeaderboard, getTeamPerformance,

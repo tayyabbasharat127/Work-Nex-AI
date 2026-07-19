@@ -5,7 +5,6 @@ const leaveSandwich = require('../modules/leave/leave.sandwich');
 const leaveService = require('../modules/leave/leave.service');
 const etlOrchestrator = require('../modules/etl/etl.orchestrator');
 const alertsService = require('../modules/alerts/alerts.service');
-const analyticsService = require('../modules/analytics/analytics.service');
 
 const syncTms = async () => {
   const organizations = await prisma.organization.findMany({ select: { id: true } });
@@ -92,8 +91,6 @@ const runEtl = async ({ previousMonth = false } = {}) => {
   return { month, year, organizations: organizations.length, success: results.every((item) => item.success) };
 };
 
-const syncPowerBI = async () => analyticsService.pushAllOrganizationsToPowerBI();
-
 const scanAlerts = async () => {
   const organizations = await prisma.organization.findMany({ select: { id: true } });
   for (const organization of organizations) await alertsService.triggerScan(organization.id);
@@ -130,7 +127,6 @@ const tasks = {
   'generate-absences': generateAbsences,
   'etl-nightly': () => runEtl(),
   'etl-monthly': () => runEtl({ previousMonth: true }),
-  'powerbi-sync': syncPowerBI,
   'scan-alerts': scanAlerts,
   'cleanup-auth-tokens': cleanupAuthTokens,
 };
